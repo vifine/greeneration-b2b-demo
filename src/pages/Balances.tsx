@@ -11,16 +11,17 @@ import { fmt } from '../data/lines';
 import type { Tone } from '../data/types';
 import { downloadPdf } from '../lib/pdf';
 
-function Kpi({ label, value, hint, tone }: { label: string; value: string; hint: string; tone?: Tone }) {
+function Kpi({ label, value, hint, tone, active, onClick }: { label: string; value: string; hint: string; tone?: Tone; active?: boolean; onClick?: () => void }) {
+  const Tag = onClick ? 'button' : 'div';
   return (
-    <div className="kpi">
+    <Tag type={onClick ? 'button' : undefined} className={`kpi ${onClick ? 'kpi-tab' : ''} ${active ? 'active' : ''}`} onClick={onClick} aria-pressed={onClick ? !!active : undefined}>
       <span className="kpi-t">
         {tone && <Dot tone={tone} />}
         {label}
       </span>
       <span className={`kpi-v ${tone === 'danger' ? 'text-danger' : ''}`}>{value}</span>
       <span className="kpi-h">{hint}</span>
-    </div>
+    </Tag>
   );
 }
 
@@ -75,34 +76,48 @@ export function Balances() {
   return (
     <Shell crumbs={[{ label: 'Customers' }, { label: 'Balances' }]} contentClass="balances-page">
       <div className="kpis">
-        <Kpi label="Total receivable, AED" value={fmt(account.reduce((s, b) => s + b.balance, 0))} hint={`${account.length} clients on account`} />
+        <Kpi
+          label="Total receivable, AED"
+          value={fmt(account.reduce((s, b) => s + b.balance, 0))}
+          hint={`${groups.all.length} clients · ${account.length} on account`}
+          active={tab === 'all'}
+          onClick={() => setTab('all')}
+        />
         <Kpi
           label="Overdue, AED"
           tone="danger"
           value={fmt(overdue.reduce((s, b) => s + b.overdue, 0))}
           hint={`${overdue.length} clients · oldest ${Math.max(...overdue.map((b) => b.oldestDays ?? 0))} days`}
+          active={tab === 'overdue'}
+          onClick={() => setTab('overdue')}
         />
-        <Kpi label="Due in next 7 days, AED" tone="warning" value={fmt(in7.reduce((s, i) => s + i.amount - i.paid, 0))} hint={`${in7.length} invoices`} />
+        <Kpi
+          label="Due in next 7 days, AED"
+          tone="warning"
+          value={fmt(in7.reduce((s, i) => s + i.amount - i.paid, 0))}
+          hint={`${groups.week.length} clients · ${in7.length} invoices`}
+          active={tab === 'week'}
+          onClick={() => setTab('week')}
+        />
         <Kpi
           label="Awaiting prepayment, AED"
           tone="info"
           value={fmt(prepay.reduce((s, b) => s + (b.nextDue?.amount ?? 0), 0))}
           hint={`${prepay.length} orders before delivery`}
+          active={tab === 'prepay'}
+          onClick={() => setTab('prepay')}
+        />
+        <Kpi
+          label="On hold, AED"
+          tone="danger"
+          value={fmt(groups.hold.reduce((s, b) => s + b.balance, 0))}
+          hint={`${groups.hold.length} clients · new orders blocked`}
+          active={tab === 'hold'}
+          onClick={() => setTab('hold')}
         />
       </div>
 
       <div className="journal-toolbar">
-        <Tabs<BalTab>
-          tabs={[
-            { key: 'all', label: 'All', count: groups.all.length },
-            { key: 'overdue', label: 'Overdue', count: groups.overdue.length },
-            { key: 'week', label: 'Due this week', count: groups.week.length },
-            { key: 'prepay', label: 'Awaiting prepayment', count: groups.prepay.length },
-            { key: 'hold', label: 'On hold', count: groups.hold.length },
-          ]}
-          value={tab}
-          onChange={setTab}
-        />
         <div className="grow" />
         <div className="journal-filters">
           <SearchBox value={q} onChange={setQ} placeholder="Search client" className="journal-search" />
