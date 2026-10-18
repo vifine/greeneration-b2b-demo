@@ -301,15 +301,20 @@ img {
   overflow: hidden;
   min-height: 74px;
 }
-/* logo keeps its proportions while the sidebar width animates */
+/* both logos have fixed boxes: nothing scales while the sidebar width animates */
 .sb-brand img {
   flex: none;
   max-width: none;
+  min-width: 0;
   object-fit: contain;
 }
-.sidebar.expanded .sb-brand img {
-  width: 148px;
-  height: auto;
+.sb-brand img.sb-logo-mark {
+  width: 20px !important;
+  height: 32.88px !important;
+}
+.sb-brand img.sb-logo-full {
+  width: 148px !important;
+  height: 24.6px !important;
   animation: sb-fade 0.18s ease;
 }
 @keyframes sb-fade {
@@ -2528,3 +2533,7 @@ button.kpi {
 .journal-toolbar .sync-note {
   margin-left: -16px;
 }
+
+/* money totals in journals read first */
+.journal .c-total > span:first-child,
+.journal .c-total:not(.two) { font-weight: 600; color: var(--ink, inherit); }

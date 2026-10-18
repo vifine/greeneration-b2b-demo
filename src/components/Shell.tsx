@@ -113,11 +113,11 @@ export function Sidebar({ pinned }: { pinned: boolean }) {
         <div className="sb-brand">
           {expanded ? (
             <>
-              <img src={I.logoLight} width={148} height={24.6} alt="greeneration" />
+              <img className="sb-logo-full" src={I.logoLight} width={148} height={24.6} alt="greeneration" />
               <span className="pill-orderdesk">Order desk</span>
             </>
           ) : (
-            <img src={I.logoMark} width={20} height={32.88} alt="greeneration" />
+            <img className="sb-logo-mark" src={I.logoMark} width={20} height={32.88} alt="greeneration" />
           )}
         </div>
         {sections.map((s) => (
