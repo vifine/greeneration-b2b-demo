@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { CatalogModal } from '../components/CatalogModal';
 import { FileChip } from '../components/FileChip';
@@ -221,7 +221,19 @@ export function RequestCard() {
             <div key={c.key} className={`check-item ${c.ok ? 'ok' : 'fail'}`}>
               <CheckState state={c.ok ? 'done' : 'fail'} />
               <span className="check-label">{c.label}</span>
-              {!c.ok && c.detail && <span className="check-detail">{c.detail}</span>}
+              {c.key === 'delivery_date' ? (
+                <DeliveryDayPick
+                  value={r.delivery.day}
+                  invalid={!c.ok}
+                  disabled={r.status !== 'open'}
+                  onPick={(day) => {
+                    updateRequest(r.id, (x) => ({ ...x, delivery: { day, window: /today|asap/i.test(x.delivery.window) ? '08:00–12:00' : x.delivery.window }, deliveryValid: true }));
+                    toast(`Delivery date set to ${day}`);
+                  }}
+                />
+              ) : (
+                !c.ok && c.detail && <span className="check-detail">{c.detail}</span>
+              )}
             </div>
           ))}
         </section>
@@ -254,5 +266,53 @@ export function RequestCard() {
         />
       )}
     </Shell>
+  );
+}
+
+/** Next delivery days (Dubai: Mon–Sat). Today in the demo is Mon 19 Oct, past the cutoff for same-day. */
+const DELIVERY_DAYS = ['Tue 20 Oct', 'Wed 21 Oct', 'Thu 22 Oct', 'Fri 23 Oct', 'Sat 24 Oct', 'Mon 26 Oct'];
+
+function DeliveryDayPick({ value, invalid, disabled, onPick }: { value: string; invalid: boolean; disabled?: boolean; onPick: (day: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+  return (
+    <div className={`fsel day-pick ${invalid ? 'invalid' : ''} ${open ? 'open' : ''}`} ref={ref}>
+      <button type="button" className="day-pick-btn" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} title="Change delivery date" onClick={() => setOpen((v) => !v)}>
+        <span>{value}</span>
+        <img src={I.icChevronDown} width={14} height={14} alt="" />
+      </button>
+      {open && (
+        <ul className="fsel-menu" role="listbox" aria-label="Delivery date">
+          {DELIVERY_DAYS.map((d, i) => (
+            <li key={d}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={d === value}
+                className={d === value ? 'selected' : ''}
+                onClick={() => {
+                  onPick(d);
+                  setOpen(false);
+                }}
+              >
+                {d}
+                {i === 0 && <small> · next delivery</small>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
