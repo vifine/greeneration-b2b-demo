@@ -46,6 +46,15 @@ function useTabParam<T extends string>(keys: readonly T[], fallback: T) {
   const raw = params.get('tab') as T | null;
   const tab = raw && keys.includes(raw) ? raw : fallback;
   const q = params.get('q') ?? '';
+  const idsRaw = params.get('ids');
+  const ids = idsRaw ? idsRaw.split(',') : null;
+  const from = params.get('from') ?? '';
+  const clearIds = () => {
+    const p = new URLSearchParams(params);
+    p.delete('ids');
+    p.delete('from');
+    setParams(p, { replace: true });
+  };
   const update = (next: { tab?: T; q?: string }) => {
     const p = new URLSearchParams(params);
     if (next.tab !== undefined) p.set('tab', next.tab);
@@ -55,7 +64,7 @@ function useTabParam<T extends string>(keys: readonly T[], fallback: T) {
     }
     setParams(p, { replace: true });
   };
-  return { tab, q, setTab: (t: T) => update({ tab: t }), setQ: (v: string) => update({ q: v }) };
+  return { tab, q, ids, from, clearIds, setTab: (t: T) => update({ tab: t }), setQ: (v: string) => update({ q: v }) };
 }
 
 type DeliveryFilter = 'all' | 'upcoming' | 'tomorrow' | 'later';
@@ -68,6 +77,19 @@ const DELIVERY_FILTERS = (first: 'all' | 'upcoming') =>
   ] as { value: DeliveryFilter; label: string }[];
 const matchesDelivery = (day: string, f: DeliveryFilter) =>
   f === 'all' || (f === 'upcoming' ? day !== 'Mon 19 Oct' : f === 'tomorrow' ? day === 'Tue 20 Oct' : day !== 'Tue 20 Oct' && day !== 'Mon 19 Oct');
+
+function FromHome({ n, from, onClear }: { n: number; from: string; onClear: () => void }) {
+  return (
+    <div className="from-home">
+      <span>
+        Showing {n} from Home{from ? <> · <b>{from}</b></> : null}
+      </span>
+      <button type="button" className="link-sort" onClick={onClear}>
+        Show all
+      </button>
+    </div>
+  );
+}
 
 const matches = (q: string, ...fields: string[]) => {
   const n = q.trim().toLowerCase().replace(/^#/, '');
@@ -82,7 +104,7 @@ type ReqTab = (typeof REQ_TABS)[number];
 export function RequestsJournal() {
   const { requests } = useStore();
   const navigate = useNavigate();
-  const { tab, q, setTab, setQ } = useTabParam<ReqTab>(REQ_TABS, 'all');
+  const { tab, q, ids, from, clearIds, setTab, setQ } = useTabParam<ReqTab>(REQ_TABS, 'all');
   const [dday, setDday] = useState<DeliveryFilter>('all');
 
   const rows = requests.map((r) => ({ r, issue: requestIssue(r), client: clientById(r.clientId) }));
@@ -93,7 +115,7 @@ export function RequestsJournal() {
     ready: open.filter((x) => x.issue.tone === 'success'),
     closed: rows.filter((x) => x.r.status === 'closed'),
   };
-  const visible = groups[tab]
+  const visible = (ids ? rows.filter((x) => ids.includes(x.r.id)) : groups[tab])
     .filter((x) => matchesDelivery(x.r.delivery.day, dday))
     .filter((x) => matches(q, x.client.name, x.r.id, ...x.r.lines.map((l) => `${l.product} ${l.clientWrote}`)));
 
@@ -113,6 +135,7 @@ export function RequestsJournal() {
       >
         <FilterSelect value={dday} onChange={setDday} options={DELIVERY_FILTERS('all')} />
       </Toolbar>
+      {ids && <FromHome n={visible.length} from={from} onClear={clearIds} />}
       <div className="table journal req-table">
         <div className="tr th">
           <span className="c-client">Client</span>
@@ -171,14 +194,14 @@ const STAGE_TONE: Record<OrderStage, Tone> = { 'New request': 'info', Preorder: 
 export function OrdersJournal() {
   const { orders } = useStore();
   const navigate = useNavigate();
-  const { tab, q, setTab, setQ } = useTabParam<OrdTab>(ORD_TABS, 'all');
+  const { tab, q, ids, from, clearIds, setTab, setQ } = useTabParam<OrdTab>(ORD_TABS, 'all');
   const [dday, setDday] = useState<DeliveryFilter>('upcoming');
   const [payF, setPayF] = useState<PaymentFilter>('all');
   const rows = orders.map((o) => ({ o, client: clientById(o.clientId), pay: paymentView(o, orderCurrentTotal(o), orderOriginalTotal(o)) }));
   const count = (t: OrdTab) => (t === 'all' ? rows.length : rows.filter((x) => x.o.stage === STAGE_OF[t]).length);
   const visible = rows
-    .filter((x) => tab === 'all' || x.o.stage === STAGE_OF[tab])
-    .filter((x) => matchesDelivery(x.o.delivery.day, dday) && matchesPaymentFilter(x.pay, payF))
+    .filter((x) => (ids ? ids.includes(x.o.id) : tab === 'all' || x.o.stage === STAGE_OF[tab]))
+    .filter((x) => ids || (matchesDelivery(x.o.delivery.day, dday) && matchesPaymentFilter(x.pay, payF)))
     .filter((x) => matches(q, x.client.name, x.o.id, ...x.o.lines.map((l) => l.product)));
 
   return (
@@ -198,6 +221,7 @@ export function OrdersJournal() {
         <FilterSelect value={dday} onChange={setDday} options={DELIVERY_FILTERS('upcoming')} />
         <FilterSelect value={payF} onChange={setPayF} options={PAYMENT_FILTERS} />
       </Toolbar>
+      {ids && <FromHome n={visible.length} from={from} onClear={clearIds} />}
       <div className="table journal ord-table">
         <div className="tr th">
           <span className="c-client">Client</span>

@@ -2323,3 +2323,17 @@ button.tr:hover,
   background: var(--forest);
   border-radius: 1px;
 }
+
+.from-home {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.from-home b {
+  color: var(--text);
+}
+.decision-row.is-empty {
+  cursor: default;
+}
