@@ -9,7 +9,7 @@ import { orderCurrentTotal, orderHasChanges, requestIssue, useStore } from '../s
 type RowTone = 'danger' | 'warning' | 'neutral';
 
 const MILESTONES = [
-  { time: '10:00', label: 'Shift started', future: 'Shift starts' },
+  { time: '08:00', label: 'Shift started', future: 'Shift starts' },
   { time: '15:00', label: 'Farm stock updated', future: 'Farm stock update' },
   { time: '22:00', label: 'No reply → delivery', future: 'No reply → delivery' },
   { time: '22:30', label: 'Intake closed · stock check', future: 'Intake closes · stock check' },

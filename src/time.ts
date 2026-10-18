@@ -38,7 +38,7 @@ export function useDubaiNow(): number {
 export const INTAKE_CLOSES = toMin('22:30');
 
 export function intakeChip(now: number): string {
-  if (now < toMin('10:00')) return `Intake opens at 10:00`;
+  if (now < toMin('08:00')) return `Intake opens at 08:00`;
   if (now >= INTAKE_CLOSES) return 'Intake closed · next day';
   return `Intake closes in ${dur(INTAKE_CLOSES - now).replace(' min', 'm').replace(' h ', 'h ').replace(' h', 'h')}`;
 }

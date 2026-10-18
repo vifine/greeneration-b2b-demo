@@ -298,6 +298,23 @@ img {
   gap: 8px;
   padding-bottom: 20px;
   align-items: flex-start;
+  overflow: hidden;
+  min-height: 74px;
+}
+/* logo keeps its proportions while the sidebar width animates */
+.sb-brand img {
+  flex: none;
+  max-width: none;
+  object-fit: contain;
+}
+.sidebar.expanded .sb-brand img {
+  width: 148px;
+  height: auto;
+  animation: sb-fade 0.18s ease;
+}
+@keyframes sb-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 .sidebar.expanded .sb-brand {
   padding-left: 16px;
