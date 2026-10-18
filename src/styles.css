@@ -2423,3 +2423,40 @@ button.kpi {
   border-color: var(--forest);
   box-shadow: inset 0 -3px 0 var(--forest);
 }
+
+/* Balance KPI tabs: each tile in its own colour (border, dot, number) + filter icon */
+.kpi-forest { --k: var(--forest); --k-tint: #eef4e6; }
+.kpi-danger { --k: var(--danger); --k-tint: var(--tint-danger); }
+.kpi-warning { --k: #b8902f; --k-tint: var(--tint-warning); }
+.kpi-info { --k: var(--info); --k-tint: var(--tint-info); }
+.kpi-hold { --k: var(--emph-danger); --k-tint: #f3e3e1; }
+.kpi[class*='kpi-'] {
+  border-color: color-mix(in srgb, var(--k, var(--border)) 35%, white);
+}
+.kpi[class*='kpi-'] .kpi-v {
+  color: var(--k);
+}
+.kpi-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--k, var(--text-2));
+  flex: 0 0 8px;
+}
+.kpi-t .kpi-filter {
+  margin-left: auto;
+  color: var(--k, var(--text-2));
+  opacity: 0.55;
+}
+.kpi-tab:hover .kpi-filter,
+.kpi-tab.active .kpi-filter {
+  opacity: 1;
+}
+.kpi-tab:hover {
+  background: var(--k-tint, var(--row-hover));
+}
+.kpi-tab.active {
+  border-color: var(--k);
+  background: var(--k-tint);
+  box-shadow: inset 0 -3px 0 var(--k);
+}
