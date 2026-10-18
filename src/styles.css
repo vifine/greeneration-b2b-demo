@@ -2760,3 +2760,7 @@ input, select, button, textarea { font-family: inherit; }
 .seg button.on { background: var(--forest); color: var(--on-dark); }
 .seg button:not(.on):hover { background: var(--green-tea); }
 .lines-table .l-price { flex-basis: 108px !important; }
+
+.kv-link { text-decoration: underline; text-decoration-color: currentColor; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-style: dotted; }
+.kv-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.kv-link img { opacity: 0.6; margin-left: 4px; vertical-align: -2px; }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Money } from '../components/Money';
-import { Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
+import { balanceOf } from '../data/balances';
 import { AddressDialog, AddressPick, emptyAddress } from '../components/Addresses';
 import { pickAddress } from '../data/addresses';
 import { ReplyDialog } from '../components/ReplyDialog';
@@ -191,13 +192,27 @@ export function OrderCard() {
             </span>
           </div>
           <div className="kv-grid">
-            {pay.fields.map((f) => (
-              <Kv key={f.k} f={f} />
-            ))}
+            {pay.fields.map((f) =>
+              f.k === 'Client account' && balanceOf(o.clientId) ? (
+                <div key={f.k} className="kv-cell">
+                  <span className="kv-k">{f.k}</span>
+                  <Link to={`/customers/balances/${o.clientId}`} className={`kv-v kv-link ${f.strong ? 'strong' : ''} ${f.tone ? `text-${f.tone}` : ''}`}>
+                    {f.v}
+                  </Link>
+                </div>
+              ) : (
+                <Kv key={f.k} f={f} />
+              ),
+            )}
           </div>
           <div className="oblock-foot">
             {pay.document && <FileChip name={pay.document.name} size={pay.document.size} title={`Invoice ${o.invoice}`} lines={docLines('INV')} />}
             <div className="grow" />
+            {balanceOf(o.clientId) && (
+              <Link to={`/customers/balances/${o.clientId}`} className="link-sort">
+                Client balance
+              </Link>
+            )}
             {pay.action && (
               <Btn kind="secondary" className="btn-sm" onClick={() => toast(`${pay.action} · sent to ${client.name}`)}>
                 {pay.action}
