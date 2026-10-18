@@ -7,6 +7,7 @@ import { ClientCard, ClientsJournal } from './pages/Clients';
 import { AuditLog } from './pages/AuditLog';
 import { StockCheck } from './pages/StockCheck';
 import { ClaimCard, ClaimsJournal } from './pages/Claims';
+import { Availability } from './pages/Availability';
 import { CatalogPage } from './pages/CatalogPage';
 import { ComingSoon } from './pages/ComingSoon';
 import { Home } from './pages/Home';
@@ -23,7 +24,6 @@ function Private({ children }: { children: ReactNode }) {
 const SOON: [string, string, string?][] = [
   ['/crm/leads', 'Leads'],
   ['/crm/issues', 'Issues'],
-  ['/stock/availability', 'Stock', 'Availability (15:00)'],
   ['/references/prices', 'References', 'Prices'],
   ['/references/zones', 'References', 'Delivery zones'],
 ];
@@ -52,6 +52,7 @@ export default function App() {
             <Route path="/customers/balances/:id" element={<Private><BalanceDetail /></Private>} />
             <Route path="/references" element={<Navigate to="/references/catalog" replace />} />
             <Route path="/stock" element={<Navigate to="/stock/availability" replace />} />
+            <Route path="/stock/availability" element={<Private><Availability /></Private>} />
             <Route path="/references/catalog" element={<Private><CatalogPage /></Private>} />
             {SOON.map(([path, section, sub]) => (
               <Route

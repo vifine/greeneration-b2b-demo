@@ -2864,3 +2864,13 @@ input, select, button, textarea { font-family: inherit; }
 .claim-lines .l-price { flex: 0 0 120px; text-align: right; padding-top: 6px; }
 .claim-lines .l-sum { flex: 0 0 120px; text-align: right; padding-top: 6px; }
 .claim-lines .tr.th > span { padding-top: 0; }
+
+/* availability */
+.avail-kpis { grid-template-columns: repeat(4, 1fr); }
+.avail-table .a-photo { flex: 0 0 56px; }
+.avail-table .a-product { flex: 1 1 auto; min-width: 0; }
+.avail-table .a-num { flex: 0 0 100px; text-align: right; }
+.avail-table .a-status { flex: 0 0 220px; display: flex; align-items: center; gap: 8px; padding-left: 24px; }
+.avail-table .a-stop { flex: 0 0 90px; text-align: center; padding-right: 0 !important; }
+.avail-table .a-stop input { width: 18px; height: 18px; accent-color: var(--forest); }
+.avail-table .line-photo { width: 40px; height: 40px; }
