@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { availability, CATALOG, CATEGORIES, findPack, packChip } from '../data/catalog';
+import { availability, CATALOG, CATEGORIES, findPack, packChip, lineImage } from '../data/catalog';
 import { fmt, line } from '../data/lines';
 import type { Availability, Category, Line, Pack, ProductGroup } from '../data/types';
 import * as I from './icons';
@@ -187,12 +187,17 @@ function PackRow({ pack, value, onChange }: { pack: Pack; value: number; onChang
   const a = availText(availability(pack));
   const custom = pack.kind === 'custom';
   const filled = value > 0;
+  const photo = lineImage(pack.sku);
   return (
     <div className={`pack-row ${filled ? 'filled' : ''}`}>
       <span className="c-photo">
-        <span className="photo-ph">
-          <img src={I.icImagePh} width={18} height={18} alt="" />
-        </span>
+        {photo ? (
+          <img className="line-photo" src={photo} width={44} height={44} alt="" loading="lazy" />
+        ) : (
+          <span className="photo-ph">
+            <img src={I.icImagePh} width={18} height={18} alt="" />
+          </span>
+        )}
       </span>
       <span className="c-pack">
         <b>{pack.label}</b>
