@@ -4,6 +4,8 @@ import { isLoggedIn } from './auth';
 import { ToastProvider } from './components/ui';
 import { BalanceDetail, Balances } from './pages/Balances';
 import { ClientCard, ClientsJournal } from './pages/Clients';
+import { AuditLog } from './pages/AuditLog';
+import { StockCheck } from './pages/StockCheck';
 import { CatalogPage } from './pages/CatalogPage';
 import { ComingSoon } from './pages/ComingSoon';
 import { Home } from './pages/Home';
@@ -22,10 +24,8 @@ const SOON: [string, string, string?][] = [
   ['/crm/issues', 'Issues'],
   ['/crm/claims', 'Claims'],
   ['/stock/availability', 'Stock', 'Availability (15:00)'],
-  ['/stock/check', 'Stock', 'Stock check 22:30'],
   ['/references/prices', 'References', 'Prices'],
   ['/references/zones', 'References', 'Delivery zones'],
-  ['/audit', 'Audit log'],
 ];
 
 export default function App() {
@@ -42,6 +42,8 @@ export default function App() {
             <Route path="/crm/orders" element={<Private><OrdersJournal /></Private>} />
             <Route path="/crm/orders/:id" element={<Private><OrderCard /></Private>} />
             <Route path="/customers" element={<Navigate to="/customers/balances" replace />} />
+            <Route path="/stock/check" element={<Private><StockCheck /></Private>} />
+            <Route path="/audit" element={<Private><AuditLog /></Private>} />
             <Route path="/customers/clients" element={<Private><ClientsJournal /></Private>} />
             <Route path="/customers/clients/:id" element={<Private><ClientCard /></Private>} />
             <Route path="/customers/balances" element={<Private><Balances /></Private>} />

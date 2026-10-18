@@ -200,6 +200,16 @@ export function Home() {
         <Glance to={target('/crm/orders', tomorrow.map((o) => o.id), 'Order value, Tue 20 Oct')} label="Order value" money value={fmt(value).replace(/\.\d+$/, '')} hint="Tue 20 Oct" />
         <Glance to="/crm/leads" label="Leads" value="11" hint="Unsorted · oldest 3 days" />
       </div>
+
+      <h2 className="group-title">
+        Automation this week <span className="demo-note">demo figures · targets set after the 2-week baseline</span>
+      </h2>
+      <div className="glance metrics">
+        <Glance to="/audit" label="Orders without coordinator" value="64%" hint="Received → Confirmed, no hand-off" />
+        <Glance to="/audit" label="Message → invoice" value="4 min" hint="Median, all channels" />
+        <Glance to="/audit" label="SKU match accuracy" value="93%" hint="Lines not corrected by coordinator" />
+        <Glance to="/audit" label="Invoices redone" value="2" hint="After sending to the client" />
+      </div>
     </Shell>
   );
 }
