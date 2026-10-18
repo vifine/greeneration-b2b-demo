@@ -4,6 +4,7 @@ import { lineSum } from './data/lines';
 import { INITIAL_ORDERS } from './data/orders';
 import { INITIAL_REQUESTS } from './data/requests';
 import { balanceOf } from './data/balances';
+import { INITIAL_ADDRESSES, type Address } from './data/addresses';
 import type { Line, Order, OrderLine, PaymentSpec, Request, Tone } from './data/types';
 import { ORDER_ISSUES, REQUEST_ISSUES, REQUEST_ISSUE_ORDER, withCount, type OrderIssueKey, type RequestIssueKey } from './data/issues';
 
@@ -99,6 +100,10 @@ interface Store {
   updateOrder: (id: string, fn: (o: Order) => Order) => void;
   createOrderFromRequest: (id: string) => string;
   createOrder: (clientId: string, day: string, window: string, lines: Line[]) => string;
+  addresses: Address[];
+  /** Insert or update; returns the address id. */
+  saveAddress: (a: Omit<Address, 'id'> & { id?: string }) => string;
+  makeMainAddress: (id: string) => void;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -106,6 +111,7 @@ const Ctx = createContext<Store | null>(null);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [requests, setRequests] = useState<Request[]>(INITIAL_REQUESTS);
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
+  const [addresses, setAddresses] = useState<Address[]>(INITIAL_ADDRESSES);
 
   const store = useMemo<Store>(() => {
     const newOrder = (id: string, clientId: string, channel: string, day: string, window: string, lines: Line[]): Order => ({
@@ -121,15 +127,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       invoiceSent: '21:18',
       payment: paymentForNewOrder(clientId),
     });
+    const setMain = (list: Address[], id: string) => {
+      const target = list.find((a) => a.id === id);
+      return target ? list.map((a) => (a.clientId === target.clientId ? { ...a, main: a.id === id } : a)) : list;
+    };
     return {
       requests,
       orders,
+      addresses,
+      saveAddress: (a) => {
+        const id = a.id ?? `${a.clientId}-${Date.now().toString(36)}`;
+        setAddresses((list) => {
+          const next = list.some((x) => x.id === id) ? list.map((x) => (x.id === id ? { ...x, ...a, id } : x)) : [...list, { ...a, id }];
+          return a.main ? setMain(next, id) : next;
+        });
+        return id;
+      },
+      makeMainAddress: (id) => setAddresses((list) => setMain(list, id)),
       updateRequest: (id, fn) => setRequests((rs) => rs.map((r) => (r.id === id ? fn(r) : r))),
       updateOrder: (id, fn) => setOrders((os) => os.map((o) => (o.id === id ? fn(o) : o))),
       createOrderFromRequest: (id) => {
         const r = requests.find((x) => x.id === id)!;
         setRequests((rs) => rs.map((x) => (x.id === id ? { ...x, status: 'closed', closedAs: `Became order #${id}` } : x)));
-        setOrders((os) => [newOrder(id, r.clientId, r.channel, r.delivery.day, r.delivery.window, r.lines), ...os.filter((o) => o.id !== id)]);
+        setOrders((os) => [{ ...newOrder(id, r.clientId, r.channel, r.delivery.day, r.delivery.window, r.lines), addressId: r.addressId }, ...os.filter((o) => o.id !== id)]);
         return id;
       },
       createOrder: (clientId, day, window, lines) => {
@@ -139,7 +159,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return id;
       },
     };
-  }, [requests, orders]);
+  }, [requests, orders, addresses]);
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { AddressDialog, AddressPick, emptyAddress } from '../components/Addresses';
+import { pickAddress } from '../data/addresses';
 import { CatalogModal } from '../components/CatalogModal';
 import { FileChip } from '../components/FileChip';
 import * as I from '../components/icons';
@@ -82,7 +84,8 @@ function AttachmentChip({ a, requestId, onRead }: { a: Attachment; requestId: st
 
 export function RequestCard() {
   const { id } = useParams();
-  const { requests, updateRequest, createOrderFromRequest } = useStore();
+  const { requests, updateRequest, createOrderFromRequest, addresses, saveAddress } = useStore();
+  const [newAddr, setNewAddr] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
   const [modal, setModal] = useState<{ matchId?: string } | null>(null);
@@ -132,8 +135,17 @@ export function RequestCard() {
             <h1>{client.name}</h1>
             <img src={I.icChevronDownDark} width={18} height={18} alt="" style={{ transform: 'rotate(90deg)' }} />
           </div>
-          <p>
-            Delivery {r.delivery.day}, {r.delivery.window} · {client.area}
+          <p className="card-sub">
+            <span>
+              Delivery {r.delivery.day}, {r.delivery.window}
+            </span>
+            <AddressPick
+              list={addresses.filter((a) => a.clientId === r.clientId)}
+              value={pickAddress(addresses, r.clientId, r.addressId)}
+              disabled={r.status !== 'open'}
+              onPick={(aid) => updateRequest(r.id, (x) => ({ ...x, addressId: aid }))}
+              onNew={() => setNewAddr(true)}
+            />
           </p>
         </div>
         <div className="card-actions">
@@ -250,6 +262,19 @@ export function RequestCard() {
         onAddLine={() => setModal({})}
       />
 
+      {newAddr && (
+        <AddressDialog
+          title={`New address · ${client.name}`}
+          initial={emptyAddress(r.clientId, client.area)}
+          onClose={() => setNewAddr(false)}
+          onSave={(a) => {
+            const aid = saveAddress(a);
+            updateRequest(r.id, (x) => ({ ...x, addressId: aid }));
+            toast('Address saved to the client and set for this request');
+            setNewAddr(false);
+          }}
+        />
+      )}
       {modal && (
         <CatalogModal
           clientId={r.clientId}

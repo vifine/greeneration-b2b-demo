@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
+import { AddressDialog, AddressPick, emptyAddress } from '../components/Addresses';
+import { pickAddress } from '../data/addresses';
 import { CatalogModal } from '../components/CatalogModal';
 import { FileChip } from '../components/FileChip';
 import { LinesTable } from '../components/LinesTable';
@@ -44,7 +46,8 @@ function Kv({ f }: { f: PaymentField }) {
 
 export function OrderCard() {
   const { id } = useParams();
-  const { orders, updateOrder } = useStore();
+  const { orders, updateOrder, addresses, saveAddress } = useStore();
+  const [newAddr, setNewAddr] = useState(false);
   const toast = useToast();
   const [modal, setModal] = useState(false);
   const o = orders.find((x) => x.id === id);
@@ -54,7 +57,18 @@ export function OrderCard() {
   const before = orderOriginalTotal(o);
   const after = orderCurrentTotal(o);
   const pay = paymentView(o, after, before);
-  const dlv = deliveryFor(o);
+  const addr = pickAddress(addresses, o.clientId, o.addressId);
+  const base = deliveryFor(o);
+  const dlv = addr
+    ? {
+        ...base,
+        zone: `${addr.area}, ${addr.emirate} · ${base.zone.split(' · ')[1] ?? ''}`,
+        address: `${addr.name} · ${addr.line}`,
+        recipient: [addr.contact, addr.phone].filter(Boolean).join(' · ') || '—',
+        note: addr.note || base.note,
+        hours: addr.hours,
+      }
+    : { ...base, hours: '' };
   const steps = orderSteps(o, pay);
 
   const setLines = (fn: (ls: OrderLine[]) => OrderLine[]) => updateOrder(o.id, (x) => ({ ...x, lines: fn(x.lines) }));
@@ -97,7 +111,7 @@ export function OrderCard() {
             </span>
           </div>
           <p>
-            Delivery {o.delivery.day}, {o.delivery.window} · {client.area}
+            Delivery {o.delivery.day}, {o.delivery.window} · {addr ? `${addr.name}, ${addr.area}` : client.area}
           </p>
         </div>
         <div className="card-actions">
@@ -147,15 +161,21 @@ export function OrderCard() {
             <Kv f={{ k: 'Zone · route', v: dlv.zone }} />
             <Kv f={{ k: 'Address', v: dlv.address }} />
             <Kv f={{ k: 'Recipient', v: dlv.recipient }} />
-            <Kv f={{ k: 'Driver', v: dlv.driver }} />
+            <Kv f={{ k: 'Receiving hours', v: dlv.hours || '—' }} />
             <Kv f={{ k: 'Delivery note', v: dlv.note }} />
           </div>
           <div className="oblock-foot">
             <FileChip name={dlv.dn.name} size={dlv.dn.size} title={`Delivery note DN-${o.id}`} lines={docLines('DN')} />
             <div className="grow" />
-            <Btn kind="secondary" className="btn-sm" onClick={() => toast('Delivery change form — not part of this prototype')}>
-              Change delivery
-            </Btn>
+            <AddressPick
+              list={addresses.filter((a) => a.clientId === o.clientId)}
+              value={addr}
+              onPick={(aid) => {
+                updateOrder(o.id, (x) => ({ ...x, addressId: aid }));
+                toast('Delivery address changed');
+              }}
+              onNew={() => setNewAddr(true)}
+            />
           </div>
         </section>
         <section className="oblock">
@@ -205,6 +225,19 @@ export function OrderCard() {
             toast(`${ls.length} line${ls.length === 1 ? '' : 's'} added · apply changes to update the invoice`);
           }}
           onClose={() => setModal(false)}
+        />
+      )}
+      {newAddr && (
+        <AddressDialog
+          title={`New address · ${client.name}`}
+          initial={emptyAddress(o.clientId, client.area)}
+          onClose={() => setNewAddr(false)}
+          onSave={(a) => {
+            const aid = saveAddress(a);
+            updateOrder(o.id, (x) => ({ ...x, addressId: aid }));
+            toast('Address saved to the client and set for this order');
+            setNewAddr(false);
+          }}
         />
       )}
     </Shell>

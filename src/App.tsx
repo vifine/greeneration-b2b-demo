@@ -3,6 +3,7 @@ import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { isLoggedIn } from './auth';
 import { ToastProvider } from './components/ui';
 import { BalanceDetail, Balances } from './pages/Balances';
+import { ClientCard, ClientsJournal } from './pages/Clients';
 import { CatalogPage } from './pages/CatalogPage';
 import { ComingSoon } from './pages/ComingSoon';
 import { Home } from './pages/Home';
@@ -20,7 +21,6 @@ const SOON: [string, string, string?][] = [
   ['/crm/leads', 'Leads'],
   ['/crm/issues', 'Issues'],
   ['/crm/claims', 'Claims'],
-  ['/customers/clients', 'Customers', 'Clients'],
   ['/stock/availability', 'Stock', 'Availability (15:00)'],
   ['/stock/check', 'Stock', 'Stock check 22:30'],
   ['/references/prices', 'References', 'Prices'],
@@ -42,6 +42,8 @@ export default function App() {
             <Route path="/crm/orders" element={<Private><OrdersJournal /></Private>} />
             <Route path="/crm/orders/:id" element={<Private><OrderCard /></Private>} />
             <Route path="/customers" element={<Navigate to="/customers/balances" replace />} />
+            <Route path="/customers/clients" element={<Private><ClientsJournal /></Private>} />
+            <Route path="/customers/clients/:id" element={<Private><ClientCard /></Private>} />
             <Route path="/customers/balances" element={<Private><Balances /></Private>} />
             <Route path="/customers/balances/:id" element={<Private><BalanceDetail /></Private>} />
             <Route path="/references" element={<Navigate to="/references/catalog" replace />} />

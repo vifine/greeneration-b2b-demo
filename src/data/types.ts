@@ -77,6 +77,8 @@ export interface Request {
   channel: string;
   received: { day: string; time: string };
   delivery: { day: string; window: string };
+  /** Delivery point; falls back to the client's main address. */
+  addressId?: string;
   deliveryValid: boolean;
   extraIssues?: number;
   /** Issue that is not covered by the automatic checks (e.g. amendment vs new order). */
@@ -136,6 +138,8 @@ export interface Order {
   clientId: string;
   channel: string;
   delivery: { day: string; window: string };
+  /** Delivery point; falls back to the client's main address. */
+  addressId?: string;
   stage: OrderStage;
   issue?: string;
   reply: string;
