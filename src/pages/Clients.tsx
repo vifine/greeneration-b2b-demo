@@ -8,10 +8,11 @@ import { Btn, Dot, SearchBox, useToast } from '../components/ui';
 import { DELIVERY_DAYS_BY_EMIRATE, MIN_ORDER, ZONES, type Address } from '../data/addresses';
 import { balanceOf } from '../data/balances';
 import { CLIENTS, clientById } from '../data/clients';
+import { fmt } from '../data/lines';
 import { useStore } from '../store';
 
 export function ClientsJournal() {
-  const { addresses, invoiceMode } = useStore();
+  const { addresses, invoiceMode, minOverrides } = useStore();
   const navigate = useNavigate();
   const [q, setQ] = useState('');
   const rows = CLIENTS.map((c) => {
@@ -57,7 +58,12 @@ export function ClientsJournal() {
               <Dot tone={invoiceMode(c.id) === 'auto' ? 'success' : 'info'} />
               {invoiceMode(c.id) === 'auto' ? 'Sent automatically' : 'Coordinator approves'}
             </span>
-            <span className="c-min right"><Money v={MIN_ORDER[main?.emirate ?? 'Dubai']} /></span>
+            <span className="c-min right two">
+              <span>
+                <Money v={minOverrides[c.id] ?? MIN_ORDER[main?.emirate ?? 'Dubai']} />
+              </span>
+              <small>{minOverrides[c.id] != null ? 'client' : 'by emirate'}</small>
+            </span>
           </button>
         ))}
         {!rows.length && <div className="empty">No clients match.</div>}
@@ -68,7 +74,7 @@ export function ClientsJournal() {
 
 export function ClientCard() {
   const { id } = useParams();
-  const { addresses, saveAddress, makeMainAddress, invoiceMode, setInvoiceMode } = useStore();
+  const { addresses, saveAddress, makeMainAddress, invoiceMode, setInvoiceMode, minOverrides, setMinOrder } = useStore();
   const toast = useToast();
   const [edit, setEdit] = useState<(Omit<Address, 'id'> & { id?: string }) | null>(null);
   const c = id ? CLIENTS.find((x) => x.id === id) : undefined;
@@ -89,7 +95,7 @@ export function ClientCard() {
             )}
           </div>
           <p>
-            Min order <Money v={MIN_ORDER[own.find((a) => a.main)?.emirate ?? 'Dubai']} /> by emirate · {own.length} delivery address{own.length === 1 ? '' : 'es'}
+ {own.length} delivery address{own.length === 1 ? '' : 'es'}
             {bal ? (
               <>
                 {' · '}
@@ -106,6 +112,17 @@ export function ClientCard() {
           </Btn>
         </div>
       </div>
+
+      <MinOrderRow
+        key={c.id}
+        value={minOverrides[c.id]}
+        fallback={MIN_ORDER[own.find((a) => a.main)?.emirate ?? 'Dubai']}
+        emirate={own.find((a) => a.main)?.emirate ?? 'Dubai'}
+        onSave={(v) => {
+          setMinOrder(c.id, v);
+          toast(v == null ? `${c.name}: minimum back to the emirate default` : `${c.name}: minimum order AED ${fmt(v)}`);
+        }}
+      />
 
       <section className="mode-row">
         <div>
@@ -131,8 +148,10 @@ export function ClientCard() {
         </div>
       </section>
 
-      <h2 className="section-h">Delivery addresses</h2>
-      <p className="section-note">Every request and order picks one of these points. The main address is used when the client doesn't say otherwise.</p>
+      <div className="section-head">
+        <h2 className="section-h">Delivery addresses</h2>
+        <p className="section-note">Every request and order picks one of these points. The main address is used when the client doesn't say otherwise.</p>
+      </div>
       <div className="addr-grid">
         {own.map((a) => (
           <AddressCard
@@ -163,5 +182,50 @@ export function ClientCard() {
         />
       )}
     </Shell>
+  );
+}
+
+function MinOrderRow({ value, fallback, emirate, onSave }: { value?: number; fallback: number; emirate: string; onSave: (v: number | null) => void }) {
+  const [draft, setDraft] = useState(String(value ?? fallback));
+  const n = parseFloat(draft);
+  const changed = !Number.isNaN(n) && n !== (value ?? fallback);
+  return (
+    <section className="mode-row">
+      <div>
+        <h2 className="section-h">Minimum order</h2>
+        <p className="section-note">
+          {value != null
+            ? `Set for this client. The ${emirate} default is AED ${fmt(fallback)}.`
+            : `${emirate} default. Change it if this client has agreed a different minimum.`}
+        </p>
+      </div>
+      <form
+        className="min-edit"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (changed) onSave(n === fallback ? null : n);
+        }}
+      >
+        <span className="input-prefix">
+          <span className="aed">AED</span>
+          <input className="inline-input has-prefix" inputMode="decimal" value={draft} onChange={(e) => setDraft(e.target.value.replace(/[^\d.]/g, ''))} aria-label="Minimum order" />
+        </span>
+        <Btn kind="secondary" type="submit" disabled={!changed} className="btn-sm">
+          Save
+        </Btn>
+        {value != null && (
+          <button
+            type="button"
+            className="link-sort"
+            onClick={() => {
+              setDraft(String(fallback));
+              onSave(null);
+            }}
+          >
+            Use {emirate} default
+          </button>
+        )}
+      </form>
+    </section>
   );
 }

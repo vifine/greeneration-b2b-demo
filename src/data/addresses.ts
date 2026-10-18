@@ -133,3 +133,13 @@ export let ADDRESS_BOOK: Address[] = INITIAL_ADDRESSES;
 export function setAddressBook(list: Address[]) {
   ADDRESS_BOOK = list;
 }
+
+/** Per-client minimum order set by the coordinator; overrides the emirate default. */
+export let MIN_OVERRIDES: Record<string, number> = {};
+export function setMinOverrides(m: Record<string, number>) {
+  MIN_OVERRIDES = m;
+}
+/** Minimum order for a client at an address: the client's own value, else the emirate default. */
+export function minOrderFor(clientId: string, emirate: Emirate) {
+  return MIN_OVERRIDES[clientId] ?? MIN_ORDER[emirate];
+}

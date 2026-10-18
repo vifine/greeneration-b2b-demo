@@ -4,7 +4,7 @@ import { lineSum, money } from './data/lines';
 import { INITIAL_ORDERS } from './data/orders';
 import { INITIAL_REQUESTS } from './data/requests';
 import { balanceOf } from './data/balances';
-import { ADDRESS_BOOK, DELIVERY_DAYS_BY_EMIRATE, deliveryDays, INITIAL_ADDRESSES, MIN_ORDER, pickAddress, setAddressBook, type Address } from './data/addresses';
+import { ADDRESS_BOOK, DELIVERY_DAYS_BY_EMIRATE, deliveryDays, INITIAL_ADDRESSES, MIN_OVERRIDES, minOrderFor, pickAddress, setAddressBook, setMinOverrides, type Address } from './data/addresses';
 import type { Line, Order, OrderLine, PaymentSpec, Request, Tone } from './data/types';
 import { ORDER_ISSUES, REQUEST_ISSUES, REQUEST_ISSUE_ORDER, withCount, type OrderIssueKey, type RequestIssueKey } from './data/issues';
 
@@ -37,7 +37,8 @@ export function requestChecks(r: Request): Check[] {
   const C = REQUEST_ISSUES;
   const addr = pickAddress(ADDRESS_BOOK, r.clientId, r.addressId);
   const emirate = addr?.emirate ?? 'Dubai';
-  const min = MIN_ORDER[emirate];
+  const min = minOrderFor(r.clientId, emirate);
+  const custom = MIN_OVERRIDES[r.clientId] != null;
   const dayOk = r.deliveryValid && deliveryDays(emirate, 12).includes(r.delivery.day);
   return [
     { key: 'unrecognised', label: C.unrecognised.check, ok: n > 0 && matched === n, detail: `${n - matched} unrecognised` },
@@ -64,7 +65,7 @@ export function requestChecks(r: Request): Check[] {
       key: 'min_order',
       label: C.min_order.check,
       ok: total >= min,
-      detail: `short by ${money(min - total)} · ${emirate} min ${money(min)}`,
+      detail: `short by ${money(min - total)} · ${custom ? 'client' : emirate} min ${money(min)}`,
     },
   ];
 }
@@ -134,6 +135,9 @@ interface Store {
   saveAddress: (a: Omit<Address, 'id'> & { id?: string }) => string;
   makeMainAddress: (id: string) => void;
   /** Invoice sending per client: coordinator approves first (start) or the system sends on its own. */
+  minOverrides: Record<string, number>;
+  /** Set the client's own minimum order; null goes back to the emirate default. */
+  setMinOrder: (clientId: string, v: number | null) => void;
   invoiceMode: (clientId: string) => InvoiceMode;
   setInvoiceMode: (clientId: string, m: InvoiceMode) => void;
 }
@@ -149,7 +153,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [addresses, setAddresses] = useState<Address[]>(INITIAL_ADDRESSES);
   const [modes, setModes] = useState<Record<string, InvoiceMode>>(() => Object.fromEntries(AUTO_AT_START.map((id) => [id, 'auto' as InvoiceMode])));
 
+  const [minOverrides, setMinState] = useState<Record<string, number>>({ littlefig: 100 });
   setAddressBook(addresses);
+  setMinOverrides(minOverrides);
   const store = useMemo<Store>(() => {
     const newOrder = (id: string, clientId: string, channel: string, day: string, window: string, lines: Line[]): Order => ({
       id,
@@ -181,6 +187,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return id;
       },
       makeMainAddress: (id) => setAddresses((list) => setMain(list, id)),
+      minOverrides,
+      setMinOrder: (id, v) =>
+        setMinState((m) => {
+          const next = { ...m };
+          if (v == null) delete next[id];
+          else next[id] = v;
+          return next;
+        }),
       invoiceMode: (id) => modes[id] ?? 'approve',
       setInvoiceMode: (id, m) => setModes((x) => ({ ...x, [id]: m })),
       updateRequest: (id, fn) => setRequests((rs) => rs.map((r) => (r.id === id ? fn(r) : r))),
@@ -198,7 +212,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return id;
       },
     };
-  }, [requests, orders, addresses, modes]);
+  }, [requests, orders, addresses, modes, minOverrides]);
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }

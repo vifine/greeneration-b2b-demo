@@ -2832,3 +2832,6 @@ input, select, button, textarea { font-family: inherit; }
 .block-delivery .dlv-slot { font-size: 14px; line-height: 30px; }
 .block-delivery .kv-k { font-size: 12px; color: var(--text-2); }
 .block-summary .sum-head { flex-direction: column; align-items: flex-start; gap: 2px; }
+
+.min-edit { display: flex; align-items: center; gap: 12px; flex: none; }
+.min-edit .inline-input { width: 120px; height: 36px; text-align: right; }

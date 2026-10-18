@@ -1,5 +1,5 @@
 import type { ReplyTemplate } from '../components/ReplyDialog';
-import { addressText, deliveryDays, DELIVERY_DAYS_BY_EMIRATE, MIN_ORDER, type Address } from './addresses';
+import { addressText, deliveryDays, DELIVERY_DAYS_BY_EMIRATE, minOrderFor, type Address } from './addresses';
 import { balanceOf } from './balances';
 import { clientById } from './clients';
 import { money } from './lines';
@@ -12,7 +12,7 @@ const sign = '\n\nGreeneration · Order desk';
 export function requestReplies(r: Request, total: number, addr: Address | undefined, failing: string[]): ReplyTemplate[] {
   const hi = `Hi ${first(r.author)},`;
   const emirate = addr?.emirate ?? 'Dubai';
-  const min = MIN_ORDER[emirate];
+  const min = minOrderFor(r.clientId, emirate);
   const days = deliveryDays(emirate, 3);
   const bal = balanceOf(r.clientId);
   const where = addr ? `${addr.name}, ${addressText(addr)}` : clientById(r.clientId).area;
@@ -38,7 +38,7 @@ export function requestReplies(r: Request, total: number, addr: Address | undefi
       when: 'min_order',
       label: 'Ask to top up',
       why: `Below ${money(min)} minimum`,
-      text: `${hi} your order comes to ${money(total)}. The minimum for ${emirate} is ${money(min)} — could you add ${money(Math.max(0, min - total))} more? Happy to suggest something from this week's harvest.${sign}`,
+      text: `${hi} your order comes to ${money(total)}. Your minimum order is ${money(min)} — could you add ${money(Math.max(0, min - total))} more? Happy to suggest something from this week's harvest.${sign}`,
     },
     {
       key: 'amend_or_new',
