@@ -144,10 +144,6 @@ export function Balances() {
           <SearchBox value={q} onChange={setQ} placeholder="Search client" className="journal-search" />
           <FilterSelect value={terms} onChange={setTerms} options={TERMS} />
           <FilterSelect value={sort} onChange={setSort} options={SORTS} />
-          <button type="button" className="filter-btn">
-            Filters · 2
-            <img src={I.icChevronDown} width={14} height={14} alt="" />
-          </button>
         </div>
       </div>
       <div className="table bal-table">
@@ -166,7 +162,7 @@ export function Balances() {
             <button
               type="button"
               key={b.clientId}
-              className={`tr row ${tone === 'danger' ? 'stripe-danger' : ''}`}
+              className={`tr row stripe-${tone}`}
               onClick={() => navigate(`/customers/balances/${b.clientId}`)}
             >
               <span className="b-client two">

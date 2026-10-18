@@ -1,7 +1,6 @@
 import type React from 'react';
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import * as I from '../components/icons';
 import { Shell } from '../components/Shell';
 import { Dot, FilterSelect, SearchBox, Tabs } from '../components/ui';
 import { matchesPaymentFilter, PAYMENT_FILTERS, paymentView, type PaymentFilter } from '../data/payments';
@@ -32,10 +31,6 @@ function Toolbar<T extends string>({
       <div className="journal-filters">
         <SearchBox value={q} onChange={setQ} placeholder="Search client, deal #, product" className="journal-search" />
         {children}
-        <button type="button" className="filter-btn">
-          Filters · 2
-          <img src={I.icChevronDown} width={14} height={14} alt="" />
-        </button>
       </div>
     </div>
   );

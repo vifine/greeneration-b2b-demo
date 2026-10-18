@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import type { Tone } from '../data/types';
 import * as I from './icons';
 
@@ -168,17 +168,49 @@ export function FilterSelect<T extends string>({
   options: readonly { value: T; label: string }[];
 }) {
   const current = options.find((o) => o.value === value) ?? options[0];
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+  const prefix = current.label.includes(':') ? current.label.split(':')[0] : '';
   return (
-    <label className="filter-btn">
-      <span>{current.label}</span>
-      <img src={I.icChevronDown} width={14} height={14} alt="" />
-      <select value={value} onChange={(e) => onChange(e.target.value as T)} aria-label={current.label.split(':')[0]}>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div className={`fsel ${open ? 'open' : ''} ${value !== options[0].value ? 'changed' : ''}`} ref={ref}>
+      <button type="button" className="filter-btn" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <span>{current.label}</span>
+        <img src={I.icChevronDown} width={14} height={14} alt="" />
+      </button>
+      {open && (
+        <ul className="fsel-menu" role="listbox" aria-label={prefix || 'Filter'}>
+          {options.map((o) => (
+            <li key={o.value}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={o.value === value}
+                className={o.value === value ? 'selected' : ''}
+                onClick={() => {
+                  onChange(o.value);
+                  setOpen(false);
+                }}
+              >
+                {(() => {
+                  const t = prefix && o.label.startsWith(prefix + ':') ? o.label.slice(prefix.length + 1).trim() : o.label;
+                  return t.charAt(0).toUpperCase() + t.slice(1);
+                })()}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

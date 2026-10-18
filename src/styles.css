@@ -2482,3 +2482,49 @@ button.kpi {
   padding: 0;
   align-self: center;
 }
+/* custom filter dropdown */
+.fsel {
+  position: relative;
+}
+.fsel.open .filter-btn,
+.fsel.changed .filter-btn {
+  background: var(--soft-light);
+}
+.fsel-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 30;
+  min-width: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+.fsel-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  white-space: nowrap;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.fsel-menu button:hover {
+  background: var(--row-hover);
+}
+.fsel-menu button.selected {
+  font-weight: 700;
+  color: var(--forest);
+  background: var(--table-head);
+}
+.journal-toolbar .sync-note {
+  margin-left: -16px;
+}
