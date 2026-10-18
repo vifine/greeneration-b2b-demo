@@ -138,6 +138,7 @@ export function Balances() {
       </div>
 
       <div className="journal-toolbar">
+        <p className="sync-note">Balances from QuickBooks · synced 15:05</p>
         <div className="grow" />
         <div className="journal-filters">
           <SearchBox value={q} onChange={setQ} placeholder="Search client" className="journal-search" />
@@ -149,8 +150,6 @@ export function Balances() {
           </button>
         </div>
       </div>
-      <p className="sync-note">Balances from QuickBooks · synced 15:05</p>
-
       <div className="table bal-table">
         <div className="tr th">
           <span className="b-client">Client</span>
