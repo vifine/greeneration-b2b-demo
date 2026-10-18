@@ -1,0 +1,64 @@
+import type { Availability, Category, Pack, ProductGroup } from './types';
+import { CATALOG, PRODUCT_IMAGES } from './catalog.generated';
+import peaPunnet from '../assets/photos/p0.png';
+import arugulaPunnet from '../assets/photos/p1.png';
+import peaCut from '../assets/photos/p2.png';
+import radishCut from '../assets/photos/p3.png';
+
+export { CATALOG };
+
+export const CATEGORIES: Category[] = ['Microgreens', 'Specialty greens', 'Edible flowers'];
+
+/** Product photos from the design file, used for the line tables. */
+const LOCAL_PHOTOS: Record<string, string> = {
+  MP101: peaPunnet,
+  MP103: arugulaPunnet,
+  MC101: peaCut,
+  MC105: radishCut,
+};
+
+const BY_SKU = new Map<string, { group: ProductGroup; pack: Pack }>();
+for (const group of CATALOG) for (const pack of group.packs) BY_SKU.set(pack.sku, { group, pack });
+
+export function findPack(sku: string) {
+  return BY_SKU.get(sku);
+}
+
+/** Photo for a line in request / order tables. Falls back to the group photo, then to a placeholder. */
+export function lineImage(sku: string | null): string | undefined {
+  if (!sku) return undefined;
+  const base = sku.replace(/-C$/, '');
+  if (LOCAL_PHOTOS[base]) return LOCAL_PHOTOS[base];
+  if (PRODUCT_IMAGES[base]) return PRODUCT_IMAGES[base];
+  return BY_SKU.get(sku)?.group.image;
+}
+
+function hash(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+/** Fictional availability for the next delivery day. Deterministic per SKU. */
+const FIXED: Record<string, Availability> = {
+  MP101: { kind: 'in' },
+  MC101: { kind: 'in' },
+  MP110: { kind: 'low', left: 6 },
+  MC110: { kind: 'in' },
+};
+
+export function availability(pack: Pack): Availability {
+  if (pack.kind === 'custom') return { kind: 'tbc' };
+  if (FIXED[pack.sku]) return FIXED[pack.sku];
+  const h = hash(pack.sku) % 100;
+  if (h < 7) return { kind: 'out' };
+  if (h < 18) return { kind: 'low', left: 3 + (h % 9) };
+  return { kind: 'in' };
+}
+
+export function packChip(kind: Pack['kind']): 'Punnet' | 'Cut' | 'Flowers' | 'Leaves' {
+  if (kind === 'punnet') return 'Punnet';
+  if (kind === 'cut' || kind === 'custom') return 'Cut';
+  if (kind === 'flowers') return 'Flowers';
+  return 'Leaves';
+}

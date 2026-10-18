@@ -1,0 +1,728 @@
+// Generated from the product catalog (sku, name, category, pack, base price only).
+// Availability is fictional demo data. Do not edit by hand.
+import type { ProductGroup } from './types';
+
+export const PRODUCT_IMAGES: Record<string, string> = {
+  "F102": "https://static.tildacdn.one/stor6131-3631-4937-b666-613539663035/e67e8ed1bc2a4c6c469d1ea49c55dc0c.png",
+  "F103": "https://static.tildacdn.one/stor3335-3232-4531-b964-396365376539/e379c01d8135be56f02091a083f07d28.png",
+  "F104": "https://static.tildacdn.one/stor3830-3562-4264-b066-323866623931/2065e00e1210c37e351e19d2a160a916.png",
+  "F105": "https://static.tildacdn.one/stor3264-6330-4237-a534-383262646463/502d261e31b7a0a0547130d8ec4fe0f6.png",
+  "F106": "https://static.tildacdn.one/stor3863-6436-4930-a635-346637666233/c1770a108b8d19d87b1dc4766e6ac06d.png",
+  "F107": "https://static.tildacdn.one/stor6239-3238-4330-b735-393734316661/af7fc9c5907703cbdf136345dd60be0e.png",
+  "F108": "https://static.tildacdn.one/stor6164-3934-4038-a537-656432353530/ff674a4220ce3d0ec79e4c93b65132af.png",
+  "F109": "https://static.tildacdn.one/stor3664-6661-4164-a438-336537626661/f57953afd440103889ad5b2cbc697e2b.png",
+  "F110": "https://static.tildacdn.one/stor3132-3236-4930-b439-656436666232/77d52be1c8444af6c9a5249a6e6b97bc.png",
+  "F111": "https://static.tildacdn.one/stor3664-6537-4862-a161-383434303132/c2b66ee5fd13dbbe467c0c3f870647bf.png",
+  "F112": "https://static.tildacdn.one/stor3336-3164-4238-a431-383064313965/edd1a874fb40286098a68eea70a16b22.png",
+  "F113": "https://static.tildacdn.one/stor3663-6334-4333-b335-393532383731/ee20d3526b25ff1b67149f9e3ca7cd5b.png",
+  "F122": "https://static.tildacdn.one/stor6538-3861-4437-b831-376137653366/45fddffdbc9234f0994191a3ca86bd87.png",
+  "F123": "https://static.tildacdn.one/stor3534-3766-4433-b030-616361363865/2ffc6c05e24fcd0f134c9747c5d3ba3d.png",
+  "F124": "https://static.tildacdn.one/stor3734-6432-4166-a239-656331653539/2167b0943cb1c53e1e55ce989ebaa8b0.png",
+  "F125": "https://static.tildacdn.one/stor6135-6439-4132-b236-623334383266/d9f59fb466f5ce780cdf6c3735cfd2db.png",
+  "F126": "https://static.tildacdn.one/stor3639-3131-4361-a266-373137666661/11f470593d7458b3cd138116beffc125.png",
+  "F128": "https://static.tildacdn.one/stor3764-3435-4331-b130-383334313335/af426156f932faa9bb6f7f3475f6f247.png",
+  "F129": "https://static.tildacdn.one/stor3633-3439-4939-a633-353261313262/527b71912ce733b76f00feefea0522de.png",
+  "F130": "https://static.tildacdn.one/stor3234-3763-4362-b331-323037383761/4cb5e760feeb9cf8cfb973b09f4ac6e4.png",
+  "F132": "https://static.tildacdn.one/stor3837-3965-4365-b334-393837376437/5abb034e0bf475207a00a7ced4d17fa0.png",
+  "F133": "https://static.tildacdn.one/stor6434-6464-4631-a338-613962646333/4be1dbfd2f2b17717aa454cb85f2955f.png",
+  "F135": "https://static.tildacdn.one/stor3264-6535-4337-a663-333066313833/b4c391674c5d013593002833343d9d47.png",
+  "F136": "https://static.tildacdn.one/stor3836-3861-4839-b239-623061626532/8e518ab994baa249a4ee8967bef2b8cf.png",
+  "F137": "https://static.tildacdn.one/stor3664-3437-4661-b837-623833346337/25849c1ab48b75072143980790d9d709.png",
+  "F138": "https://static.tildacdn.one/stor6436-3462-4463-b033-373435336432/16d813688034d8cd12563864f8b86980.png",
+  "F139": "https://static.tildacdn.one/stor6564-3436-4131-b832-663336323637/0d5ed390e394c317e9aa1878aa1f5c60.png",
+  "F140": "https://static.tildacdn.one/stor6335-6262-4262-b964-646664346135/f6dc194e4d7365bac9ae5a1599ebf447.png",
+  "F141": "https://static.tildacdn.one/stor3562-6537-4131-b232-336338633865/e1bea1ae94d021ed00707bd85c503100.png",
+  "F147": "https://static.tildacdn.one/stor3238-6438-4332-a631-663363376336/d7e15801ef48d79c7977d883b5544f05.png",
+  "F148": "https://static.tildacdn.one/stor3031-6461-4239-a434-336664633664/8bcfe7960674b549e0bcee6fa7287452.png",
+  "MC101": "https://static.tildacdn.one/stor3630-3863-4131-a462-356261633038/81256160.png",
+  "MC102": "https://static.tildacdn.one/stor6261-3536-4636-a666-643261613361/44619140.jpg",
+  "MC103": "https://static.tildacdn.one/stor3432-3836-4637-b032-356365363038/44330021.png",
+  "MC104": "https://static.tildacdn.one/stor6163-3138-4136-b932-623031303331/24391950.jpg",
+  "MC105": "https://static.tildacdn.one/stor6566-3662-4132-b834-666366326164/97706010.jpg",
+  "MC106": "https://static.tildacdn.one/stor6432-3836-4637-a163-653435643162/20472035.jpg",
+  "MC107": "https://static.tildacdn.one/stor6531-6437-4330-b432-313333333038/76123421.jpg",
+  "MC108": "https://static.tildacdn.one/stor3439-3534-4934-b061-643463376332/91699983.jpg",
+  "MC109": "https://static.tildacdn.one/stor6436-6239-4437-a439-616334663032/54447649.jpg",
+  "MC110": "https://static.tildacdn.one/stor3138-3665-4165-a361-633662623165/25280941.jpg",
+  "MC111": "https://static.tildacdn.one/stor3533-6663-4436-a462-373933343966/66485522.jpg",
+  "MC112": "https://static.tildacdn.one/stor6135-3832-4539-a435-396564313735/73286918.jpg",
+  "MC113": "https://static.tildacdn.one/stor3861-6162-4936-a562-313261613664/32354085.jpg",
+  "MC114": "https://static.tildacdn.one/stor6238-6661-4439-a635-396435333164/59414767.jpg",
+  "MC115": "https://static.tildacdn.one/stor6561-3136-4862-a266-633536353636/21942057.jpg",
+  "MC116": "https://static.tildacdn.one/stor3066-6231-4061-b234-316634633664/78589765.jpg",
+  "MC117": "https://static.tildacdn.one/stor3731-3231-4766-b936-646336353637/75460765.png",
+  "MP101": "https://static.tildacdn.one/stor6437-3564-4632-b663-646539303763/9db019759ccd2a741216faeca5ebfcb2.png",
+  "MP102": "https://static.tildacdn.one/stor3666-3763-4166-a639-383762393939/12d8f6b79cafe1d5de2f5fcae468120a.png",
+  "MP103": "https://static.tildacdn.one/stor6663-3966-4337-a238-626362333433/70e0355c3aa2ab962b2bb85ad2bc55f6.png",
+  "MP104": "https://static.tildacdn.one/stor6336-3639-4163-a431-613530373439/0ea0b9075fd577de24787725e16a89cf.png",
+  "MP105": "https://static.tildacdn.one/stor3237-3364-4863-b236-333461303032/755407ff710aa085d0bbe6ba58daeacf.png",
+  "MP106": "https://static.tildacdn.one/stor6564-3464-4834-b764-383366326231/f25563a86f34e1c43d54d3c117a67501.png",
+  "MP107": "https://static.tildacdn.one/stor6637-3962-4931-b661-383835393765/a3fdb3c2f8cd9df83c73ae2c239dcba2.png",
+  "MP108": "https://static.tildacdn.one/stor3165-6161-4637-a139-636361626363/ccbd050c932d49279c8ddfee8957964e.png",
+  "MP109": "https://static.tildacdn.one/stor3136-3431-4735-a563-656132323032/11e65e7128eeb07fc41325392453a791.png",
+  "MP110": "https://static.tildacdn.one/stor3632-6132-4563-a336-346530373738/2d4d21c0bf0f1ef25235d752241a0273.png",
+  "MP111": "https://static.tildacdn.one/stor6635-6337-4463-a130-656331663265/5d52f0716bd4c838155137813d89d996.png",
+  "MP113": "https://static.tildacdn.one/stor6334-3936-4035-b264-613366366434/298f2b0a67f239f8e797f0d80fe5057f.png",
+  "MP114": "https://static.tildacdn.one/stor3833-6230-4161-a437-323236313964/275a915e06ac936f8e6e5f7b74b1eef6.png",
+  "MP115": "https://static.tildacdn.one/stor6666-3163-4261-b633-663262636330/344d1ebbfb43e0d1c146111364f53c88.png",
+  "MP116": "https://static.tildacdn.one/stor3966-3161-4835-b135-326233636132/afe4620453965c4fc8f22a0d7047ad32.png",
+  "MP117": "https://static.tildacdn.one/stor3763-3236-4230-b139-323131333733/e20853485588fe52bc1ec06d73f7bc35.png",
+  "S101": "https://static.tildacdn.one/stor3462-6532-4461-b034-386463653763/e9b34e5c47a34acc1ca786d351dd46f1.png",
+  "S102": "https://static.tildacdn.one/stor3563-6235-4566-b630-313133353264/f8e2af2b654a04f679289e70f8f4dab5.png",
+  "S103": "https://static.tildacdn.one/stor3061-3431-4466-b566-376535633035/b35209b8b0a577232f48d8340c0a8601.png",
+  "S104": "https://static.tildacdn.one/stor3937-3232-4138-b837-313438323036/d504e63ffc89f90eb572a0e56314c258.png",
+  "S105": "https://static.tildacdn.one/stor3061-3633-4661-b633-663837366462/413107fc68c122cda30498b8afcf287d.png",
+  "S106": "https://static.tildacdn.one/stor3264-3532-4636-b563-333036663034/fc7cd9ea29227f71372fdebddcd386fd.png",
+  "S107": "https://static.tildacdn.one/stor3132-6331-4863-b234-356233336130/9871530680bcb5e3a6935b5984c9ab04.png",
+  "S108": "https://static.tildacdn.one/stor3839-6561-4133-b765-323265663566/ad0235e9c5930241cc1c27959491c61d.png",
+  "S109": "https://static.tildacdn.one/stor3336-3164-4532-a230-633961333638/bbf17401caa68fef587f4c07f146f315.png",
+  "S113": "https://static.tildacdn.one/stor6363-6266-4134-b832-303433393932/bcf491f527a3f5d819d7eac52a8cfac1.png",
+  "S114": "https://static.tildacdn.one/stor6533-3562-4430-b436-666363653734/185707f44b79c1989a60a407183c90be.png",
+  "S115": "https://static.tildacdn.one/stor6131-6337-4165-a666-343966616161/7a77ca9b2726573e1316ad8e260cf633.png",
+  "S116": "https://static.tildacdn.one/stor3831-3366-4131-b463-393730643736/4a02e3a6820623b4687f4b2934ab4029.png",
+  "S117": "https://static.tildacdn.one/stor3264-3532-4636-b563-333036663034/fc7cd9ea29227f71372fdebddcd386fd.png",
+  "S118": "https://static.tildacdn.one/stor3264-3532-4636-b563-333036663034/fc7cd9ea29227f71372fdebddcd386fd.png",
+  "S123": "https://static.tildacdn.one/stor3831-3366-4131-b463-393730643736/4a02e3a6820623b4687f4b2934ab4029.png",
+  "S127": "https://static.tildacdn.one/stor6563-3031-4836-b938-633230653666/c86fa44cad025699ddbbb43fcad70517.png",
+  "S130": "https://static.tildacdn.one/stor3333-6562-4237-b035-393133643263/a1e88089f08f1bff901513717a629df3.png",
+  "S131": "https://static.tildacdn.one/stor3062-3837-4435-a566-633739626463/705106f6e52f8cc6020d826cddaec477.png",
+  "TR158": "https://static.tildacdn.one/stor6637-6236-4436-b362-383966643061/66f12710518e58000b552bbf3e4c7e64.png",
+  "TR159": "https://static.tildacdn.one/stor6438-3132-4862-a630-303931643430/709774387c82987154fc00b5422e9511.png"
+};
+
+export const CATALOG: ProductGroup[] = [
+  {
+    id: "mi-pea-shoots",
+    name: "Pea Shoots",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor6437-3564-4632-b663-646539303763/9db019759ccd2a741216faeca5ebfcb2.png",
+    packs: [
+      { sku: "MP101", label: "Punnet", kind: 'punnet', price: 3.53 },
+      { sku: "MC101", label: "Cut 30 g", kind: 'cut', price: 20.0, grams: 30 },
+      { sku: "MC101-C", label: "Custom weight", kind: 'custom', price: 6.67 },
+    ],
+  },
+  {
+    id: "mi-sorrel-red-vein",
+    name: "Sorrel Red Vein",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor3632-6132-4563-a336-346530373738/2d4d21c0bf0f1ef25235d752241a0273.png",
+    packs: [
+      { sku: "MP110", label: "Punnet", kind: 'punnet', price: 3.53 },
+      { sku: "MC110", label: "Cut 20 g", kind: 'cut', price: 28.24, grams: 20 },
+      { sku: "MC110-C", label: "Custom weight", kind: 'custom', price: 14.12 },
+    ],
+  },
+  {
+    id: "mi-coriander",
+    name: "Coriander",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor6336-3639-4163-a431-613530373439/0ea0b9075fd577de24787725e16a89cf.png",
+    packs: [
+      { sku: "MP104", label: "Punnet", kind: 'punnet', price: 3.53 },
+      { sku: "MC104", label: "Cut 20 g", kind: 'cut', price: 20.0, grams: 20 },
+      { sku: "MC104-C", label: "Custom weight", kind: 'custom', price: 10.0 },
+    ],
+  },
+  {
+    id: "mi-arugula",
+    name: "Arugula",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor6663-3966-4337-a238-626362333433/70e0355c3aa2ab962b2bb85ad2bc55f6.png",
+    packs: [
+      { sku: "MP103", label: "Punnet", kind: 'punnet', price: 3.53 },
+      { sku: "MC103", label: "Cut 30 g", kind: 'cut', price: 20.0, grams: 30 },
+      { sku: "MC103-C", label: "Custom weight", kind: 'custom', price: 6.67 },
+    ],
+  },
+  {
+    id: "mi-radish",
+    name: "Radish",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor3237-3364-4863-b236-333461303032/755407ff710aa085d0bbe6ba58daeacf.png",
+    packs: [
+      { sku: "MP105", label: "Punnet", kind: 'punnet', price: 3.53 },
+      { sku: "MC105", label: "Cut 30 g", kind: 'cut', price: 18.82, grams: 30 },
+      { sku: "MC105-C", label: "Custom weight", kind: 'custom', price: 6.27 },
+    ],
+  },
+  {
+    id: "mi-basil-genovese",
+    name: "Basil Genovese",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor3833-6230-4161-a437-323236313964/275a915e06ac936f8e6e5f7b74b1eef6.png",
+    packs: [
+      { sku: "MP114", label: "Punnet", kind: 'punnet', price: 3.53 },
+      { sku: "MC114", label: "Cut 15 g", kind: 'cut', price: 23.53, grams: 15 },
+      { sku: "MC114-C", label: "Custom weight", kind: 'custom', price: 15.69 },
+    ],
+  },
+  {
+    id: "mi-kale",
+    name: "Kale",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor3666-3763-4166-a639-383762393939/12d8f6b79cafe1d5de2f5fcae468120a.png",
+    packs: [
+      { sku: "MP102", label: "Punnet", kind: 'punnet', price: 3.53 },
+      { sku: "MC102", label: "Cut 30 g", kind: 'cut', price: 18.82, grams: 30 },
+      { sku: "MC102-C", label: "Custom weight", kind: 'custom', price: 6.27 },
+    ],
+  },
+  {
+    id: "mi-beetroot",
+    name: "Beetroot",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor3136-3431-4735-a563-656132323032/11e65e7128eeb07fc41325392453a791.png",
+    packs: [
+      { sku: "MP109", label: "Punnet", kind: 'punnet', price: 3.53 },
+      { sku: "MC109", label: "Cut 20 g", kind: 'cut', price: 25.88, grams: 20 },
+      { sku: "MC109-C", label: "Custom weight", kind: 'custom', price: 12.94 },
+    ],
+  },
+  {
+    id: "mi-borage",
+    name: "Borage",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor6334-3936-4035-b264-613366366434/298f2b0a67f239f8e797f0d80fe5057f.png",
+    packs: [
+      { sku: "MP113", label: "Punnet", kind: 'punnet', price: 3.53 },
+      { sku: "MC113", label: "Cut 30 g", kind: 'cut', price: 20.0, grams: 30 },
+      { sku: "MC113-C", label: "Custom weight", kind: 'custom', price: 6.67 },
+    ],
+  },
+  {
+    id: "mi-broccoli",
+    name: "Broccoli",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor3165-6161-4637-a139-636361626363/ccbd050c932d49279c8ddfee8957964e.png",
+    packs: [
+      { sku: "MP108", label: "Punnet", kind: 'punnet', price: 3.53 },
+      { sku: "MC108", label: "Cut 30 g", kind: 'cut', price: 18.82, grams: 30 },
+      { sku: "MC108-C", label: "Custom weight", kind: 'custom', price: 6.27 },
+    ],
+  },
+  {
+    id: "mi-chives",
+    name: "Chives",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor6635-6337-4463-a130-656331663265/5d52f0716bd4c838155137813d89d996.png",
+    packs: [
+      { sku: "MP111", label: "Punnet", kind: 'punnet', price: 3.53 },
+      { sku: "MC111", label: "Cut 15 g", kind: 'cut', price: 20.0, grams: 15 },
+      { sku: "MC111-C", label: "Custom weight", kind: 'custom', price: 13.33 },
+    ],
+  },
+  {
+    id: "mi-garden-cress",
+    name: "Garden Cress",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor3966-3161-4835-b135-326233636132/afe4620453965c4fc8f22a0d7047ad32.png",
+    packs: [
+      { sku: "MP116", label: "Punnet", kind: 'punnet', price: 3.53 },
+      { sku: "MC116", label: "Cut 30 g", kind: 'cut', price: 23.53, grams: 30 },
+      { sku: "MC116-C", label: "Custom weight", kind: 'custom', price: 7.84 },
+    ],
+  },
+  {
+    id: "mi-kohlrabi-purple",
+    name: "Kohlrabi Purple",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor3763-3236-4230-b139-323131333733/e20853485588fe52bc1ec06d73f7bc35.png",
+    packs: [
+      { sku: "MP117", label: "Punnet", kind: 'punnet', price: 3.53 },
+      { sku: "MC117", label: "Cut 30 g", kind: 'cut', price: 23.53, grams: 30 },
+      { sku: "MC117-C", label: "Custom weight", kind: 'custom', price: 7.84 },
+    ],
+  },
+  {
+    id: "mi-melissa",
+    name: "Melissa",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor6666-3163-4261-b633-663262636330/344d1ebbfb43e0d1c146111364f53c88.png",
+    packs: [
+      { sku: "MP115", label: "Punnet", kind: 'punnet', price: 3.53 },
+      { sku: "MC115", label: "Cut 20 g", kind: 'cut', price: 29.41, grams: 20 },
+      { sku: "MC115-C", label: "Custom weight", kind: 'custom', price: 14.7 },
+    ],
+  },
+  {
+    id: "mi-mizuna",
+    name: "Mizuna",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor6637-3962-4931-b661-383835393765/a3fdb3c2f8cd9df83c73ae2c239dcba2.png",
+    packs: [
+      { sku: "MP107", label: "Punnet", kind: 'punnet', price: 3.53 },
+    ],
+  },
+  {
+    id: "mi-mizuna-red",
+    name: "Mizuna Red",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor6531-6437-4330-b432-313333333038/76123421.jpg",
+    packs: [
+      { sku: "MC107", label: "Cut 20 g", kind: 'cut', price: 23.53, grams: 20 },
+      { sku: "MC107-C", label: "Custom weight", kind: 'custom', price: 11.77 },
+    ],
+  },
+  {
+    id: "mi-mustard",
+    name: "Mustard",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor6564-3464-4834-b764-383366326231/f25563a86f34e1c43d54d3c117a67501.png",
+    packs: [
+      { sku: "MP106", label: "Punnet", kind: 'punnet', price: 3.53 },
+    ],
+  },
+  {
+    id: "mi-mustard-green",
+    name: "Mustard Green",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor6432-3836-4637-a163-653435643162/20472035.jpg",
+    packs: [
+      { sku: "MC106", label: "Cut 30 g", kind: 'cut', price: 31.76, grams: 30 },
+      { sku: "MC106-C", label: "Custom weight", kind: 'custom', price: 10.59 },
+    ],
+  },
+  {
+    id: "mi-shiso",
+    name: "Shiso",
+    category: "Microgreens",
+    image: "https://static.tildacdn.one/stor6135-3832-4539-a435-396564313735/73286918.jpg",
+    packs: [
+      { sku: "MC112", label: "Cut 10 g", kind: 'cut', price: 20.0, grams: 10 },
+      { sku: "MC112-C", label: "Custom weight", kind: 'custom', price: 20.0 },
+    ],
+  },
+  {
+    id: "sp-ice-plant",
+    name: "Ice Plant",
+    category: "Specialty greens",
+    image: "https://static.tildacdn.one/stor6131-6337-4165-a666-343966616161/7a77ca9b2726573e1316ad8e260cf633.png",
+    packs: [
+      { sku: "S115", label: "10 leaves", kind: 'leaves', price: 40.0 },
+    ],
+  },
+  {
+    id: "sp-kitsune-leaf",
+    name: "Kitsune Leaf",
+    category: "Specialty greens",
+    image: "https://static.tildacdn.one/stor6363-6266-4134-b832-303433393932/bcf491f527a3f5d819d7eac52a8cfac1.png",
+    packs: [
+      { sku: "S113", label: "10 leaves", kind: 'leaves', price: 50.59 },
+    ],
+  },
+  {
+    id: "sp-maple-leaf-purple",
+    name: "Maple Leaf Purple",
+    category: "Specialty greens",
+    image: "https://static.tildacdn.one/stor6533-3562-4430-b436-666363653734/185707f44b79c1989a60a407183c90be.png",
+    packs: [
+      { sku: "S114", label: "10 leaves", kind: 'leaves', price: 44.71 },
+    ],
+  },
+  {
+    id: "sp-nasturtium-leaf",
+    name: "Nasturtium Leaf",
+    category: "Specialty greens",
+    image: "https://static.tildacdn.one/stor3264-3532-4636-b563-333036663034/fc7cd9ea29227f71372fdebddcd386fd.png",
+    packs: [
+      { sku: "S106", label: "45 leaves", kind: 'leaves', price: 25.88 },
+    ],
+  },
+  {
+    id: "sp-nasturtium-leaf-large",
+    name: "Nasturtium Leaf Large",
+    category: "Specialty greens",
+    image: "https://static.tildacdn.one/stor3264-3532-4636-b563-333036663034/fc7cd9ea29227f71372fdebddcd386fd.png",
+    packs: [
+      { sku: "S118", label: "45 leaves", kind: 'leaves', price: 25.88 },
+    ],
+  },
+  {
+    id: "sp-nasturtium-leaf-medium",
+    name: "Nasturtium Leaf Medium",
+    category: "Specialty greens",
+    image: "https://static.tildacdn.one/stor3264-3532-4636-b563-333036663034/fc7cd9ea29227f71372fdebddcd386fd.png",
+    packs: [
+      { sku: "S117", label: "45 leaves", kind: 'leaves', price: 25.88 },
+    ],
+  },
+  {
+    id: "sp-oxalis-butterfly-leaf",
+    name: "Oxalis Butterfly Leaf",
+    category: "Specialty greens",
+    image: "https://static.tildacdn.one/stor3336-3164-4532-a230-633961333638/bbf17401caa68fef587f4c07f146f315.png",
+    packs: [
+      { sku: "S109", label: "15 leaves", kind: 'leaves', price: 40.0 },
+    ],
+  },
+  {
+    id: "sp-oxalis-green-leaf",
+    name: "Oxalis Green Leaf",
+    category: "Specialty greens",
+    image: "https://static.tildacdn.one/stor3333-6562-4237-b035-393133643263/a1e88089f08f1bff901513717a629df3.png",
+    packs: [
+      { sku: "S130", label: "8 g", kind: 'leaves', price: 29.41, grams: 8 },
+    ],
+  },
+  {
+    id: "sp-oxalis-mix",
+    name: "Oxalis Mix",
+    category: "Specialty greens",
+    image: "https://static.tildacdn.one/stor3062-3837-4435-a566-633739626463/705106f6e52f8cc6020d826cddaec477.png",
+    packs: [
+      { sku: "S131", label: "8 g", kind: 'leaves', price: 23.53, grams: 8 },
+    ],
+  },
+  {
+    id: "sp-oxalis-purple-leaf",
+    name: "Oxalis Purple Leaf",
+    category: "Specialty greens",
+    image: "https://static.tildacdn.one/stor3132-6331-4863-b234-356233336130/9871530680bcb5e3a6935b5984c9ab04.png",
+    packs: [
+      { sku: "S107", label: "11 g", kind: 'leaves', price: 29.41, grams: 11 },
+    ],
+  },
+  {
+    id: "sp-shiso-green-leaf",
+    name: "Shiso Green Leaf",
+    category: "Specialty greens",
+    image: "https://static.tildacdn.one/stor3462-6532-4461-b034-386463653763/e9b34e5c47a34acc1ca786d351dd46f1.png",
+    packs: [
+      { sku: "S101", label: "20 leaves", kind: 'leaves', price: 27.06 },
+    ],
+  },
+  {
+    id: "sp-shiso-green-leaf-big",
+    name: "Shiso Green Leaf Big",
+    category: "Specialty greens",
+    image: "https://static.tildacdn.one/stor3831-3366-4131-b463-393730643736/4a02e3a6820623b4687f4b2934ab4029.png",
+    packs: [
+      { sku: "S123", label: "20 leaves", kind: 'leaves', price: 27.06 },
+    ],
+  },
+  {
+    id: "sp-shiso-green-leaf-small",
+    name: "Shiso Green Leaf Small",
+    category: "Specialty greens",
+    image: "https://static.tildacdn.one/stor3831-3366-4131-b463-393730643736/4a02e3a6820623b4687f4b2934ab4029.png",
+    packs: [
+      { sku: "S116", label: "20 leaves", kind: 'leaves', price: 27.06 },
+    ],
+  },
+  {
+    id: "sp-shiso-red-leaf",
+    name: "Shiso Red Leaf",
+    category: "Specialty greens",
+    image: "https://static.tildacdn.one/stor3563-6235-4566-b630-313133353264/f8e2af2b654a04f679289e70f8f4dab5.png",
+    packs: [
+      { sku: "S102", label: "20 leaves", kind: 'leaves', price: 27.06 },
+    ],
+  },
+  {
+    id: "sp-tagetes-leaf",
+    name: "Tagetes Leaf",
+    category: "Specialty greens",
+    image: "https://static.tildacdn.one/stor3061-3431-4466-b566-376535633035/b35209b8b0a577232f48d8340c0a8601.png",
+    packs: [
+      { sku: "S103", label: "30 leaves", kind: 'leaves', price: 37.65 },
+    ],
+  },
+  {
+    id: "sp-verbena-leaf",
+    name: "Verbena Leaf",
+    category: "Specialty greens",
+    image: "https://static.tildacdn.one/stor3937-3232-4138-b837-313438323036/d504e63ffc89f90eb572a0e56314c258.png",
+    packs: [
+      { sku: "S104", label: "20 leaves", kind: 'leaves', price: 30.59 },
+    ],
+  },
+  {
+    id: "sp-watercress-leaf",
+    name: "Watercress Leaf",
+    category: "Specialty greens",
+    image: "https://static.tildacdn.one/stor3061-3633-4661-b633-663837366462/413107fc68c122cda30498b8afcf287d.png",
+    packs: [
+      { sku: "S105", label: "30 leaves", kind: 'leaves', price: 29.41 },
+    ],
+  },
+  {
+    id: "ed-balsamina",
+    name: "Balsamina",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3132-3236-4930-b439-656436666232/77d52be1c8444af6c9a5249a6e6b97bc.png",
+    packs: [
+      { sku: "F110", label: "20 flowers", kind: 'flowers', price: 35.29 },
+    ],
+  },
+  {
+    id: "ed-begonia",
+    name: "Begonia",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3664-6661-4164-a438-336537626661/f57953afd440103889ad5b2cbc697e2b.png",
+    packs: [
+      { sku: "F109", label: "20 flowers", kind: 'flowers', price: 37.65 },
+    ],
+  },
+  {
+    id: "ed-begonia-white",
+    name: "Begonia White",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3664-3437-4661-b837-623833346337/25849c1ab48b75072143980790d9d709.png",
+    packs: [
+      { sku: "F137", label: "20 flowers", kind: 'flowers', price: 37.65 },
+    ],
+  },
+  {
+    id: "ed-borage",
+    name: "Borage",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3335-3232-4531-b964-396365376539/e379c01d8135be56f02091a083f07d28.png",
+    packs: [
+      { sku: "F103", label: "20 flowers", kind: 'flowers', price: 27.06 },
+    ],
+  },
+  {
+    id: "ed-buzz-buttons",
+    name: "Buzz Buttons",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor6164-3934-4038-a537-656432353530/ff674a4220ce3d0ec79e4c93b65132af.png",
+    packs: [
+      { sku: "F108", label: "20 flowers", kind: 'flowers', price: 32.94 },
+    ],
+  },
+  {
+    id: "ed-calendula",
+    name: "Calendula",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3336-3164-4238-a431-383064313965/edd1a874fb40286098a68eea70a16b22.png",
+    packs: [
+      { sku: "F112", label: "12 flowers", kind: 'flowers', price: 47.06 },
+    ],
+  },
+  {
+    id: "ed-cornflower",
+    name: "Cornflower",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor6239-3238-4330-b735-393734316661/af7fc9c5907703cbdf136345dd60be0e.png",
+    packs: [
+      { sku: "F107", label: "10 flowers", kind: 'flowers', price: 28.24 },
+    ],
+  },
+  {
+    id: "ed-cornflower-blue",
+    name: "Cornflower Blue",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3734-6432-4166-a239-656331653539/2167b0943cb1c53e1e55ce989ebaa8b0.png",
+    packs: [
+      { sku: "F124", label: "10 flowers", kind: 'flowers', price: 28.24 },
+    ],
+  },
+  {
+    id: "ed-cornflower-pink",
+    name: "Cornflower Pink",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3264-6535-4337-a663-333066313833/b4c391674c5d013593002833343d9d47.png",
+    packs: [
+      { sku: "F135", label: "10 flowers", kind: 'flowers', price: 28.24 },
+    ],
+  },
+  {
+    id: "ed-cornflower-purple",
+    name: "Cornflower Purple",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3836-3861-4839-b239-623061626532/8e518ab994baa249a4ee8967bef2b8cf.png",
+    packs: [
+      { sku: "F136", label: "10 flowers", kind: 'flowers', price: 28.24 },
+    ],
+  },
+  {
+    id: "ed-cornflower-white",
+    name: "Cornflower White",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3534-3766-4433-b030-616361363865/2ffc6c05e24fcd0f134c9747c5d3ba3d.png",
+    packs: [
+      { sku: "F123", label: "10 flowers", kind: 'flowers', price: 28.24 },
+    ],
+  },
+  {
+    id: "ed-dianthus-mix",
+    name: "Dianthus Mix",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor6131-3631-4937-b666-613539663035/e67e8ed1bc2a4c6c469d1ea49c55dc0c.png",
+    packs: [
+      { sku: "F102", label: "12 flowers", kind: 'flowers', price: 21.18 },
+    ],
+  },
+  {
+    id: "ed-dianthus-mix-big",
+    name: "Dianthus mix Big",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor6335-6262-4262-b964-646664346135/f6dc194e4d7365bac9ae5a1599ebf447.png",
+    packs: [
+      { sku: "F140", label: "12 big flowers", kind: 'flowers', price: 21.18 },
+    ],
+  },
+  {
+    id: "ed-dianthus-mix-small",
+    name: "Dianthus mix Small",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor6564-3436-4131-b832-663336323637/0d5ed390e394c317e9aa1878aa1f5c60.png",
+    packs: [
+      { sku: "F139", label: "20 small flowers", kind: 'flowers', price: 31.76 },
+    ],
+  },
+  {
+    id: "ed-dianthus-pink",
+    name: "Dianthus Pink",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor6434-6464-4631-a338-613962646333/4be1dbfd2f2b17717aa454cb85f2955f.png",
+    packs: [
+      { sku: "F133", label: "12 flowers", kind: 'flowers', price: 21.18 },
+    ],
+  },
+  {
+    id: "ed-dianthus-white",
+    name: "Dianthus White",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3837-3965-4365-b334-393837376437/5abb034e0bf475207a00a7ced4d17fa0.png",
+    packs: [
+      { sku: "F132", label: "12 flowers", kind: 'flowers', price: 21.18 },
+    ],
+  },
+  {
+    id: "ed-egyptian-star",
+    name: "Egyptian Star",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3639-3131-4361-a266-373137666661/11f470593d7458b3cd138116beffc125.png",
+    packs: [
+      { sku: "F126", label: "20 flowers", kind: 'flowers', price: 25.89 },
+    ],
+  },
+  {
+    id: "ed-egyptian-star-mix",
+    name: "Egyptian Star Mix",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3562-6537-4131-b232-336338633865/e1bea1ae94d021ed00707bd85c503100.png",
+    packs: [
+      { sku: "F141", label: "20 flowers", kind: 'flowers', price: 25.89 },
+    ],
+  },
+  {
+    id: "ed-marigold-french",
+    name: "Marigold French",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3264-6330-4237-a534-383262646463/502d261e31b7a0a0547130d8ec4fe0f6.png",
+    packs: [
+      { sku: "F105", label: "20 flowers", kind: 'flowers', price: 28.24 },
+    ],
+  },
+  {
+    id: "ed-marigold-gem",
+    name: "Marigold Gem",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3830-3562-4264-b066-323866623931/2065e00e1210c37e351e19d2a160a916.png",
+    packs: [
+      { sku: "F104", label: "20 flowers", kind: 'flowers', price: 30.59 },
+    ],
+  },
+  {
+    id: "ed-nasturtium-flowers",
+    name: "Nasturtium Flowers",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3863-6436-4930-a635-346637666233/c1770a108b8d19d87b1dc4766e6ac06d.png",
+    packs: [
+      { sku: "F106", label: "10 flowers", kind: 'flowers', price: 30.59 },
+    ],
+  },
+  {
+    id: "ed-sweet-alyssum",
+    name: "Sweet Alyssum",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3663-6334-4333-b335-393532383731/ee20d3526b25ff1b67149f9e3ca7cd5b.png",
+    packs: [
+      { sku: "F113", label: "10 flowers", kind: 'flowers', price: 25.0 },
+    ],
+  },
+  {
+    id: "ed-sweet-alyssum-purple",
+    name: "Sweet Alyssum Purple",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor6135-6439-4132-b236-623334383266/d9f59fb466f5ce780cdf6c3735cfd2db.png",
+    packs: [
+      { sku: "F125", label: "10 flowers", kind: 'flowers', price: 25.0 },
+    ],
+  },
+  {
+    id: "ed-torenia",
+    name: "Torenia",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3664-6537-4862-a161-383434303132/c2b66ee5fd13dbbe467c0c3f870647bf.png",
+    packs: [
+      { sku: "F111", label: "20 flowers", kind: 'flowers', price: 37.65 },
+    ],
+  },
+  {
+    id: "ed-verbena-flower-mix",
+    name: "Verbena Flower Mix",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor6538-3861-4437-b831-376137653366/45fddffdbc9234f0994191a3ca86bd87.png",
+    packs: [
+      { sku: "F122", label: "20 flowers", kind: 'flowers', price: 25.88 },
+    ],
+  },
+  {
+    id: "ed-verbena-flower-white",
+    name: "Verbena Flower White",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor6436-3462-4463-b033-373435336432/16d813688034d8cd12563864f8b86980.png",
+    packs: [
+      { sku: "F138", label: "20 flowers", kind: 'flowers', price: 25.88 },
+    ],
+  },
+  {
+    id: "ed-viola-purple",
+    name: "Viola Purple",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3633-3439-4939-a633-353261313262/527b71912ce733b76f00feefea0522de.png",
+    packs: [
+      { sku: "F129", label: "20 flowers", kind: 'flowers', price: 24.71 },
+    ],
+  },
+  {
+    id: "ed-viola-white",
+    name: "Viola White",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3764-3435-4331-b130-383334313335/af426156f932faa9bb6f7f3475f6f247.png",
+    packs: [
+      { sku: "F128", label: "20 flowers", kind: 'flowers', price: 24.71 },
+    ],
+  },
+  {
+    id: "ed-viola-yellow",
+    name: "Viola Yellow",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor3234-3763-4362-b331-323037383761/4cb5e760feeb9cf8cfb973b09f4ac6e4.png",
+    packs: [
+      { sku: "F130", label: "20 flowers", kind: 'flowers', price: 24.71 },
+    ],
+  },
+  {
+    id: "ed-zucchini-flower-female",
+    name: "Zucchini Flower Female",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor6637-6236-4436-b362-383966643061/66f12710518e58000b552bbf3e4c7e64.png",
+    packs: [
+      { sku: "TR158", label: "10 pcs", kind: 'flowers', price: 76.47 },
+    ],
+  },
+  {
+    id: "ed-zucchini-flower-male",
+    name: "Zucchini Flower Male",
+    category: "Edible flowers",
+    image: "https://static.tildacdn.one/stor6438-3132-4862-a630-303931643430/709774387c82987154fc00b5422e9511.png",
+    packs: [
+      { sku: "TR159", label: "10 pcs", kind: 'flowers', price: 64.71 },
+    ],
+  },
+];
