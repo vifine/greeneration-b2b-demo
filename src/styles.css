@@ -2681,3 +2681,9 @@ button.kpi {
 /* header cells keep the header colour */
 .tr.th > .l-base,
 .cat-cols > .c-base { color: inherit; }
+/* headers too: one- and two-line labels start on the same line */
+.tr.th,
+.cat-cols {
+  align-items: flex-start;
+}
+.line-row .l-qty .was { line-height: 20px; }
