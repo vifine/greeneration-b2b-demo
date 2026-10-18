@@ -2823,3 +2823,12 @@ input, select, button, textarea { font-family: inherit; }
 .block-summary .dlv-slot { font-size: 14px; line-height: 30px; }
 .block-checks { gap: 4px; }
 .block-checks .check-item { min-height: 24px; }
+
+/* summary and delivery as two blocks */
+.block-summary { flex: 0 0 200px; }
+.block-delivery { flex: 0 0 280px; gap: 8px; }
+.block-delivery .dlv-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; padding: 0; margin: 0; border: 0; }
+.block-delivery .dlv-wide { grid-column: span 2; }
+.block-delivery .dlv-slot { font-size: 14px; line-height: 30px; }
+.block-delivery .kv-k { font-size: 12px; color: var(--text-2); }
+.block-summary .sum-head { flex-direction: column; align-items: flex-start; gap: 2px; }

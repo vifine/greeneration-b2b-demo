@@ -225,6 +225,9 @@ export function RequestCard() {
           <span className="total-v">
             <Money v={total} bold />
           </span>
+        </section>
+        <section className="block block-soft block-delivery">
+          <b className="block-heading">Delivery</b>
           <div className="dlv-fields">
             <div className="dlv-field dlv-wide">
               <span className="kv-k">Delivery address</span>
