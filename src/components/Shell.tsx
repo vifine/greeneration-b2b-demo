@@ -100,7 +100,7 @@ export function Sidebar({ pinned }: { pinned: boolean }) {
   const subActive = (to: string) => pathname === to || pathname.startsWith(to + '/');
 
   return (
-    <div className={`sidebar-slot ${pinned ? 'pinned' : ''}`}>
+    <div className={`sidebar-slot ${pinned ? 'pinned' : ''} ${expanded ? 'expanded' : ''}`}>
       <nav
         className={`sidebar ${expanded ? 'expanded' : 'collapsed'}`}
         onMouseEnter={() => setHover(true)}

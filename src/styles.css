@@ -259,6 +259,12 @@ img {
   flex: 0 0 72px;
   position: relative;
   z-index: 50;
+  transition: width 0.18s ease, flex-basis 0.18s ease;
+}
+/* Expanded menu pushes the white content area instead of overlaying it */
+.sidebar-slot.expanded {
+  width: 240px;
+  flex-basis: 240px;
 }
 .sidebar-slot.pinned {
   width: 240px;
@@ -285,9 +291,7 @@ img {
 .sidebar.expanded {
   width: 240px;
 }
-.sidebar-slot:not(.pinned) .sidebar.expanded {
-  box-shadow: 8px 0 24px rgba(0, 0, 0, 0.18);
-}
+
 .sb-brand {
   display: flex;
   flex-direction: column;
