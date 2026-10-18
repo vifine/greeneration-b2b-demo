@@ -216,9 +216,17 @@ export function RequestCard() {
           )}
         </section>
         <section className="block block-soft block-summary">
-          <b className="block-heading">Summary</b>
+          <div className="sum-head">
+            <b className="block-heading">Summary</b>
+            <span className="sum-meta">
+              {r.lines.length} lines · {units} units
+            </span>
+          </div>
+          <span className="total-v">
+            <Money v={total} bold />
+          </span>
           <div className="dlv-fields">
-            <div className="dlv-field">
+            <div className="dlv-field dlv-wide">
               <span className="kv-k">Delivery address</span>
               <AddressPick
                 key={r.id}
@@ -233,7 +241,7 @@ export function RequestCard() {
               />
             </div>
             <div className="dlv-field">
-              <span className="kv-k">Delivery date</span>
+              <span className="kv-k">Date</span>
               <DeliveryDayPick
                 key={r.id}
                 days={deliveryDays(addr?.emirate ?? 'Dubai')}
@@ -247,24 +255,9 @@ export function RequestCard() {
               />
             </div>
             <div className="dlv-field">
-              <span className="kv-k">Slot</span>
-              <span className="dlv-slot">
-                {r.delivery.window}
-                {addr && <small> · zone {addr.zone}</small>}
-              </span>
+              <span className="kv-k">Slot · zone {addr?.zone ?? '—'}</span>
+              <span className="dlv-slot">{r.delivery.window}</span>
             </div>
-          </div>
-          <div className="total">
-            <span className="total-k">Total</span>
-            <span className="total-v"><Money v={total} bold /></span>
-          </div>
-          <div className="kv">
-            <span>Lines</span>
-            <b>{r.lines.length}</b>
-          </div>
-          <div className="kv">
-            <span>Units</span>
-            <b>{units}</b>
           </div>
         </section>
         <section className="block block-outline block-checks">

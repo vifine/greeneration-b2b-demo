@@ -2777,3 +2777,49 @@ input, select, button, textarea { font-family: inherit; }
 
 /* header rows: breathing room above the labels now that they align to the top */
 .journal .tr.th { height: auto; min-height: 40px; padding-top: 10px; padding-bottom: 10px; align-items: flex-start; }
+
+/* polish pass */
+/* journals: when the menu pushes the content, columns shrink instead of the client name collapsing */
+.journal .c-client { flex: 1 1 180px; min-width: 160px; }
+.journal .c-issue { flex: 0 1 250px; min-width: 150px; }
+.journal .c-reply { flex: 0 1 200px; min-width: 120px; }
+.journal .c-pay { flex: 0 1 220px; min-width: 150px; }
+.journal .c-received, .journal .c-for { flex-shrink: 0; }
+.journal .tr > span.two > *,
+.journal .c-pay .two > * { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.journal .c-issue .ellipsis, .journal .c-pay .two { min-width: 0; }
+.journal .c-reply { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* request header: separator between the delivery line and the address */
+.card-sub > .muted::before { content: '·'; margin-right: 6px; }
+.card-sub { gap: 6px; }
+
+/* checklist: the label stays on one line, a long detail wraps on the right */
+.check-label { white-space: nowrap; }
+.check-detail { white-space: normal; text-align: right; line-height: 18px; }
+.check-detail .ask-link { white-space: nowrap; }
+
+
+/* client card: heading and note together */
+.section-head { display: flex; flex-direction: column; gap: 4px; }
+.section-head .section-h, .section-head .section-note { margin: 0; }
+.mode-row .section-h { margin: 0 0 4px; }
+.mode-row .section-note { margin: 0; }
+
+/* AED in big KPI numbers */
+.kpi-v .aed, .glance-value .aed { font-size: 0.6em; }
+
+/* block footers: chips, links and small buttons share one height */
+.oblock-foot .btn-sm { height: 34px; }
+.oblock-foot .link-sort { white-space: nowrap; }
+
+/* compact request summary */
+.block-summary { gap: 8px; }
+.sum-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.sum-meta { font-size: 13px; color: var(--text-2); }
+.block-summary .total-v { font-size: 26px; line-height: 32px; }
+.block-summary .dlv-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; padding: 10px 0 0; margin: 2px 0 0; border-bottom: 0; }
+.block-summary .dlv-wide { grid-column: span 2; }
+.block-summary .dlv-slot { font-size: 14px; line-height: 30px; }
+.block-checks { gap: 4px; }
+.block-checks .check-item { min-height: 24px; }
