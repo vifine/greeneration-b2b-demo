@@ -15,11 +15,11 @@ const SLOTS = [
 ];
 
 export function CatalogPage() {
-  const s = useCatalogSelection();
+  const [client, setClient] = useState('verdant');
+  const s = useCatalogSelection(client);
   const { createOrder } = useStore();
   const navigate = useNavigate();
   const toast = useToast();
-  const [client, setClient] = useState('verdant');
   const [slot, setSlot] = useState(SLOTS[0].value);
   const [day, window] = slot.split('|');
 
@@ -46,7 +46,7 @@ export function CatalogPage() {
           }}
         />
       </div>
-      <CatalogList s={s} deliveryLabel={day} />
+      <CatalogList s={s} deliveryLabel={day} clientId={client} />
     </Shell>
   );
 }

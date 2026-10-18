@@ -1814,8 +1814,33 @@ button.tr:hover,
   flex: 1 1 auto;
   min-width: 0;
 }
+.c-base {
+  flex: 0 0 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--text-2);
+}
+.c-base .struck {
+  text-decoration: line-through;
+}
 .c-price {
-  flex: 0 0 220px;
+  flex: 0 0 200px;
+}
+.c-price .disc {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--forest);
+  background: var(--green-tea);
+  border-radius: 4px;
+  padding: 0 5px;
+  margin-left: 8px;
+  font-size: 12px;
+}
+.c-price small {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 .c-avail {
   flex: 0 0 170px;

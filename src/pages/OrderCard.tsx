@@ -194,6 +194,7 @@ export function OrderCard() {
 
       {modal && (
         <CatalogModal
+          clientId={o.clientId}
           title="Add lines from catalog"
           subtitle={`Order #${o.id} · ${client.name} · delivery ${o.delivery.day}`}
           deliveryLabel={o.delivery.day}

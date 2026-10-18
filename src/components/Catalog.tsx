@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { availability, CATALOG, CATEGORIES, findPack, packChip, lineImage } from '../data/catalog';
 import { fmt, line } from '../data/lines';
+import { customerPrice } from '../data/customerPrices';
 import type { Availability, Category, Line, Pack, ProductGroup } from '../data/types';
 import * as I from './icons';
 import { Btn, CheckboxField, Dot, SearchBox, Stepper, Tabs } from './ui';
@@ -9,11 +10,11 @@ import { Btn, CheckboxField, Dot, SearchBox, Stepper, Tabs } from './ui';
 
 export type Selection = Record<string, number>;
 
-export function packSum(pack: Pack, v: number) {
-  return pack.kind === 'custom' ? (pack.price * v) / 10 : pack.price * v;
+export function packSum(pack: Pack, v: number, unit = pack.price) {
+  return pack.kind === 'custom' ? (unit * v) / 10 : unit * v;
 }
 
-export function useCatalogSelection() {
+export function useCatalogSelection(clientId?: string) {
   const [sel, setSel] = useState<Selection>({});
   return useMemo(() => {
     const entries = Object.entries(sel).filter(([, v]) => v > 0);
@@ -22,7 +23,7 @@ export function useCatalogSelection() {
     for (const [sku, v] of entries) {
       const hit = findPack(sku);
       if (!hit) continue;
-      sum += packSum(hit.pack, v);
+      sum += packSum(hit.pack, v, customerPrice(clientId, hit.pack).price);
       if (hit.pack.kind === 'custom') approx = true;
     }
     return {
@@ -35,12 +36,13 @@ export function useCatalogSelection() {
       toLines: (): Line[] =>
         entries.map(([sku, v]) => {
           const pack = findPack(sku)!.pack;
+          const cp = customerPrice(clientId, pack);
           return pack.kind === 'custom'
-            ? line(sku, 1, Math.round(packSum(pack, v) * 100) / 100, 'base', 'added from catalog', v)
-            : line(sku, v, pack.price, 'base', 'added from catalog');
+            ? line(sku, 1, Math.round(packSum(pack, v, cp.price) * 100) / 100, cp.type, 'added from catalog', v)
+            : line(sku, v, cp.price, cp.type, 'added from catalog');
         }),
     };
-  }, [sel]);
+  }, [sel, clientId]);
 }
 
 export type CatalogSel = ReturnType<typeof useCatalogSelection>;
@@ -100,7 +102,7 @@ function availText(a: Availability) {
   }
 }
 
-export function CatalogList({ s, deliveryLabel = 'Tue 20 Oct' }: { s: CatalogSel; deliveryLabel?: string }) {
+export function CatalogList({ s, deliveryLabel = 'Tue 20 Oct', clientId }: { s: CatalogSel; deliveryLabel?: string; clientId?: string }) {
   const [cat, setCat] = useState<CatKey>('all');
   const [q, setQ] = useState('');
   const [inStock, setInStock] = useState(false);
@@ -160,7 +162,8 @@ export function CatalogList({ s, deliveryLabel = 'Tue 20 Oct' }: { s: CatalogSel
       <div className="cat-cols">
         <span className="c-photo" />
         <span className="c-pack">Pack</span>
-        <span className="c-price">Price, AED</span>
+        <span className="c-base">Base price, AED</span>
+        <span className="c-price">Customer price, AED</span>
         <span className="c-avail">Availability</span>
         <span className="c-qty">Qty / weight</span>
         <span className="c-sum">Sum, AED</span>
@@ -173,7 +176,7 @@ export function CatalogList({ s, deliveryLabel = 'Tue 20 Oct' }: { s: CatalogSel
               <span className="cat-group-cat">{group.category}</span>
             </div>
             {packs.map((p) => (
-              <PackRow key={p.sku} pack={p} value={s.sel[p.sku] ?? 0} onChange={(v) => s.set(p.sku, v)} />
+              <PackRow key={p.sku} pack={p} clientId={clientId} value={s.sel[p.sku] ?? 0} onChange={(v) => s.set(p.sku, v)} />
             ))}
           </section>
         ))}
@@ -183,7 +186,10 @@ export function CatalogList({ s, deliveryLabel = 'Tue 20 Oct' }: { s: CatalogSel
   );
 }
 
-function PackRow({ pack, value, onChange }: { pack: Pack; value: number; onChange: (v: number) => void }) {
+const PT = { special: { label: 'Special price', tone: 'info' as const }, last: { label: 'Last price', tone: 'success' as const }, base: { label: 'Base price', tone: 'sand' as const } };
+
+function PackRow({ pack, value, onChange, clientId }: { pack: Pack; value: number; onChange: (v: number) => void; clientId?: string }) {
+  const cp = customerPrice(clientId, pack);
   const a = availText(availability(pack));
   const custom = pack.kind === 'custom';
   const filled = value > 0;
@@ -203,9 +209,18 @@ function PackRow({ pack, value, onChange }: { pack: Pack; value: number; onChang
         <b>{pack.label}</b>
         <small>{pack.sku}</small>
       </span>
+      <span className="c-base">
+        <span className={cp.discount ? 'struck' : ''}>{custom ? `${fmt(pack.price)} / 10 g` : fmt(pack.price)}</span>
+        <small>excl. VAT</small>
+      </span>
       <span className="c-price">
-        <b>{custom ? `${fmt(pack.price)} AED / 10 g` : `${fmt(pack.price)} AED`}</b>
-        <small>{custom ? 'Price by weight · excl. VAT' : 'Base price · excl. VAT'}</small>
+        <b>
+          {custom ? `${fmt(cp.price)} / 10 g` : fmt(cp.price)}
+          {cp.discount > 0 && <em className="disc">−{cp.discount}%</em>}
+        </b>
+        <small>
+          <Dot tone={PT[cp.type].tone} /> {PT[cp.type].label}
+        </small>
       </span>
       <span className="c-avail">
         <Dot tone={a.tone} />
@@ -226,7 +241,7 @@ function PackRow({ pack, value, onChange }: { pack: Pack; value: number; onChang
           <Stepper value={value} onChange={onChange} disabled={availability(pack).kind === 'out'} />
         )}
       </span>
-      <span className={`c-sum ${filled ? 'strong' : ''}`}>{filled ? `${custom ? '≈ ' : ''}${fmt(packSum(pack, value))}` : '—'}</span>
+      <span className={`c-sum ${filled ? 'strong' : ''}`}>{filled ? `${custom ? '≈ ' : ''}${fmt(packSum(pack, value, cp.price))}` : '—'}</span>
     </div>
   );
 }

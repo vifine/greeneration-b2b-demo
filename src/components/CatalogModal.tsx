@@ -10,7 +10,9 @@ export function CatalogModal({
   primaryLabel = (n: number) => `Add ${n} line${n === 1 ? '' : 's'} to request`,
   onAdd,
   onClose,
+  clientId,
 }: {
+  clientId?: string;
   title: string;
   subtitle: string;
   deliveryLabel: string;
@@ -18,7 +20,7 @@ export function CatalogModal({
   onAdd: (lines: Line[]) => void;
   onClose: () => void;
 }) {
-  const s = useCatalogSelection();
+  const s = useCatalogSelection(clientId);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -43,7 +45,7 @@ export function CatalogModal({
           </button>
         </div>
         <div className="modal-body">
-          <CatalogList s={s} deliveryLabel={deliveryLabel} />
+          <CatalogList s={s} deliveryLabel={deliveryLabel} clientId={clientId} />
         </div>
       </div>
     </div>

@@ -240,6 +240,7 @@ export function RequestCard() {
 
       {modal && (
         <CatalogModal
+          clientId={r.clientId}
           title={matchLine ? 'Match line from catalog' : 'Add lines from catalog'}
           subtitle={
             matchLine
