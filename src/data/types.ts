@@ -42,6 +42,8 @@ export interface Line {
   clientWrote: string;
   qty: number;
   price: number | null;
+  /** Base (list) unit price; price = basePrice × (1 − discount). Derived when absent. */
+  basePrice?: number;
   priceType: PriceType;
   suggestion?: Suggestion;
   custom?: boolean;

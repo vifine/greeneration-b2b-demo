@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { lineImage } from '../data/catalog';
-import { fmt } from '../data/lines';
-import type { OrderLine, PriceType, Tone } from '../data/types';
+import { fmt, lineBase, lineDiscount, withBase, withDiscount } from '../data/lines';
+import type { Line, OrderLine, PriceType, Tone } from '../data/types';
 import * as I from './icons';
 import { Dot } from './ui';
 
@@ -63,14 +63,15 @@ export interface LinesTableProps {
   lines: OrderLine[];
   variant: 'request' | 'order';
   onQty: (id: string, qty: number) => void;
-  onPrice: (id: string, price: number) => void;
+  /** Apply a pricing patch (base price / discount → unit price). */
+  onPricing: (id: string, patch: Partial<Line>) => void;
   onRemove: (id: string) => void;
   onAccept?: (id: string) => void;
   onSearch?: (id: string) => void;
   onAddLine: () => void;
 }
 
-export function LinesTable({ lines, variant, onQty, onPrice, onRemove, onAccept, onSearch, onAddLine }: LinesTableProps) {
+export function LinesTable({ lines, variant, onQty, onPricing, onRemove, onAccept, onSearch, onAddLine }: LinesTableProps) {
   return (
     <div className={`table lines-table lines-${variant}`}>
       <div className="tr th">
@@ -79,6 +80,8 @@ export function LinesTable({ lines, variant, onQty, onPrice, onRemove, onAccept,
         <span className="l-sku">SKU</span>
         <span className="l-wrote">Client wrote</span>
         <span className="l-qty">Qty</span>
+        <span className="l-base">Base, AED</span>
+        <span className="l-disc">Disc., %</span>
         <span className="l-price">Price, AED</span>
         <span className="l-type">Price type</span>
         <span className="l-sum">Sum, AED</span>
@@ -181,9 +184,13 @@ export function LinesTable({ lines, variant, onQty, onPrice, onRemove, onAccept,
                 onCommit={(v) => onQty(l.id, v)}
               />
             </span>
-            <span className="l-price">
-              <NumInput value={l.price ?? 0} decimals={2} width={80} label={`Price for ${l.product}`} disabled={l.removed} onCommit={(v) => onPrice(l.id, v)} />
+            <span className="l-base">
+              <NumInput value={lineBase(l)} decimals={2} width={76} label={`Base price for ${l.product}`} disabled={l.removed || unmatched} onCommit={(v) => onPricing(l.id, withBase(l, v))} />
             </span>
+            <span className="l-disc">
+              <NumInput value={lineDiscount(l)} decimals={1} width={56} label={`Discount for ${l.product}`} disabled={l.removed || unmatched} highlight={lineDiscount(l) > 0} onCommit={(v) => onPricing(l.id, withDiscount(l, v))} />
+            </span>
+            <span className="l-price">{(l.price ?? 0) > 0 ? fmt(l.price ?? 0) : '—'}</span>
             <span className="l-type">
               <Dot tone={pt.tone} />
               {pt.label}

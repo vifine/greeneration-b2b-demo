@@ -1419,10 +1419,20 @@ button.tr:hover,
   gap: 16px;
 }
 .lines-table .l-sku {
-  flex: 0 0 110px;
+  flex: 0 0 90px;
 }
 .lines-table .l-wrote {
-  flex: 0 0 170px;
+  flex: 0 0 150px;
+}
+.lines-table .l-base {
+  flex: 0 0 80px;
+  display: flex;
+  justify-content: flex-end;
+}
+.lines-table .l-disc {
+  flex: 0 0 60px;
+  display: flex;
+  justify-content: flex-end;
 }
 .lines-table .l-qty {
   flex: 0 0 52px;
@@ -1435,12 +1445,13 @@ button.tr:hover,
   flex-basis: 110px;
 }
 .lines-table .l-price {
-  flex: 0 0 90px;
+  flex: 0 0 76px;
+  font-weight: 700;
   display: flex;
   justify-content: flex-end;
 }
 .lines-table .l-type {
-  flex: 0 0 140px;
+  flex: 0 0 128px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1533,6 +1544,7 @@ button.tr:hover,
 .line-row.removed .l-wrote,
 .line-row.removed .l-type,
 .line-row.removed .l-sum,
+.line-row.removed .l-price,
 .line-row.removed .inline-input {
   text-decoration: line-through;
   color: var(--text-2);

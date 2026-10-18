@@ -231,7 +231,7 @@ export function RequestCard() {
         variant="request"
         lines={r.lines}
         onQty={(lid, qty) => patch(lid, { qty })}
-        onPrice={(lid, price) => patch(lid, { price, priceType: 'manual' })}
+        onPricing={(lid, pt) => patch(lid, pt)}
         onRemove={(lid) => setLines((ls) => ls.filter((l) => l.id !== lid))}
         onAccept={accept}
         onSearch={(lid) => setModal({ matchId: lid })}

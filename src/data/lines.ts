@@ -63,3 +63,36 @@ export const lineSum = (l: { qty: number; price: number | null }) => (l.price ??
 
 export const fmt = (n: number) =>
   n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,/g, ' ');
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+/** Base unit price of a line (explicit, else derived from its price type for the demo data). */
+export function lineBase(l: Line): number {
+  if (l.basePrice != null) return l.basePrice;
+  const p = l.price ?? 0;
+  if (!p) return findPack(l.sku ?? '')?.pack.price ?? 0;
+  if (l.priceType === 'special') return r2(p / 0.9);
+  if (l.priceType === 'last') return r2(p / 0.95);
+  return p;
+}
+
+/** Discount in % (one decimal) between base and actual unit price. */
+export function lineDiscount(l: Line): number {
+  const b = lineBase(l);
+  const p = l.price ?? 0;
+  if (!b || !p) return 0;
+  return Math.round((1 - p / b) * 1000) / 10;
+}
+
+/** Patch for a new base price, keeping the current discount. */
+export function withBase(l: Line, base: number): Partial<Line> {
+  const d = lineDiscount(l);
+  return { basePrice: base, price: r2(base * (1 - d / 100)), priceType: l.price ? l.priceType : 'manual' };
+}
+
+/** Patch for a new discount %, keeping the base price. */
+export function withDiscount(l: Line, d: number): Partial<Line> {
+  const b = lineBase(l);
+  const dd = Math.min(100, Math.max(0, d));
+  return { basePrice: b, price: r2(b * (1 - dd / 100)), priceType: 'manual' };
+}

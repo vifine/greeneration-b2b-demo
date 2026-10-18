@@ -187,7 +187,7 @@ export function OrderCard() {
         variant="order"
         lines={o.lines}
         onQty={changeQty}
-        onPrice={(lid, price) => setLines((ls) => ls.map((l) => (l.id === lid ? { ...l, price, priceType: 'manual' } : l)))}
+        onPricing={(lid, pt) => setLines((ls) => ls.map((l) => (l.id === lid ? { ...l, ...pt } : l)))}
         onRemove={(lid) => setLines((ls) => ls.flatMap((l) => (l.id !== lid ? [l] : l.added ? [] : [{ ...l, removed: !l.removed }])))}
         onAddLine={() => setModal(true)}
       />
