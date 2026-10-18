@@ -47,6 +47,10 @@ export interface Line {
   priceType: PriceType;
   suggestion?: Suggestion;
   custom?: boolean;
+  /** Unit price written in the client's PO, when it came with one. */
+  poPrice?: number;
+  /** Coordinator kept the agreed price although the PO says otherwise. */
+  poPriceKept?: boolean;
 }
 
 export type Tone = 'danger' | 'warning' | 'success' | 'info' | 'neutral';
@@ -79,6 +83,10 @@ export interface Request {
   delivery: { day: string; window: string };
   /** Delivery point; falls back to the client's main address. */
   addressId?: string;
+  /** Purchase order number taken from the client's PO. */
+  poNumber?: string;
+  /** Came after the 22:30 cutoff: the day the client asked for, before the system moved it. */
+  movedFrom?: string;
   deliveryValid: boolean;
   extraIssues?: number;
   /** Issue that is not covered by the automatic checks (e.g. amendment vs new order). */

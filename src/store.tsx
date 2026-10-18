@@ -1,10 +1,10 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import { clientById } from './data/clients';
-import { lineSum } from './data/lines';
+import { lineSum, money } from './data/lines';
 import { INITIAL_ORDERS } from './data/orders';
 import { INITIAL_REQUESTS } from './data/requests';
 import { balanceOf } from './data/balances';
-import { INITIAL_ADDRESSES, type Address } from './data/addresses';
+import { ADDRESS_BOOK, DELIVERY_DAYS_BY_EMIRATE, deliveryDays, INITIAL_ADDRESSES, MIN_ORDER, pickAddress, setAddressBook, type Address } from './data/addresses';
 import type { Line, Order, OrderLine, PaymentSpec, Request, Tone } from './data/types';
 import { ORDER_ISSUES, REQUEST_ISSUES, REQUEST_ISSUE_ORDER, withCount, type OrderIssueKey, type RequestIssueKey } from './data/issues';
 
@@ -15,7 +15,12 @@ export interface Check {
   label: string;
   ok: boolean;
   detail?: string;
+  /** Shown even when the check passes (e.g. the system moved the date). */
+  note?: string;
 }
+
+/** PO price differs from the agreed client price and the coordinator hasn't decided yet. */
+export const poMismatch = (l: Line) => l.poPrice != null && !l.poPriceKept && Math.abs(l.poPrice - (l.price ?? 0)) > 0.004;
 
 export function requestTotal(r: Request) {
   return r.lines.reduce((s, l) => s + lineSum(l), 0);
@@ -26,18 +31,41 @@ export function requestChecks(r: Request): Check[] {
   const matched = r.lines.filter((l) => l.sku).length;
   const priced = r.lines.filter((l) => (l.price ?? 0) > 0).length;
   const unread = r.attachments.filter((a) => !a.read).length;
+  const poDiff = r.lines.filter(poMismatch).length;
   const client = clientById(r.clientId);
   const total = requestTotal(r);
   const C = REQUEST_ISSUES;
+  const addr = pickAddress(ADDRESS_BOOK, r.clientId, r.addressId);
+  const emirate = addr?.emirate ?? 'Dubai';
+  const min = MIN_ORDER[emirate];
+  const dayOk = r.deliveryValid && deliveryDays(emirate, 12).includes(r.delivery.day);
   return [
     { key: 'unrecognised', label: C.unrecognised.check, ok: n > 0 && matched === n, detail: `${n - matched} unrecognised` },
     { key: 'missing_price', label: C.missing_price.check, ok: n > 0 && priced === n, detail: `${n - priced} missing` },
+    ...(r.lines.some((l) => l.poPrice != null)
+      ? [{ key: 'po_price', label: C.po_price.check, ok: poDiff === 0, detail: `${poDiff} line${poDiff === 1 ? '' : 's'} differ`, note: r.poNumber }]
+      : []),
     { key: 'unread_attachment', label: C.unread_attachment.check, ok: unread === 0, detail: `${unread} unread` },
     { key: 'amend_or_new', label: C.amend_or_new.check, ok: !r.note, detail: 'ask the client' },
-    { key: 'delivery_date', label: C.delivery_date.check, ok: r.deliveryValid, detail: r.delivery.day },
-    { key: 'after_cutoff', label: C.after_cutoff.check, ok: true },
+    {
+      key: 'delivery_date',
+      label: C.delivery_date.check,
+      ok: dayOk,
+      detail: r.deliveryValid ? `${emirate}: ${DELIVERY_DAYS_BY_EMIRATE[emirate]}` : r.delivery.day,
+    },
+    {
+      key: 'after_cutoff',
+      label: C.after_cutoff.check,
+      ok: true,
+      note: r.movedFrom ? `came ${r.received.time} · moved from ${r.movedFrom}, client told` : undefined,
+    },
     { key: 'credit_hold', label: C.credit_hold.check, ok: !client.creditHold, detail: 'see balance' },
-    { key: 'min_order', label: C.min_order.check, ok: total >= client.minOrder, detail: `min AED ${client.minOrder}` },
+    {
+      key: 'min_order',
+      label: C.min_order.check,
+      ok: total >= min,
+      detail: `short by ${money(min - total)} · ${emirate} min ${money(min)}`,
+    },
   ];
 }
 
@@ -49,6 +77,7 @@ export function requestIssues(r: Request): { key: RequestIssueKey; text: string;
     if (k === 'unrecognised') return r.lines.filter((l) => !l.sku).length;
     if (k === 'missing_price') return r.lines.filter((l) => l.sku && !((l.price ?? 0) > 0)).length;
     if (k === 'unread_attachment') return r.attachments.filter((a) => !a.read).length;
+    if (k === 'po_price') return r.lines.filter(poMismatch).length;
     return 1;
   };
   return REQUEST_ISSUE_ORDER.filter((k) => fails.some((f) => f.key === k))
@@ -104,7 +133,13 @@ interface Store {
   /** Insert or update; returns the address id. */
   saveAddress: (a: Omit<Address, 'id'> & { id?: string }) => string;
   makeMainAddress: (id: string) => void;
+  /** Invoice sending per client: coordinator approves first (start) or the system sends on its own. */
+  invoiceMode: (clientId: string) => InvoiceMode;
+  setInvoiceMode: (clientId: string, m: InvoiceMode) => void;
 }
+
+export type InvoiceMode = 'approve' | 'auto';
+const AUTO_AT_START = ['kintsugi', 'saffron', 'cedar'];
 
 const Ctx = createContext<Store | null>(null);
 
@@ -112,7 +147,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [requests, setRequests] = useState<Request[]>(INITIAL_REQUESTS);
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
   const [addresses, setAddresses] = useState<Address[]>(INITIAL_ADDRESSES);
+  const [modes, setModes] = useState<Record<string, InvoiceMode>>(() => Object.fromEntries(AUTO_AT_START.map((id) => [id, 'auto' as InvoiceMode])));
 
+  setAddressBook(addresses);
   const store = useMemo<Store>(() => {
     const newOrder = (id: string, clientId: string, channel: string, day: string, window: string, lines: Line[]): Order => ({
       id,
@@ -144,6 +181,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return id;
       },
       makeMainAddress: (id) => setAddresses((list) => setMain(list, id)),
+      invoiceMode: (id) => modes[id] ?? 'approve',
+      setInvoiceMode: (id, m) => setModes((x) => ({ ...x, [id]: m })),
       updateRequest: (id, fn) => setRequests((rs) => rs.map((r) => (r.id === id ? fn(r) : r))),
       updateOrder: (id, fn) => setOrders((os) => os.map((o) => (o.id === id ? fn(o) : o))),
       createOrderFromRequest: (id) => {
@@ -159,7 +198,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return id;
       },
     };
-  }, [requests, orders, addresses]);
+  }, [requests, orders, addresses, modes]);
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }

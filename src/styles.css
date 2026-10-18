@@ -2698,3 +2698,64 @@ button.kpi {
 .c-price b .money, .total-v .money { gap: 0.12em; }
 
 input, select, button, textarea { font-family: inherit; }
+
+.check-note { font-size: 13px; color: var(--text-2); white-space: nowrap; }
+
+/* stock check, audit log, metrics */
+.stock-kpis { margin-bottom: 8px; }
+.stock-note { color: var(--text-2); font-size: 13px; margin: 4px 0 16px; }
+.stock-table .s-photo { flex: 0 0 60px; }
+.stock-table .s-product { flex: 1 1 auto; min-width: 0; }
+.stock-table .s-product .muted { color: var(--text-2); }
+.stock-table .s-num { flex: 0 0 100px; text-align: right; }
+.stock-table .s-orders { flex: 0 0 150px; padding-left: 24px; }
+.stock-table .s-act { flex: 0 0 110px; display: flex; justify-content: flex-end; padding-right: 0 !important; }
+.stock-table .tr.row.stock-row { height: auto; min-height: 60px; padding-bottom: 8px; }
+.stock-row.open { background: var(--row-hover); }
+.stock-sub { border-bottom: 1px solid var(--border); background: var(--soft-light); padding: 4px 20px 8px 80px; }
+.stock-sub-row { display: flex; align-items: flex-start; gap: 16px; padding: 8px 0; border-top: 1px solid var(--border); }
+.stock-sub-row:first-child { border-top: 0; }
+.stock-sub-row .ss-client { flex: 1 1 auto; min-width: 0; color: inherit; text-decoration: none; }
+.stock-sub-row .ss-client:hover span:first-child { text-decoration: underline; }
+.stock-sub-row .ss-qty { flex: 0 0 160px; padding-top: 4px; }
+.stock-sub-row .ss-qty small { color: var(--text-2); }
+.stock-sub-row .ss-sum { flex: 0 0 110px; text-align: right; padding-top: 4px; }
+.stock-sub-row .ss-act { flex: 0 0 220px; display: flex; justify-content: flex-end; gap: 8px; }
+.audit-table .a-time { flex: 0 0 110px; }
+.audit-table .a-who { flex: 0 0 150px; display: flex; align-items: center; gap: 8px; padding-top: 0; }
+.audit-table .a-what { flex: 1 1 auto; min-width: 0; }
+.audit-table .a-what .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.audit-table .a-deal { flex: 0 0 240px; min-width: 0; }
+.audit-table .a-deal .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.audit-table .a-amount { flex: 0 0 120px; text-align: right; padding-right: 0 !important; }
+.group-title .demo-note { font-size: 13px; font-weight: 400; color: var(--text-2); margin-left: 12px; }
+.glance.metrics .glance-value { color: var(--forest); }
+
+.lines-table .l-price { flex-direction: column; align-items: flex-end; gap: 4px; }
+.po-diff { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 12px; line-height: 16px; color: var(--danger); white-space: nowrap; }
+.po-actions { display: flex; gap: 8px; }
+.po-actions .link-sort { font-size: 12px; }
+
+/* reply to client */
+.modal.modal-reply { width: 880px; height: auto; max-height: calc(100vh - 80px); }
+.reply-body { display: flex; min-height: 340px; }
+.reply-list { list-style: none; margin: 0; padding: 12px; width: 260px; flex: none; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; overflow: auto; }
+.reply-list button { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border-radius: 8px; font: inherit; }
+.reply-list button:hover { background: var(--row-hover); }
+.reply-list button.selected { background: var(--table-head); }
+.reply-list button.selected b { color: var(--forest); }
+.reply-list small { font-size: 12px; color: var(--text-2); }
+.reply-edit { flex: 1; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+.reply-text { height: auto; min-height: 240px; flex: 1; padding: 12px; font-size: 15px; line-height: 22px; resize: vertical; }
+.reply-attach { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; font-size: 13px; border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px; }
+.ask-link { margin-left: 8px; font-size: 13px; }
+
+.clients-table .c-mode { flex: 0 0 200px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.clients-table .c-addr { flex-basis: 0; }
+.mode-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 8px; }
+.mode-row .section-note { max-width: 640px; }
+.seg { display: inline-flex; border: 1px solid var(--forest); border-radius: 8px; overflow: hidden; flex: none; }
+.seg button { padding: 8px 14px; font: inherit; font-size: 14px; color: var(--forest); background: var(--white); }
+.seg button + button { border-left: 1px solid var(--forest); }
+.seg button.on { background: var(--forest); color: var(--on-dark); }
+.seg button:not(.on):hover { background: var(--green-tea); }

@@ -3,6 +3,7 @@ import { Aed, Money } from './Money';
 import { lineImage } from '../data/catalog';
 import { lineBase, lineDiscount, withDiscount, withPrice } from '../data/lines';
 import type { Line, OrderLine, PriceType, Tone } from '../data/types';
+import { poMismatch } from '../store';
 import * as I from './icons';
 import { Dot } from './ui';
 
@@ -112,11 +113,13 @@ export function LinesTable({ lines, variant, onQty, onPricing, onRemove, onAccep
         const amended = !l.removed && (l.added || (l.wasQty != null && l.wasQty !== l.qty));
         const img = lineImage(l.sku ?? l.suggestion?.sku ?? null);
         const pt = PRICE_TYPE[(l.price ?? 0) > 0 ? l.priceType : 'none'];
+        const poDiff = !l.removed && poMismatch(l);
         const cls = [
           'tr',
           'line-row',
           unmatched ? 'unmatched stripe-danger' : '',
           !unmatched && !l.removed && !((l.price ?? 0) > 0) ? 'problem stripe-danger' : '',
+          poDiff ? 'problem stripe-danger' : '',
           amended ? 'stripe-warning' : '',
           l.removed ? 'removed stripe-warning' : '',
         ].join(' ');
@@ -214,7 +217,22 @@ export function LinesTable({ lines, variant, onQty, onPricing, onRemove, onAccep
               <NumInput value={lineDiscount(l)} decimals={1} width={64} suffix="%" label={`Discount for ${l.product}`} disabled={l.removed || unmatched} highlight={lineDiscount(l) > 0} onCommit={(v) => onPricing(l.id, withDiscount(l, v))} />
             </span>
             <span className="l-price">
-              <NumInput prefix value={l.price ?? 0} decimals={2} width={76} label={`Price for ${l.product}`} disabled={l.removed || unmatched} onCommit={(v) => onPricing(l.id, withPrice(l, v))} />
+              <NumInput prefix value={l.price ?? 0} decimals={2} width={76} label={`Price for ${l.product}`} disabled={l.removed || unmatched} highlight={poDiff} onCommit={(v) => onPricing(l.id, withPrice(l, v))} />
+              {poDiff && (
+                <span className="po-diff">
+                  <span>
+                    PO <Money v={l.poPrice!} />
+                  </span>
+                  <span className="po-actions">
+                    <button type="button" className="link-sort" onClick={() => onPricing(l.id, withPrice(l, l.poPrice!))}>
+                      Use PO
+                    </button>
+                    <button type="button" className="link-sort" onClick={() => onPricing(l.id, { poPriceKept: true })}>
+                      Keep
+                    </button>
+                  </span>
+                </span>
+              )}
             </span>
             <span className="l-type">
               <Dot tone={pt.tone} />

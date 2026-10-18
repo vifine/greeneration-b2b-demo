@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Money } from '../components/Money';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { AddressDialog, AddressPick, emptyAddress } from '../components/Addresses';
-import { pickAddress } from '../data/addresses';
+import { deliveryDays, pickAddress } from '../data/addresses';
+import { ReplyDialog } from '../components/ReplyDialog';
+import { requestReplies } from '../data/replies';
 import { CatalogModal } from '../components/CatalogModal';
 import { FileChip } from '../components/FileChip';
 import * as I from '../components/icons';
@@ -87,6 +89,7 @@ export function RequestCard() {
   const { id } = useParams();
   const { requests, updateRequest, createOrderFromRequest, addresses, saveAddress } = useStore();
   const [newAddr, setNewAddr] = useState(false);
+  const [reply, setReply] = useState<{ key?: string } | null>(null);
   const navigate = useNavigate();
   const toast = useToast();
   const [modal, setModal] = useState<{ matchId?: string } | null>(null);
@@ -102,7 +105,9 @@ export function RequestCard() {
   const setLines = (fn: (ls: Line[]) => Line[]) => updateRequest(r.id, (x) => ({ ...x, lines: fn(x.lines) }));
   const patch = (lineId: string, p: Partial<Line>) => setLines((ls) => ls.map((l) => (l.id === lineId ? { ...l, ...p } : l)));
 
-  const accept = (lineId: string) =>
+  const accept = (lineId: string) => {
+    const l0 = r.lines.find((l) => l.id === lineId);
+    if (l0?.suggestion) toast(`“${l0.clientWrote}” → ${l0.suggestion.sku} saved to ${client.name}'s SKU mapping`);
     setLines((ls) =>
       ls.map((l) => {
         if (l.id !== lineId || !l.suggestion) return l;
@@ -110,6 +115,7 @@ export function RequestCard() {
         return { ...l, sku: l.suggestion.sku, product: t.product, pack: t.pack, price: l.suggestion.price, priceType: 'base', suggestion: undefined };
       }),
     );
+  };
 
   const addFromCatalog = (newLines: Line[]) => {
     const matchId = modal?.matchId;
@@ -139,8 +145,10 @@ export function RequestCard() {
           <p className="card-sub">
             <span>
               Delivery {r.delivery.day}, {r.delivery.window}
+              {r.poNumber ? ` · ${r.poNumber}` : ''}
             </span>
             <AddressPick
+              key={r.id}
               list={addresses.filter((a) => a.clientId === r.clientId)}
               value={pickAddress(addresses, r.clientId, r.addressId)}
               disabled={r.status !== 'open'}
@@ -162,7 +170,7 @@ export function RequestCard() {
               >
                 Not an order
               </Btn>
-              <Btn kind="secondary" onClick={() => toast(`Reply to ${client.name} drafted in WhatsApp`)}>
+              <Btn kind="secondary" onClick={() => setReply({})}>
                 Reply to client
               </Btn>
               <Btn
@@ -236,6 +244,8 @@ export function RequestCard() {
               <span className="check-label">{c.label}</span>
               {c.key === 'delivery_date' ? (
                 <DeliveryDayPick
+                  key={r.id}
+                  days={deliveryDays(pickAddress(addresses, r.clientId, r.addressId)?.emirate ?? 'Dubai')}
                   value={r.delivery.day}
                   invalid={!c.ok}
                   disabled={r.status !== 'open'}
@@ -244,9 +254,18 @@ export function RequestCard() {
                     toast(`Delivery date set to ${day}`);
                   }}
                 />
-              ) : (
-                !c.ok && c.detail && <span className="check-detail">{c.detail}</span>
-              )}
+              ) : !c.ok && c.detail ? (
+                <span className="check-detail">
+                  {c.detail}
+                  {(c.key === 'min_order' || c.key === 'amend_or_new' || c.key === 'unrecognised') && r.status === 'open' && (
+                    <button type="button" className="link-sort ask-link" onClick={() => setReply({ key: c.key })}>
+                      Ask client
+                    </button>
+                  )}
+                </span>
+              ) : c.note ? (
+                <span className="check-note">{c.note}</span>
+              ) : null}
             </div>
           ))}
         </section>
@@ -263,6 +282,24 @@ export function RequestCard() {
         onAddLine={() => setModal({})}
       />
 
+      {reply && (
+        <ReplyDialog
+          to={client.name}
+          channel={r.channel}
+          initial={reply.key}
+          templates={requestReplies(
+            r,
+            total,
+            pickAddress(addresses, r.clientId, r.addressId),
+            checks.filter((c) => !c.ok).map((c) => c.key),
+          )}
+          onClose={() => setReply(null)}
+          onSend={(t) => {
+            toast(`“${t.label}” sent to ${client.name} · ${/mail/i.test(r.channel) ? 'email' : 'WhatsApp'}`);
+            setReply(null);
+          }}
+        />
+      )}
       {newAddr && (
         <AddressDialog
           title={`New address · ${client.name}`}
@@ -295,10 +332,7 @@ export function RequestCard() {
   );
 }
 
-/** Next delivery days (Dubai: Mon–Sat). Today in the demo is Mon 19 Oct, past the cutoff for same-day. */
-const DELIVERY_DAYS = ['Tue 20 Oct', 'Wed 21 Oct', 'Thu 22 Oct', 'Fri 23 Oct', 'Sat 24 Oct', 'Mon 26 Oct'];
-
-function DeliveryDayPick({ value, invalid, disabled, onPick }: { value: string; invalid: boolean; disabled?: boolean; onPick: (day: string) => void }) {
+function DeliveryDayPick({ days, value, invalid, disabled, onPick }: { days: string[]; value: string; invalid: boolean; disabled?: boolean; onPick: (day: string) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -320,7 +354,7 @@ function DeliveryDayPick({ value, invalid, disabled, onPick }: { value: string; 
       </button>
       {open && (
         <ul className="fsel-menu" role="listbox" aria-label="Delivery date">
-          {DELIVERY_DAYS.map((d, i) => (
+          {days.map((d, i) => (
             <li key={d}>
               <button
                 type="button"
@@ -333,7 +367,7 @@ function DeliveryDayPick({ value, invalid, disabled, onPick }: { value: string; 
                 }}
               >
                 {d}
-                {i === 0 && <small> · next delivery</small>}
+                {i === 0 && <small> · nearest delivery</small>}
               </button>
             </li>
           ))}

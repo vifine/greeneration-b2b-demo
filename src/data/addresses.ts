@@ -44,6 +44,7 @@ const EXTRA: Record<string, Omit<Address, 'id' | 'clientId' | 'contact' | 'phone
     { name: 'Abu Dhabi events', emirate: 'Abu Dhabi', area: 'Al Reem Island', line: 'Reem Central Park, Pavilion 2', hours: 'Tue, Thu, Sat 07:00–11:00' },
   ],
   cedar: [{ name: 'Rooftop lounge', emirate: 'Dubai', area: 'Downtown', line: 'Mohammed Bin Rashid Blvd, Cedar Courtyard, roof', hours: 'Daily 10:00–13:00' }],
+  fennel: [{ name: 'Sharjah deli', emirate: 'Sharjah', area: 'Al Khan', line: 'Al Khan St, Bldg 3, shop 2', hours: 'Mon, Wed 08:00–12:00' }],
   harbour: [{ name: 'Second outlet', emirate: 'Dubai', area: 'City Walk', line: 'City Walk Bldg 7, unit 3', hours: 'Mon–Sat 09:00–12:00' }],
 };
 
@@ -78,4 +79,28 @@ export const addressText = (a: Address) => `${a.line}, ${a.area}, ${a.emirate}`;
 export function pickAddress(list: Address[], clientId: string, addressId?: string) {
   const own = list.filter((a) => a.clientId === clientId);
   return own.find((a) => a.id === addressId) ?? own.find((a) => a.main) ?? own[0];
+}
+
+/** Minimum order by emirate (TZ §7): Dubai 150, Sharjah and Abu Dhabi 200. */
+export const MIN_ORDER: Record<Emirate, number> = { Dubai: 150, Sharjah: 200, 'Abu Dhabi': 200 };
+
+const WEEKDAYS: Record<Emirate, number[]> = { Dubai: [1, 2, 3, 4, 5, 6], Sharjah: [1, 3], 'Abu Dhabi': [2, 4, 6] };
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** Delivery days open for the emirate, from the first day after today's cutoff (demo today: Mon 19 Oct 2026). */
+export function deliveryDays(emirate: Emirate, count = 6): string[] {
+  const out: string[] = [];
+  const d = new Date(Date.UTC(2026, 9, 20));
+  while (out.length < count) {
+    if (WEEKDAYS[emirate].includes(d.getUTCDay())) out.push(`${DOW[d.getUTCDay()]} ${d.getUTCDate()} ${MON[d.getUTCMonth()]}`);
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return out;
+}
+
+/** Address book the derived checks read; the store keeps it in sync with edits. */
+export let ADDRESS_BOOK: Address[] = INITIAL_ADDRESSES;
+export function setAddressBook(list: Address[]) {
+  ADDRESS_BOOK = list;
 }

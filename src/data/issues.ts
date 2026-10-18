@@ -13,6 +13,7 @@ export const REQUEST_ISSUES = {
   amend_or_new: { issue: 'Amendment or new order', check: 'Request type clear', tone: 'warning' },
   unrecognised: { issue: 'Unrecognised items', check: 'All items recognised', tone: 'warning' },
   missing_price: { issue: 'Missing prices', check: 'All prices set', tone: 'warning' },
+  po_price: { issue: 'PO price differs', check: 'PO prices match agreed', tone: 'warning' },
   unread_attachment: { issue: 'Unread attachments', check: 'Attachments read', tone: 'warning' },
 } as const satisfies Record<string, { issue: string; check: string; tone: Tone }>;
 export type RequestIssueKey = keyof typeof REQUEST_ISSUES;
@@ -25,6 +26,7 @@ export const REQUEST_ISSUE_ORDER: RequestIssueKey[] = [
   'amend_or_new',
   'unrecognised',
   'missing_price',
+  'po_price',
   'unread_attachment',
 ];
 

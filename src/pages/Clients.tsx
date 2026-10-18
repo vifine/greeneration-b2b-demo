@@ -5,13 +5,13 @@ import { AddressCard, AddressDialog, emptyAddress } from '../components/Addresse
 import * as I from '../components/icons';
 import { Shell } from '../components/Shell';
 import { Btn, Dot, SearchBox, useToast } from '../components/ui';
-import { DELIVERY_DAYS_BY_EMIRATE, type Address } from '../data/addresses';
+import { DELIVERY_DAYS_BY_EMIRATE, MIN_ORDER, type Address } from '../data/addresses';
 import { balanceOf } from '../data/balances';
 import { CLIENTS, clientById } from '../data/clients';
 import { useStore } from '../store';
 
 export function ClientsJournal() {
-  const { addresses } = useStore();
+  const { addresses, invoiceMode } = useStore();
   const navigate = useNavigate();
   const [q, setQ] = useState('');
   const rows = CLIENTS.map((c) => {
@@ -35,6 +35,7 @@ export function ClientsJournal() {
           <span className="c-addr">Main delivery address</span>
           <span className="c-emirate">Emirate · delivery days</span>
           <span className="c-points">Addresses</span>
+          <span className="c-mode">Invoices</span>
           <span className="c-min">Min order</span>
         </div>
         {rows.map(({ c, own, main }) => (
@@ -49,7 +50,11 @@ export function ClientsJournal() {
             </span>
             <span className="c-emirate">{main ? `${main.emirate} · ${DELIVERY_DAYS_BY_EMIRATE[main.emirate]}` : '—'}</span>
             <span className="c-points">{own.length}</span>
-            <span className="c-min right"><Money v={c.minOrder} /></span>
+            <span className="c-mode">
+              <Dot tone={invoiceMode(c.id) === 'auto' ? 'success' : 'info'} />
+              {invoiceMode(c.id) === 'auto' ? 'Sent automatically' : 'Coordinator approves'}
+            </span>
+            <span className="c-min right"><Money v={MIN_ORDER[main?.emirate ?? 'Dubai']} /></span>
           </button>
         ))}
         {!rows.length && <div className="empty">No clients match.</div>}
@@ -60,7 +65,7 @@ export function ClientsJournal() {
 
 export function ClientCard() {
   const { id } = useParams();
-  const { addresses, saveAddress, makeMainAddress } = useStore();
+  const { addresses, saveAddress, makeMainAddress, invoiceMode, setInvoiceMode } = useStore();
   const toast = useToast();
   const [edit, setEdit] = useState<(Omit<Address, 'id'> & { id?: string }) | null>(null);
   const c = id ? CLIENTS.find((x) => x.id === id) : undefined;
@@ -81,7 +86,7 @@ export function ClientCard() {
             )}
           </div>
           <p>
-            Min order <Money v={c.minOrder} /> · {own.length} delivery address{own.length === 1 ? '' : 'es'}
+            Min order <Money v={MIN_ORDER[own.find((a) => a.main)?.emirate ?? 'Dubai']} /> by emirate · {own.length} delivery address{own.length === 1 ? '' : 'es'}
             {bal ? (
               <>
                 {' · '}
@@ -98,6 +103,30 @@ export function ClientCard() {
           </Btn>
         </div>
       </div>
+
+      <section className="mode-row">
+        <div>
+          <h2 className="section-h">Invoices</h2>
+          <p className="section-note">At the start every invoice waits for a coordinator. Once this client's orders go through without corrections, switch to automatic sending.</p>
+        </div>
+        <div className="seg" role="radiogroup" aria-label="Invoice sending">
+          {(['approve', 'auto'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={invoiceMode(c.id) === m}
+              className={invoiceMode(c.id) === m ? 'on' : ''}
+              onClick={() => {
+                setInvoiceMode(c.id, m);
+                toast(m === 'auto' ? `${c.name}: invoices go out automatically` : `${c.name}: invoices wait for approval`);
+              }}
+            >
+              {m === 'auto' ? 'Send automatically' : 'Coordinator approves'}
+            </button>
+          ))}
+        </div>
+      </section>
 
       <h2 className="section-h">Delivery addresses</h2>
       <p className="section-note">Every request and order picks one of these points. The main address is used when the client doesn't say otherwise.</p>

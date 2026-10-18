@@ -3,6 +3,8 @@ import { Money } from '../components/Money';
 import { Navigate, useParams } from 'react-router-dom';
 import { AddressDialog, AddressPick, emptyAddress } from '../components/Addresses';
 import { pickAddress } from '../data/addresses';
+import { ReplyDialog } from '../components/ReplyDialog';
+import { orderReplies } from '../data/replies';
 import { CatalogModal } from '../components/CatalogModal';
 import { FileChip } from '../components/FileChip';
 import { LinesTable } from '../components/LinesTable';
@@ -49,6 +51,7 @@ export function OrderCard() {
   const { id } = useParams();
   const { orders, updateOrder, addresses, saveAddress } = useStore();
   const [newAddr, setNewAddr] = useState(false);
+  const [reply, setReply] = useState(false);
   const toast = useToast();
   const [modal, setModal] = useState(false);
   const o = orders.find((x) => x.id === id);
@@ -119,7 +122,7 @@ export function OrderCard() {
           <Btn kind="ghost" onClick={() => toast('Cancelling needs a reason — not part of this prototype')}>
             Cancel order
           </Btn>
-          <Btn kind="secondary" onClick={() => toast(`Reply to ${client.name} drafted`)}>
+          <Btn kind="secondary" onClick={() => setReply(true)}>
             Reply to client
           </Btn>
           <Btn kind="primary" disabled={!pending} onClick={apply} title={pending ? 'Apply the marked changes' : 'No changes to apply'}>
@@ -226,6 +229,18 @@ export function OrderCard() {
             toast(`${ls.length} line${ls.length === 1 ? '' : 's'} added · apply changes to update the invoice`);
           }}
           onClose={() => setModal(false)}
+        />
+      )}
+      {reply && (
+        <ReplyDialog
+          to={client.name}
+          channel={o.channel}
+          templates={orderReplies(o, after, addr, pending)}
+          onClose={() => setReply(false)}
+          onSend={(t) => {
+            toast(`“${t.label}” sent to ${client.name} · ${/mail/i.test(o.channel) ? 'email' : 'WhatsApp'}`);
+            setReply(false);
+          }}
         />
       )}
       {newAddr && (
