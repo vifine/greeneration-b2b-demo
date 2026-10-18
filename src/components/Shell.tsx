@@ -1,3 +1,4 @@
+import { intakeChip, useDubaiNow } from '../time';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { logout } from '../auth';
@@ -191,7 +192,7 @@ export function TopBar({ crumbs, chip = true, crmLink }: { crumbs: Crumb[]; chip
         )}
       </div>
       <div className="topbar-right">
-        {chip && <span className="chip-cutoff">Intake closes in 1h 12m</span>}
+        {chip && <IntakeChip />}
         <span className="avatar" title="Karina P. · coordinator">
           KP
         </span>
@@ -225,4 +226,9 @@ export function Shell({
       </main>
     </div>
   );
+}
+
+function IntakeChip() {
+  const now = useDubaiNow();
+  return <span className="chip-cutoff">{intakeChip(now)}</span>;
 }

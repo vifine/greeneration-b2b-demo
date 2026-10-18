@@ -2260,3 +2260,66 @@ button.tr:hover,
   outline: 2px solid var(--fern);
   outline-offset: 2px;
 }
+
+/* ---------- live day timeline (Home) ---------- */
+.day-timeline.live {
+  position: relative;
+  height: 128px;
+  padding: 0;
+}
+.day-timeline.live .tl-track,
+.day-timeline.live .tl-progress {
+  top: 48px;
+}
+.day-timeline.live .tl-track {
+  left: 24px;
+  right: 24px;
+}
+.day-timeline.live .tl-progress {
+  left: 24px;
+  transition: width 0.4s ease;
+}
+.day-timeline.live .tl-m {
+  position: absolute;
+  top: 41px;
+  width: auto;
+  transform: translateX(-50%);
+  align-items: center;
+  text-align: center;
+}
+.day-timeline.live .tl-m.align-start {
+  transform: translateX(-7px);
+  align-items: flex-start;
+  text-align: left;
+}
+.day-timeline.live .tl-m.align-end {
+  transform: translateX(calc(-100% + 7px));
+  align-items: flex-end;
+  text-align: right;
+}
+.tl-now {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  z-index: 2;
+}
+.tl-now-pill {
+  background: var(--forest);
+  color: var(--ivory, #efe7d7);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 20px;
+  padding: 1px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.tl-now-tick {
+  width: 2px;
+  height: 22px;
+  background: var(--forest);
+  border-radius: 1px;
+}

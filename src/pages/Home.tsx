@@ -2,18 +2,62 @@ import { Link } from 'react-router-dom';
 import * as I from '../components/icons';
 import { Shell } from '../components/Shell';
 import { fmt } from '../data/lines';
+import { dur, greeting, hm, toMin, useDubaiNow } from '../time';
 import { orderCurrentTotal, orderHasChanges, requestIssue, useStore } from '../store';
 
 type RowTone = 'danger' | 'warning' | 'neutral';
 
-const TIMELINE = [
-  { time: '10:00', label: 'Shift started', hint: 'Done', state: 'done', align: 'start' },
-  { time: '15:00', label: 'Farm stock updated', hint: 'Done', state: 'done', align: 'center' },
-  { time: '21:18', label: 'Now', hint: 'Intake open', state: 'now', align: 'center' },
-  { time: '22:00', label: 'No reply → delivery', hint: 'in 42 min', state: 'next', align: 'center' },
-  { time: '22:30', label: 'Intake closes · stock check', hint: 'in 1 h 12 min', state: 'future', align: 'center' },
-  { time: '23:10', label: 'Picklists printed', hint: 'in 1 h 52 min', state: 'future', align: 'end' },
-] as const;
+const MILESTONES = [
+  { time: '10:00', label: 'Shift started', future: 'Shift starts' },
+  { time: '15:00', label: 'Farm stock updated', future: 'Farm stock update' },
+  { time: '22:00', label: 'No reply → delivery', future: 'No reply → delivery' },
+  { time: '22:30', label: 'Intake closed · stock check', future: 'Intake closes · stock check' },
+  { time: '23:10', label: 'Picklists printed', future: 'Picklists printed' },
+];
+// Milestones are spaced evenly (the evening ones are close in time); "now" moves
+// proportionally inside the segment it falls into.
+const T = MILESTONES.map((m) => toMin(m.time));
+const pos = (min: number) => {
+  if (min <= T[0]) return 0;
+  if (min >= T[T.length - 1]) return 100;
+  const i = T.findIndex((t) => t > min) - 1;
+  const seg = 100 / (T.length - 1);
+  return seg * i + (seg * (min - T[i])) / (T[i + 1] - T[i]);
+};
+
+function DayTimeline() {
+  const now = useDubaiNow();
+  const nextIdx = MILESTONES.findIndex((m) => toMin(m.time) > now);
+  const nowPct = pos(now);
+  const inDay = now >= T[0] && now <= T[T.length - 1];
+  return (
+    <div className="day-timeline live">
+      <div className="tl-track" />
+      <div className="tl-progress" style={{ width: `calc((100% - 48px) * ${nowPct / 100})` }} />
+      {inDay && (
+        <div className="tl-now" style={{ left: `calc(24px + (100% - 48px) * ${nowPct / 100})` }}>
+          <span className="tl-now-pill">Now · {hm(now)}</span>
+          <span className="tl-now-tick" />
+        </div>
+      )}
+      {MILESTONES.map((m, i) => {
+        const t = toMin(m.time);
+        const done = now >= t;
+        const state = done ? 'done' : i === nextIdx ? 'next' : 'future';
+        const p = pos(t);
+        const align = p < 5 ? 'start' : p > 95 ? 'end' : 'center';
+        return (
+          <div key={m.time} className={`tl-m align-${align} state-${state}`} style={{ left: `calc(24px + (100% - 48px) * ${p / 100})` }}>
+            <span className="tl-dot" />
+            <b>{m.time}</b>
+            <span>{done ? m.label : m.future}</span>
+            <span className="tl-hint">{done ? 'Done' : `in ${dur(t - now)}`}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function DecisionRow({ label, count, tone, to }: { label: string; count: number; tone: RowTone; to: string }) {
   const t: RowTone = count === 0 ? 'neutral' : tone;
@@ -38,30 +82,18 @@ export function Home() {
   const tomorrow = orders.filter((o) => o.delivery.day === 'Tue 20 Oct');
   const awaiting = orders.filter((o) => o.stage === 'New request' && o.reply.startsWith('Waiting')).length;
   const value = tomorrow.reduce((s, o) => s + orderCurrentTotal(o), 0);
+  const now = useDubaiNow();
 
   return (
     <Shell crumbs={[{ label: 'Home' }]} pinned chip={false} contentClass="home">
       <div className="hero">
-        <p className="hero-meta">Good evening, Karina · Monday 19 Oct · orders for Tue 20 Oct</p>
+        <p className="hero-meta">{greeting(now)}, Karina · Monday 19 Oct · orders for Tue 20 Oct</p>
         <h1 className="hero-title">
           {stuck.length} request{stuck.length === 1 ? ' is' : 's are'} stuck before 22:30
         </h1>
       </div>
 
-      <div className="day-timeline">
-        <div className="tl-track" />
-        <div className="tl-progress" />
-        <div className="tl-milestones">
-          {TIMELINE.map((m) => (
-            <div key={m.time} className={`tl-m align-${m.align} state-${m.state}`}>
-              <span className="tl-dot" />
-              <b>{m.time}</b>
-              <span>{m.label}</span>
-              <span className="tl-hint">{m.hint}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <DayTimeline />
 
       <h2 className="group-title">Needs your decision</h2>
       <div className="decision-cards">
