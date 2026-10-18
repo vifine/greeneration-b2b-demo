@@ -2558,3 +2558,26 @@ button.kpi {
 .day-pick.invalid .day-pick-btn { color: var(--danger); border-color: var(--danger); font-weight: 600; }
 .day-pick-btn:disabled { cursor: default; opacity: 0.6; }
 .day-pick .fsel-menu small { color: var(--muted, #888); font-size: 12px; }
+
+/* pin the sidebar open */
+.sb-brand { position: relative; }
+.sb-pin {
+  position: absolute;
+  top: 0;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  animation: sb-fade 0.18s ease;
+}
+.sb-pin:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.sb-pin.on { color: var(--green-tea); }
+.sb-pin.on svg { transform: rotate(0deg); }
+.sb-pin:not(.on) svg { transform: rotate(35deg); }
+.sb-pin svg { transition: transform 0.15s ease; }

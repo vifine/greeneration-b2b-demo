@@ -75,11 +75,24 @@ function sectionOf(path: string) {
   return path.split('/')[1] || 'home';
 }
 
-export function Sidebar({ pinned }: { pinned: boolean }) {
+const PIN_KEY = 'od-sidebar-pin';
+function readPin(): boolean | null {
+  try {
+    const v = localStorage.getItem(PIN_KEY);
+    return v === null ? null : v === '1';
+  } catch {
+    return null;
+  }
+}
+
+export function Sidebar({ pinned: pinnedByPage }: { pinned: boolean }) {
   const sections = useSections();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [hover, setHoverState] = useState(false);
+  const [userPin, setUserPin] = useState<boolean | null>(readPin);
+  const pinned = userPin ?? pinnedByPage;
+  const navRef = useRef<HTMLElement>(null);
   const timer = useRef<number>();
   // Expand after a short hover intent, so a quick click on a collapsed icon lands on that icon.
   const setHover = (v: boolean) => {
@@ -88,9 +101,38 @@ export function Sidebar({ pinned }: { pinned: boolean }) {
     else timer.current = window.setTimeout(() => setHoverState(true), 220);
   };
   useEffect(() => () => window.clearTimeout(timer.current), []);
+  // Safety net: if a mouseleave was missed (navigation, re-render under the cursor), close as soon as the pointer is outside.
+  useEffect(() => {
+    if (!hover) return;
+    const check = (e: PointerEvent) => {
+      const r = navRef.current?.getBoundingClientRect();
+      if (r && (e.clientX > r.right || e.clientX < r.left || e.clientY < r.top || e.clientY > r.bottom)) setHover(false);
+    };
+    const leaveWindow = () => setHover(false);
+    document.addEventListener('pointermove', check);
+    document.documentElement.addEventListener('mouseleave', leaveWindow);
+    return () => {
+      document.removeEventListener('pointermove', check);
+      document.documentElement.removeEventListener('mouseleave', leaveWindow);
+    };
+  }, [hover]);
+  // Close the hover menu after navigating from it.
+  useEffect(() => {
+    setHover(false);
+  }, [pathname]);
+  const togglePin = () => {
+    const next = !pinned;
+    setUserPin(next);
+    try {
+      localStorage.setItem(PIN_KEY, next ? '1' : '0');
+    } catch {
+      /* storage unavailable: pin lasts for this page only */
+    }
+    if (!next) setHover(false);
+  };
   const active = sectionOf(pathname);
   const expanded = pinned || hover;
-  // Pinned (Home) shows the whole tree; the hover overlay works as an accordion: only the active section opens.
+  // Pinned shows the whole tree; the hover overlay works as an accordion: only the active section opens.
   const showSubs = (key: string) => pinned || key === active;
 
   const doLogout = () => {
@@ -104,10 +146,9 @@ export function Sidebar({ pinned }: { pinned: boolean }) {
     <div className={`sidebar-slot ${pinned ? 'pinned' : ''} ${expanded ? 'expanded' : ''}`}>
       <nav
         className={`sidebar ${expanded ? 'expanded' : 'collapsed'}`}
+        ref={navRef}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
-        onFocus={() => setHover(true)}
-        onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && setHover(false)}
         aria-label="Main navigation"
       >
         <div className="sb-brand">
@@ -115,6 +156,19 @@ export function Sidebar({ pinned }: { pinned: boolean }) {
             <>
               <img className="sb-logo-full" src={I.logoLight} width={148} height={24.6} alt="greeneration" />
               <span className="pill-orderdesk">Order desk</span>
+              <button
+                type="button"
+                className={`sb-pin ${pinned ? 'on' : ''}`}
+                title={pinned ? 'Unpin menu' : 'Pin menu open'}
+                aria-label={pinned ? 'Unpin menu' : 'Pin menu open'}
+                aria-pressed={pinned}
+                onClick={togglePin}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M9 4h6l-1 5 3 3v2H7v-2l3-3-1-5Z" fill={pinned ? 'currentColor' : 'none'} />
+                  <path d="M12 14v6" />
+                </svg>
+              </button>
             </>
           ) : (
             <img className="sb-logo-mark" src={I.logoMark} width={20} height={32.88} alt="greeneration" />
