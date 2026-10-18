@@ -49,7 +49,6 @@ const figmaOrders: Order[] = [
     channel: 'WhatsApp',
     delivery: { day: 'Tue 20 Oct', window: 'before 15:00' },
     stage: 'Confirmed',
-    issue: 'Amended after confirmation',
     reply: 'Confirmed 17:05',
     invoice: 'INV-46388',
     received: 'Mon 16:40',

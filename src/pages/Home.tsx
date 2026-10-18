@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import * as I from '../components/icons';
 import { Shell } from '../components/Shell';
 import { fmt } from '../data/lines';
+import { ORDER_ISSUES, REQUEST_ISSUES, REQUEST_ISSUE_ORDER, type RequestIssueKey } from '../data/issues';
 import { dur, greeting, hm, toMin, useDubaiNow } from '../time';
 import { orderCurrentTotal, orderHasChanges, requestIssue, useStore } from '../store';
 
@@ -60,18 +61,22 @@ function DayTimeline() {
 }
 
 /** One item → its card; several → the journal filtered to exactly those items. */
-function target(base: '/crm/requests' | '/crm/orders', ids: string[], from: string) {
+function target(base: '/crm/requests' | '/crm/orders', ids: string[], from: string, tab?: string) {
   if (ids.length === 1) return `${base}/${ids[0]}`;
-  return `${base}?ids=${ids.join(',')}&from=${encodeURIComponent(from)}`;
+  const t = tab ?? (base === '/crm/requests' ? 'issues' : 'all');
+  return `${base}?tab=${t}&ids=${ids.join(',')}&from=${encodeURIComponent(from)}`;
 }
 
-function DecisionRow({ label, ids, tone, base, to, count: fixed }: { label: string; ids?: string[]; tone: RowTone; base?: '/crm/requests' | '/crm/orders'; to?: string; count?: number }) {
+function DecisionRow({ label, hint, ids, tone, base, to, count: fixed }: { label: string; hint?: string; ids?: string[]; tone: RowTone; base?: '/crm/requests' | '/crm/orders'; to?: string; count?: number }) {
   const count = fixed ?? ids?.length ?? 0;
   const t: RowTone = count === 0 ? 'neutral' : tone;
   const href = to ?? (count && base ? target(base, ids!, label) : null);
   const inner = (
     <>
-      <span className="dr-label">{label}</span>
+      <span className="dr-label" title={hint}>
+        {label}
+        {hint && <small className="dr-hint">{hint}</small>}
+      </span>
       <span className="dr-count">{count}</span>
       {href && <img src={I.icChevronRight} width={20} height={20} alt="" />}
     </>
@@ -93,9 +98,15 @@ export function Home() {
   const ready = issues.length - stuck.length;
   const withIssue = open.map((r) => ({ id: r.id, issue: requestIssue(r) }));
   const stuckIds = withIssue.filter((x) => x.issue.tone !== 'success').map((x) => x.id);
-  const KNOWN = ['Credit hold', 'Not a delivery day', 'Below minimum order'];
-  const idsBy = (t: string) => withIssue.filter((x) => x.issue.text === t).map((x) => x.id);
-  const unclearIds = withIssue.filter((x) => x.issue.tone !== 'success' && !KNOWN.includes(x.issue.text)).map((x) => x.id);
+  // Each stuck request is counted once, under its main (highest-priority) issue.
+  const idsBy = (k: RequestIssueKey) => withIssue.filter((x) => x.issue.key === k).map((x) => x.id);
+  const reqRows = REQUEST_ISSUE_ORDER.map((k) => ({ k, ids: idsBy(k) }));
+  // Home has room for 4 rows: the 3 most urgent issues + the rest together.
+  const withIds = reqRows.filter((r) => r.ids.length);
+  const ordered = [...withIds, ...reqRows.filter((r) => !r.ids.length)];
+  const shownRows = withIds.length > 4 ? ordered.slice(0, 3) : ordered.slice(0, 4);
+  const moreIds = withIds.length > 4 ? withIds.slice(3).flatMap((r) => r.ids) : [];
+  const moreLabel = withIds.length > 4 ? withIds.slice(3).map((r) => REQUEST_ISSUES[r.k].issue.toLowerCase()).join(', ') : '';
   const changed = orders.filter(orderHasChanges);
   const amendedIds = changed.filter((o) => o.stage !== 'New request').map((o) => o.id);
   const askedIds = changed.filter((o) => o.stage === 'New request').map((o) => o.id);
@@ -132,14 +143,14 @@ export function Home() {
             <span className="dcard-count">{stuck.length}</span>
           </Link>
           <div className="dcard-rows">
-            <DecisionRow label="Credit hold" ids={idsBy('Credit hold')} tone="danger" base="/crm/requests" />
-            <DecisionRow label="Not a delivery day" ids={idsBy('Not a delivery day')} tone="danger" base="/crm/requests" />
-            <DecisionRow label="Below minimum order" ids={idsBy('Below minimum order')} tone="warning" base="/crm/requests" />
-            <DecisionRow label="Unclear" ids={unclearIds} tone="warning" base="/crm/requests" />
+            {shownRows.map(({ k, ids }) => (
+              <DecisionRow key={k} label={REQUEST_ISSUES[k].issue} ids={ids} tone={REQUEST_ISSUES[k].tone === 'danger' ? 'danger' : 'warning'} base="/crm/requests" />
+            ))}
+            {moreIds.length > 0 && <DecisionRow label="More issues" hint={moreLabel} ids={moreIds} tone="warning" base="/crm/requests" />}
           </div>
         </div>
         <div className="dcard dcard-warning">
-          <Link to={attentionIds.length ? target('/crm/orders', attentionIds, 'Orders need attention') : '/crm/orders'} className="dcard-head">
+          <Link to={attentionIds.length ? target('/crm/orders', attentionIds, 'Orders need attention', 'confirmed') : '/crm/orders'} className="dcard-head">
             <span className="dcard-badge">
               <img src={I.icCardClipboard} width={20} height={20} alt="" />
             </span>
@@ -152,10 +163,10 @@ export function Home() {
             <span className="dcard-count">{attentionIds.length}</span>
           </Link>
           <div className="dcard-rows">
-            <DecisionRow label="Amended after confirmation" ids={amendedIds} tone="warning" base="/crm/orders" />
-            <DecisionRow label="Client asked to change" ids={askedIds} tone="warning" base="/crm/orders" />
-            <DecisionRow label="Stock short (after 22:30)" ids={[]} tone="neutral" base="/crm/orders" />
-            <DecisionRow label="Cancelled by client" ids={[]} tone="neutral" base="/crm/orders" />
+            <DecisionRow label={ORDER_ISSUES.changed_after_confirmation.issue} ids={amendedIds} tone="warning" base="/crm/orders" />
+            <DecisionRow label={ORDER_ISSUES.change_requested.issue} ids={askedIds} tone="warning" base="/crm/orders" />
+            <DecisionRow label={ORDER_ISSUES.stock_short.issue} ids={[]} tone="neutral" base="/crm/orders" />
+            <DecisionRow label={ORDER_ISSUES.cancelled.issue} ids={[]} tone="neutral" base="/crm/orders" />
           </div>
         </div>
         <div className="dcard dcard-info">
@@ -173,7 +184,7 @@ export function Home() {
           </Link>
           <div className="dcard-rows">
             <DecisionRow label="Not delivered" count={2} tone="danger" to="/crm/claims" />
-            <DecisionRow label="Quality claim" count={1} tone="warning" to="/crm/claims" />
+            <DecisionRow label="Quality issue" count={1} tone="warning" to="/crm/claims" />
             <DecisionRow label="Credit note to issue" count={0} tone="neutral" />
             <DecisionRow label="Exchange to send" count={0} tone="neutral" />
           </div>
@@ -182,9 +193,9 @@ export function Home() {
 
       <h2 className="group-title">At a glance</h2>
       <div className="glance">
-        <Glance to={target('/crm/requests', open.map((r) => r.id), 'Open requests')} label="Requests" value={String(open.length)} hint={`${ready} ready to become orders`} />
+        <Glance to={target('/crm/requests', open.map((r) => r.id), 'Open requests', 'all')} label="Requests" value={String(open.length)} hint={`${ready} ready to become orders`} />
         <Glance to={target('/crm/orders', tomorrow.map((o) => o.id), 'Orders for Tue 20 Oct')} label="Orders for tomorrow" value={String(tomorrow.length)} hint="+4 vs last Monday" />
-        <Glance to={target('/crm/orders', awaitingIds, 'Awaiting client reply')} label="Awaiting client reply" value={String(awaitingIds.length)} hint="Auto to delivery at 22:00" />
+        <Glance to={target('/crm/orders', awaitingIds, 'Awaiting client reply', 'new')} label="Awaiting client reply" value={String(awaitingIds.length)} hint="Auto to delivery at 22:00" />
         <Glance to={target('/crm/orders', tomorrow.map((o) => o.id), 'Order value, Tue 20 Oct')} label="Order value, AED" value={fmt(value).replace(/\.\d+$/, '')} hint="Tue 20 Oct" />
         <Glance to="/crm/leads" label="Leads" value="11" hint="Unsorted · oldest 3 days" />
       </div>

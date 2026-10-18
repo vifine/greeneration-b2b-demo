@@ -5,6 +5,7 @@ import { INITIAL_ORDERS } from './data/orders';
 import { INITIAL_REQUESTS } from './data/requests';
 import { balanceOf } from './data/balances';
 import type { Line, Order, OrderLine, PaymentSpec, Request, Tone } from './data/types';
+import { ORDER_ISSUES, REQUEST_ISSUES, REQUEST_ISSUE_ORDER, withCount, type OrderIssueKey, type RequestIssueKey } from './data/issues';
 
 /* ---------- derived request state ---------- */
 
@@ -26,49 +27,47 @@ export function requestChecks(r: Request): Check[] {
   const unread = r.attachments.filter((a) => !a.read).length;
   const client = clientById(r.clientId);
   const total = requestTotal(r);
-  const creditOk = !client.creditHold && total >= client.minOrder;
+  const C = REQUEST_ISSUES;
   return [
-    { key: 'matched', label: 'All lines matched', ok: n > 0 && matched === n, detail: `${matched} of ${n}` },
-    { key: 'prices', label: 'Prices set', ok: n > 0 && priced === n, detail: `${priced} of ${n}` },
-    { key: 'attachments', label: 'Attachments checked', ok: unread === 0, detail: `${unread} not read` },
-    { key: 'delivery', label: 'Delivery date valid', ok: r.deliveryValid, detail: 'not a delivery day' },
-    { key: 'cutoff', label: 'Before 22:30 cutoff', ok: true },
-    {
-      key: 'credit',
-      label: 'Credit & minimum order',
-      ok: creditOk,
-      detail: client.creditHold ? 'credit hold' : `min ${client.minOrder} AED`,
-    },
+    { key: 'unrecognised', label: C.unrecognised.check, ok: n > 0 && matched === n, detail: `${n - matched} unrecognised` },
+    { key: 'missing_price', label: C.missing_price.check, ok: n > 0 && priced === n, detail: `${n - priced} missing` },
+    { key: 'unread_attachment', label: C.unread_attachment.check, ok: unread === 0, detail: `${unread} unread` },
+    { key: 'amend_or_new', label: C.amend_or_new.check, ok: !r.note, detail: 'ask the client' },
+    { key: 'delivery_date', label: C.delivery_date.check, ok: r.deliveryValid, detail: r.delivery.day },
+    { key: 'after_cutoff', label: C.after_cutoff.check, ok: true },
+    { key: 'credit_hold', label: C.credit_hold.check, ok: !client.creditHold, detail: 'see balance' },
+    { key: 'min_order', label: C.min_order.check, ok: total >= client.minOrder, detail: `min ${client.minOrder} AED` },
   ];
 }
 
+/** Request issues in priority order, using the shared dictionary wording. */
+export function requestIssues(r: Request): { key: RequestIssueKey; text: string; tone: Tone; count: number }[] {
+  if (r.status === 'closed') return [];
+  const fails = requestChecks(r).filter((c) => !c.ok);
+  const count = (k: string) => {
+    if (k === 'unrecognised') return r.lines.filter((l) => !l.sku).length;
+    if (k === 'missing_price') return r.lines.filter((l) => l.sku && !((l.price ?? 0) > 0)).length;
+    if (k === 'unread_attachment') return r.attachments.filter((a) => !a.read).length;
+    return 1;
+  };
+  return REQUEST_ISSUE_ORDER.filter((k) => fails.some((f) => f.key === k))
+    .filter((k) => k !== 'missing_price' || count(k) > 0)
+    .map((k) => ({ key: k, text: withCount(REQUEST_ISSUES[k].issue, count(k)), tone: REQUEST_ISSUES[k].tone as Tone, count: count(k) }));
+}
+
 /** Worst issue shown in the journal, with its tone. */
-export function requestIssue(r: Request): { text: string; tone: Tone; extra: number } {
+export function requestIssue(r: Request): { key?: RequestIssueKey; text: string; tone: Tone; extra: number } {
   if (r.status === 'closed') return { text: r.closedAs ?? 'Closed', tone: 'neutral', extra: 0 };
-  const checks = requestChecks(r);
-  const fails = checks.filter((c) => !c.ok);
-  const issues: { text: string; tone: Tone }[] = [];
-  const client = clientById(r.clientId);
-  for (const c of fails) {
-    if (c.key === 'delivery') issues.push({ text: 'Not a delivery day', tone: 'danger' });
-    if (c.key === 'credit')
-      issues.push(client.creditHold ? { text: 'Credit hold', tone: 'danger' } : { text: 'Below minimum order', tone: 'warning' });
-  }
-  for (const c of fails) {
-    if (c.key === 'matched') {
-      const unmatched = r.lines.filter((l) => !l.sku);
-      const unreadable = unmatched.filter((l) => l.clientWrote.includes('unreadable')).length;
-      issues.push({
-        text: unreadable ? `PDF: ${unreadable} lines unreadable` : unmatched.length > 1 ? `${unmatched.length} items not recognised` : 'Item not recognised',
-        tone: 'warning',
-      });
-    }
-    if (c.key === 'prices' && checks[0].ok) issues.push({ text: 'Price not set', tone: 'warning' });
-    if (c.key === 'attachments') issues.push({ text: 'Attachment not checked', tone: 'warning' });
-  }
-  if (r.note) issues.unshift({ text: r.note, tone: 'warning' });
-  if (!issues.length) return { text: 'Ready', tone: 'success', extra: 0 };
-  return { ...issues[0], extra: issues.length - 1 };
+  const list = requestIssues(r);
+  if (!list.length) return { text: 'Ready', tone: 'success', extra: 0 };
+  return { key: list[0].key, text: list[0].text, tone: list[0].tone, extra: list.length - 1 };
+}
+
+/** Order issue wording from the shared dictionary. */
+export function orderIssue(o: Order): { key: OrderIssueKey; text: string } | undefined {
+  if (!orderHasChanges(o)) return undefined;
+  const key: OrderIssueKey = o.stage === 'New request' ? 'change_requested' : 'changed_after_confirmation';
+  return { key, text: ORDER_ISSUES[key].issue };
 }
 
 /* ---------- derived order state ---------- */

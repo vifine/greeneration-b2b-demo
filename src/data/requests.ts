@@ -60,7 +60,7 @@ export const INITIAL_REQUESTS: Request[] = [
     received: { day: 'Mon 19 Oct', time: '21:02' },
     delivery: { day: 'Tue 20 Oct', window: 'before 15:00' },
     deliveryValid: true,
-    note: 'Amendment or new order?',
+    note: 'Amendment or new order',
     author: 'Rami',
     message: [[{ text: 'Also one more arugula cut for tomorrow please', highlight: true }]],
     attachments: [],

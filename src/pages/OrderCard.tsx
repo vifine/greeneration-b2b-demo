@@ -11,7 +11,7 @@ import { deliveryFor } from '../data/delivery';
 import { fmt, lineSum } from '../data/lines';
 import { paymentView, type PaymentField, type PaymentView } from '../data/payments';
 import type { Order, OrderLine, OrderStage, Tone } from '../data/types';
-import { orderCurrentTotal, orderHasChanges, orderOriginalTotal, useStore } from '../store';
+import { orderCurrentTotal, orderHasChanges, orderOriginalTotal, useStore, orderIssue } from '../store';
 
 export const STAGE_TONE: Record<OrderStage, Tone> = { 'New request': 'info', Preorder: 'warning', Confirmed: 'success' };
 
@@ -120,7 +120,7 @@ export function OrderCard() {
           {o.messages ? (
             <>
               <b>
-                Client asked to change · {o.messages.time} · {o.messages.author} via {o.messages.channel}
+                {orderIssue(o)?.text ?? 'Change requested'} · {o.messages.time} · {o.messages.author} via {o.messages.channel}
               </b>
               <p>“{o.messages.quote}” Changes are marked in the lines below — apply them before 22:30.</p>
             </>

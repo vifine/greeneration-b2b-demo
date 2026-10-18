@@ -2394,3 +2394,17 @@ button.tr:hover,
 .line-row.removed .l-base {
   text-decoration: line-through;
 }
+
+.dr-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.dr-hint {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

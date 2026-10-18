@@ -8,7 +8,7 @@ import { matchesPaymentFilter, PAYMENT_FILTERS, paymentView, type PaymentFilter 
 import { clientById } from '../data/clients';
 import { fmt } from '../data/lines';
 import type { OrderStage, Tone } from '../data/types';
-import { orderCurrentTotal, orderHasChanges, orderOriginalTotal, requestIssue, requestTotal, useStore } from '../store';
+import { orderIssue, orderCurrentTotal, orderOriginalTotal, requestIssue, requestTotal, useStore } from '../store';
 
 function Toolbar<T extends string>({
   tabs,
@@ -57,7 +57,12 @@ function useTabParam<T extends string>(keys: readonly T[], fallback: T) {
   };
   const update = (next: { tab?: T; q?: string }) => {
     const p = new URLSearchParams(params);
-    if (next.tab !== undefined) p.set('tab', next.tab);
+    if (next.tab !== undefined) {
+      p.set('tab', next.tab);
+      // Switching tab leaves the "from Home" selection.
+      p.delete('ids');
+      p.delete('from');
+    }
     if (next.q !== undefined) {
       if (next.q) p.set('q', next.q);
       else p.delete('q');
@@ -233,8 +238,7 @@ export function OrdersJournal() {
           <span className="c-total">Total, AED</span>
         </div>
         {visible.map(({ o, client, pay }) => {
-          const pending = orderHasChanges(o);
-          const issue = pending ? o.issue ?? 'Changes to apply' : undefined;
+          const issue = orderIssue(o)?.text;
           const n = o.lines.filter((l) => !l.added).length;
           return (
             <button type="button" key={o.id} className={`tr row ${issue ? 'stripe-warning' : ''}`} onClick={() => navigate(`/crm/orders/${o.id}`)}>
