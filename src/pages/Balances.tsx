@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Money } from '../components/Money';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { FileChip } from '../components/FileChip';
 import * as I from '../components/icons';
@@ -7,7 +8,7 @@ import { Shell } from '../components/Shell';
 import { Btn, Dot, FilterSelect, SearchBox, Tabs, useToast } from '../components/ui';
 import { BALANCES, balanceOf, collectionSteps, STATUS_TONE, type ClientBalance } from '../data/balances';
 import { clientById } from '../data/clients';
-import { fmt } from '../data/lines';
+import { fmt, money } from '../data/lines';
 import type { Tone } from '../data/types';
 import { downloadPdf } from '../lib/pdf';
 
@@ -25,7 +26,7 @@ function FunnelIcon() {
 
 type KpiTone = 'forest' | 'danger' | 'warning' | 'info' | 'hold';
 
-function Kpi({ label, value, hint, tone, active, onClick, color }: { label: string; value: string; hint: string; tone?: Tone; active?: boolean; onClick?: () => void; color?: KpiTone }) {
+function Kpi({ label, value, hint, tone, active, onClick, color, money }: { money?: boolean; label: string; value: string; hint: string; tone?: Tone; active?: boolean; onClick?: () => void; color?: KpiTone }) {
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag type={onClick ? 'button' : undefined} className={`kpi ${onClick ? 'kpi-tab' : ''} ${color ? `kpi-${color}` : ''} ${active ? 'active' : ''}`} onClick={onClick} aria-pressed={onClick ? !!active : undefined}>
@@ -34,7 +35,7 @@ function Kpi({ label, value, hint, tone, active, onClick, color }: { label: stri
         {label}
         {onClick && <FunnelIcon />}
       </span>
-      <span className="kpi-v">{value}</span>
+      <span className="kpi-v">{money && value !== '—' ? <Money bold>{value}</Money> : value}</span>
       <span className="kpi-h">{hint}</span>
     </Tag>
   );
@@ -92,7 +93,7 @@ export function Balances() {
     <Shell crumbs={[{ label: 'Customers' }, { label: 'Balances' }]} contentClass="balances-page">
       <div className="kpis">
         <Kpi
-          label="Total receivable, AED"
+          label="Total receivable" money
           value={fmt(account.reduce((s, b) => s + b.balance, 0))}
           hint={`${groups.all.length} clients · ${account.length} on account`}
           color="forest"
@@ -100,7 +101,7 @@ export function Balances() {
           onClick={() => setTab('all')}
         />
         <Kpi
-          label="Overdue, AED"
+          label="Overdue" money
           color="danger"
           tone="danger"
           value={fmt(overdue.reduce((s, b) => s + b.overdue, 0))}
@@ -109,7 +110,7 @@ export function Balances() {
           onClick={() => setTab('overdue')}
         />
         <Kpi
-          label="Due in next 7 days, AED"
+          label="Due in next 7 days" money
           color="warning"
           tone="warning"
           value={fmt(in7.reduce((s, i) => s + i.amount - i.paid, 0))}
@@ -118,7 +119,7 @@ export function Balances() {
           onClick={() => setTab('week')}
         />
         <Kpi
-          label="Awaiting prepayment, AED"
+          label="Awaiting prepayment" money
           color="info"
           tone="info"
           value={fmt(prepay.reduce((s, b) => s + (b.nextDue?.amount ?? 0), 0))}
@@ -127,7 +128,7 @@ export function Balances() {
           onClick={() => setTab('prepay')}
         />
         <Kpi
-          label="On hold, AED"
+          label="On hold" money
           color="hold"
           tone="danger"
           value={fmt(groups.hold.reduce((s, b) => s + b.balance, 0))}
@@ -149,8 +150,8 @@ export function Balances() {
       <div className="table bal-table">
         <div className="tr th">
           <span className="b-client">Client</span>
-          <span className="b-balance">Balance, AED</span>
-          <span className="b-overdue">Overdue, AED</span>
+          <span className="b-balance">Balance</span>
+          <span className="b-overdue">Overdue</span>
           <span className="b-next">Next due</span>
           <span className="b-status">Status</span>
           <span className="b-last">Last payment</span>
@@ -169,11 +170,11 @@ export function Balances() {
                 <span>{c.name}</span>
                 <small>{b.terms}</small>
               </span>
-              <span className="b-balance strong">{fmt(b.balance)}</span>
+              <span className="b-balance strong"><Money v={b.balance} bold /></span>
               <span className="b-overdue two right">
                 {b.overdue > 0 ? (
                   <>
-                    <span className="text-danger strong">{fmt(b.overdue)}</span>
+                    <span className="text-danger strong"><Money v={b.overdue} bold /></span>
                     <small>oldest {b.oldestDays} days</small>
                   </>
                 ) : (
@@ -184,7 +185,7 @@ export function Balances() {
                 {b.nextDue ? (
                   <>
                     <span>{b.nextDue.date}</span>
-                    <small>{fmt(b.nextDue.amount)} AED</small>
+                    <small><Money v={b.nextDue.amount} /></small>
                   </>
                 ) : (
                   <span className="muted">—</span>
@@ -197,7 +198,7 @@ export function Balances() {
               <span className="b-last two">
                 <span>{b.lastPayment.date}</span>
                 <small>
-                  {fmt(b.lastPayment.amount)} · {b.lastPayment.method}
+                  <Money v={b.lastPayment.amount} /> · {b.lastPayment.method}
                 </small>
               </span>
             </button>
@@ -256,7 +257,7 @@ export function BalanceDetail() {
           </div>
           <p>
             {b.terms}
-            {b.creditLimit ? ` · credit limit ${fmt(b.creditLimit)} AED` : ''} · QuickBooks · synced 15:05
+            {b.creditLimit ? <> · credit limit <Money v={b.creditLimit} /></> : ''} · QuickBooks · synced 15:05
           </p>
         </div>
         <div className="card-actions">
@@ -283,18 +284,18 @@ export function BalanceDetail() {
       </div>
 
       <div className="kpis">
-        <Kpi label="Balance, AED" value={fmt(b.balance)} hint={`${inv.length} open invoice${inv.length === 1 ? '' : 's'}`} />
+        <Kpi label="Balance" money value={fmt(b.balance)} hint={`${inv.length} open invoice${inv.length === 1 ? '' : 's'}`} />
         <Kpi
-          label="Overdue, AED"
+          label="Overdue" money
           tone="danger"
           value={fmt(b.overdue)}
           hint={overdueInv.length ? `${overdueInv.length} invoice${overdueInv.length === 1 ? '' : 's'} · oldest ${b.oldestDays} days` : 'nothing overdue'}
         />
-        <Kpi label="Due in next 7 days, AED" tone="warning" value={fmt(soon.reduce((s, i) => s + i.amount - i.paid, 0))} hint={`${soon.length} invoice${soon.length === 1 ? '' : 's'}`} />
+        <Kpi label="Due in next 7 days" money tone="warning" value={fmt(soon.reduce((s, i) => s + i.amount - i.paid, 0))} hint={`${soon.length} invoice${soon.length === 1 ? '' : 's'}`} />
         <Kpi
-          label="Credit left, AED"
+          label="Credit left" money
           value={b.creditLimit ? fmt(Math.max(0, b.creditLimit - b.balance)) : '—'}
-          hint={b.creditLimit ? `of ${fmt(b.creditLimit)} limit` : 'no credit terms'}
+          hint={b.creditLimit ? `of ${money(b.creditLimit)} limit` : 'no credit terms'}
         />
       </div>
 
@@ -324,9 +325,9 @@ export function BalanceDetail() {
             <span className="i-no">Invoice</span>
             <span className="i-order">Order</span>
             <span className="i-date">Invoice date</span>
-            <span className="i-amount">Amount, AED</span>
-            <span className="i-paid">Paid, AED</span>
-            <span className="i-bal">Balance, AED</span>
+            <span className="i-amount">Amount</span>
+            <span className="i-paid">Paid</span>
+            <span className="i-bal">Balance</span>
             <span className="i-due">Due</span>
             <span className="i-status">Status</span>
             <span className="i-dl" />
@@ -338,8 +339,8 @@ export function BalanceDetail() {
                 #{i.order} · {i.orderDay}
               </span>
               <span className="i-date">{i.date}</span>
-              <span className="i-amount">{fmt(i.amount)}</span>
-              <span className="i-paid muted">{fmt(i.paid)}</span>
+              <span className="i-amount"><Money v={i.amount} /></span>
+              <span className="i-paid muted"><Money v={i.paid} /></span>
               <span className={`i-bal strong ${i.status.tone === 'danger' ? 'text-danger' : ''}`}>{fmt(i.amount - i.paid)}</span>
               <span className="i-due">{i.due}</span>
               <span className="i-status">
@@ -358,9 +359,9 @@ export function BalanceDetail() {
               <span className="i-no strong">Total open</span>
               <span className="i-order" />
               <span className="i-date" />
-              <span className="i-amount strong">{fmt(totals.amount)}</span>
-              <span className="i-paid strong">{fmt(totals.paid)}</span>
-              <span className="i-bal strong">{fmt(totals.amount - totals.paid)}</span>
+              <span className="i-amount strong"><Money v={totals.amount} bold /></span>
+              <span className="i-paid strong"><Money v={totals.paid} bold /></span>
+              <span className="i-bal strong"><Money v={totals.amount - totals.paid} bold /></span>
               <span className="i-due" />
               <span className="i-status" />
               <span className="i-dl" />

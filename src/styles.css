@@ -36,7 +36,7 @@
   --disabled-bg: #e9ecef;
   --disabled-fg: #9aa0a6;
 
-  --font: 'Heebo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font: 'Heebo', 'Dirham-Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 *,
@@ -2687,3 +2687,14 @@ button.kpi {
   align-items: flex-start;
 }
 .line-row .l-qty .was { line-height: 20px; }
+
+/* dirham sign */
+.money { display: inline-flex; align-items: baseline; gap: 0.18em; white-space: nowrap; }
+.aed { font-family: 'Dirham-Sans', 'Dirham', sans-serif; font-weight: inherit; }
+.input-prefix { position: relative; display: inline-flex; align-items: center; }
+.input-prefix .aed { position: absolute; left: 8px; color: var(--text-2); pointer-events: none; font-size: 14px; }
+.input-prefix .inline-input.has-prefix { padding-left: 20px; }
+.input-prefix.is-disabled .aed { opacity: 0.5; }
+.c-price b .money, .total-v .money { gap: 0.12em; }
+
+input, select, button, textarea { font-family: inherit; }

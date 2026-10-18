@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Money } from '../components/Money';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { AddressCard, AddressDialog, emptyAddress } from '../components/Addresses';
 import * as I from '../components/icons';
@@ -7,7 +8,6 @@ import { Btn, Dot, SearchBox, useToast } from '../components/ui';
 import { DELIVERY_DAYS_BY_EMIRATE, type Address } from '../data/addresses';
 import { balanceOf } from '../data/balances';
 import { CLIENTS, clientById } from '../data/clients';
-import { fmt } from '../data/lines';
 import { useStore } from '../store';
 
 export function ClientsJournal() {
@@ -35,7 +35,7 @@ export function ClientsJournal() {
           <span className="c-addr">Main delivery address</span>
           <span className="c-emirate">Emirate · delivery days</span>
           <span className="c-points">Addresses</span>
-          <span className="c-min">Min order, AED</span>
+          <span className="c-min">Min order</span>
         </div>
         {rows.map(({ c, own, main }) => (
           <button type="button" key={c.id} className={`tr row ${c.creditHold ? 'stripe-danger' : ''}`} onClick={() => navigate(`/customers/clients/${c.id}`)}>
@@ -49,7 +49,7 @@ export function ClientsJournal() {
             </span>
             <span className="c-emirate">{main ? `${main.emirate} · ${DELIVERY_DAYS_BY_EMIRATE[main.emirate]}` : '—'}</span>
             <span className="c-points">{own.length}</span>
-            <span className="c-min right">{fmt(c.minOrder)}</span>
+            <span className="c-min right"><Money v={c.minOrder} /></span>
           </button>
         ))}
         {!rows.length && <div className="empty">No clients match.</div>}
@@ -81,12 +81,12 @@ export function ClientCard() {
             )}
           </div>
           <p>
-            Min order {fmt(c.minOrder)} AED · {own.length} delivery address{own.length === 1 ? '' : 'es'}
+            Min order <Money v={c.minOrder} /> · {own.length} delivery address{own.length === 1 ? '' : 'es'}
             {bal ? (
               <>
                 {' · '}
                 <Link to={`/customers/balances/${c.id}`} className="link-sort">
-                  Balance {fmt(bal.balance)} AED
+                  Balance <Money v={bal.balance} />
                 </Link>
               </>
             ) : null}

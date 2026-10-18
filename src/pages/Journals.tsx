@@ -1,11 +1,11 @@
 import type React from 'react';
+import { Money } from '../components/Money';
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Shell } from '../components/Shell';
 import { Dot, FilterSelect, SearchBox, Tabs } from '../components/ui';
 import { matchesPaymentFilter, PAYMENT_FILTERS, paymentView, type PaymentFilter } from '../data/payments';
 import { clientById } from '../data/clients';
-import { fmt } from '../data/lines';
 import type { OrderStage, Tone } from '../data/types';
 import { orderIssue, orderCurrentTotal, orderOriginalTotal, requestIssue, requestTotal, useStore } from '../store';
 
@@ -143,7 +143,7 @@ export function RequestsJournal() {
           <span className="c-for">Delivery for</span>
           <span className="c-issue">Issues</span>
           <span className="c-reply">Recognised</span>
-          <span className="c-total">Draft total, AED</span>
+          <span className="c-total">Draft total</span>
         </div>
         {visible.map(({ r, issue, client }) => {
           const matched = r.lines.filter((l) => l.sku).length;
@@ -170,7 +170,7 @@ export function RequestsJournal() {
                 {matched} of {r.lines.length} lines
               </span>
               <span className="c-total two right">
-                <span>{total > 0 ? fmt(total) : '—'}</span>
+                <span>{total > 0 ? <Money v={total} bold /> : '—'}</span>
                 <small>
                   {r.lines.length} line{r.lines.length === 1 ? '' : 's'}
                 </small>
@@ -230,7 +230,7 @@ export function OrdersJournal() {
           <span className="c-issue">Issues</span>
           <span className="c-reply">Client reply</span>
           <span className="c-pay">Payment</span>
-          <span className="c-total">Total, AED</span>
+          <span className="c-total">Total</span>
         </div>
         {visible.map(({ o, client, pay }) => {
           const issue = orderIssue(o)?.text;
@@ -270,7 +270,7 @@ export function OrdersJournal() {
                 </span>
               </span>
               <span className="c-total two right">
-                <span>{fmt(orderOriginalTotal(o))}</span>
+                <span><Money v={orderOriginalTotal(o)} bold /></span>
                 <small>
                   {n} line{n === 1 ? '' : 's'}
                 </small>

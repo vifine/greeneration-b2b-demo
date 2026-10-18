@@ -37,7 +37,7 @@ export function requestChecks(r: Request): Check[] {
     { key: 'delivery_date', label: C.delivery_date.check, ok: r.deliveryValid, detail: r.delivery.day },
     { key: 'after_cutoff', label: C.after_cutoff.check, ok: true },
     { key: 'credit_hold', label: C.credit_hold.check, ok: !client.creditHold, detail: 'see balance' },
-    { key: 'min_order', label: C.min_order.check, ok: total >= client.minOrder, detail: `min ${client.minOrder} AED` },
+    { key: 'min_order', label: C.min_order.check, ok: total >= client.minOrder, detail: `min AED ${client.minOrder}` },
   ];
 }
 

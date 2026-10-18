@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Money } from '../components/Money';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { AddressDialog, AddressPick, emptyAddress } from '../components/Addresses';
 import { pickAddress } from '../data/addresses';
@@ -9,7 +10,7 @@ import { LinesTable } from '../components/LinesTable';
 import { Shell } from '../components/Shell';
 import { Btn, CheckState, useToast } from '../components/ui';
 import { clientById } from '../data/clients';
-import { fmt, packText } from '../data/lines';
+import { packText } from '../data/lines';
 import type { Attachment, Line, MessagePart } from '../data/types';
 import { requestChecks, requestTotal, useStore } from '../store';
 
@@ -210,8 +211,8 @@ export function RequestCard() {
         <section className="block block-soft block-summary">
           <b className="block-heading">Summary</b>
           <div className="total">
-            <span className="total-k">Total, AED</span>
-            <span className="total-v">{fmt(total)}</span>
+            <span className="total-k">Total</span>
+            <span className="total-v"><Money v={total} bold /></span>
           </div>
           <div className="kv">
             <span>Lines</span>

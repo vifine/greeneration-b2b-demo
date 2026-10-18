@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Money } from './Money';
 import { availability, CATALOG, CATEGORIES, findPack, packChip, lineImage } from '../data/catalog';
 import { fmt, line } from '../data/lines';
 import { customerPrice } from '../data/customerPrices';
@@ -65,10 +66,10 @@ export function CatalogSummary({
         <span className="kv-v">{s.count}</span>
       </div>
       <div className="kv-stack">
-        <span className="kv-k">Sum, AED</span>
+        <span className="kv-k">Sum</span>
         <span className="kv-v kv-sum">
           {s.approx ? '≈ ' : ''}
-          {fmt(s.sum)}
+          <Money v={s.sum} bold />
         </span>
       </div>
       <div className="cat-buttons">
@@ -162,11 +163,11 @@ export function CatalogList({ s, deliveryLabel = 'Tue 20 Oct', clientId }: { s: 
       <div className="cat-cols">
         <span className="c-photo" />
         <span className="c-pack">Pack</span>
-        <span className="c-base">Base price, AED</span>
-        <span className="c-price">Customer price, AED</span>
+        <span className="c-base">Base price</span>
+        <span className="c-price">Customer price</span>
         <span className="c-avail">Availability</span>
         <span className="c-qty">Qty / weight</span>
-        <span className="c-sum">Sum, AED</span>
+        <span className="c-sum">Sum</span>
       </div>
       <div className="cat-groups">
         {visible.map(({ group, packs }) => (
@@ -210,12 +211,12 @@ function PackRow({ pack, value, onChange, clientId }: { pack: Pack; value: numbe
         <small>{pack.sku}</small>
       </span>
       <span className="c-base">
-        <span className={cp.discount ? 'struck' : ''}>{custom ? `${fmt(pack.price)} / 10 g` : fmt(pack.price)}</span>
+        <span className={cp.discount ? 'struck' : ''}><Money>{custom ? `${fmt(pack.price)} / 10 g` : fmt(pack.price)}</Money></span>
         <small>excl. VAT</small>
       </span>
       <span className="c-price">
         <b>
-          {custom ? `${fmt(cp.price)} / 10 g` : fmt(cp.price)}
+          <Money bold>{custom ? `${fmt(cp.price)} / 10 g` : fmt(cp.price)}</Money>
           {cp.discount > 0 && <em className="disc">−{cp.discount}%</em>}
         </b>
         <small>
@@ -241,7 +242,7 @@ function PackRow({ pack, value, onChange, clientId }: { pack: Pack; value: numbe
           <Stepper value={value} onChange={onChange} disabled={availability(pack).kind === 'out'} />
         )}
       </span>
-      <span className={`c-sum ${filled ? 'strong' : ''}`}>{filled ? `${custom ? '≈ ' : ''}${fmt(packSum(pack, value, cp.price))}` : '—'}</span>
+      <span className={`c-sum ${filled ? 'strong' : ''}`}>{filled ? <>{custom ? '≈ ' : ''}<Money v={packSum(pack, value, cp.price)} /></> : '—'}</span>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { balanceOf } from './balances';
-import { fmt } from './lines';
+import { fmt, money } from './lines';
 import type { Order, PaymentKind, Tone } from './types';
 
 export type PayTone = Tone | 'sand';
@@ -9,6 +9,8 @@ export interface PaymentField {
   v: string;
   tone?: 'success' | 'danger';
   strong?: boolean;
+  /** Show the dirham sign before the value. */
+  money?: boolean;
 }
 
 export interface PaymentView {
@@ -75,11 +77,11 @@ export function paymentView(o: Order, total: number, before = total): PaymentVie
   const clientAccount: PaymentField = clientOverdue
     ? {
         k: 'Client account',
-        v: `${fmt(clientOverdue.overdue)} overdue${clientOverdue.holdFrom ? ` · hold from ${clientOverdue.holdFrom.split(' ')[0]}${ordinal(clientOverdue.holdFrom)}` : ''}`,
+        v: `${money(clientOverdue.overdue)} overdue${clientOverdue.holdFrom ? ` · hold from ${clientOverdue.holdFrom.split(' ')[0]}${ordinal(clientOverdue.holdFrom)}` : ''}`,
         tone: 'danger',
         strong: true,
       }
-    : { k: 'Client account', v: `${fmt(bal?.balance ?? 0)} · nothing overdue`, tone: 'success', strong: true };
+    : { k: 'Client account', v: `${money(bal?.balance ?? 0)} · nothing overdue`, tone: 'success', strong: true };
 
   switch (p.kind) {
     case 'on_account':
@@ -91,16 +93,16 @@ export function paymentView(o: Order, total: number, before = total): PaymentVie
         return {
           kind: p.kind,
           label: orderOverdue ? `Overdue ${p.days} days` : 'Client overdue',
-          hint: orderOverdue ? `Due ${p.due} · ${fmt(balance)}` : `${fmt(clientOverdue!.overdue)} · ${clientOverdue!.oldestDays} days`,
+          hint: orderOverdue ? `Due ${p.due} · ${money(balance)}` : `${money(clientOverdue!.overdue)} · ${clientOverdue!.oldestDays} days`,
           tone: 'danger',
           danger: true,
           status: orderOverdue ? `Overdue ${p.days} days` : `${termsText} · client overdue`,
           statusDanger: true,
           fields: [
-            { k: 'Total, AED', v: totalText, strong: true },
+            { k: 'Total', money: true, v: totalText, strong: true },
             { k: 'Due', v: p.due ?? '—' },
-            { k: 'Paid', v: fmt(paid) },
-            { k: 'Balance, AED', v: fmt(balance), strong: true, tone: orderOverdue ? 'danger' : undefined },
+            { k: 'Paid', money: true, v: fmt(paid) },
+            { k: 'Balance', money: true, v: fmt(balance), strong: true, tone: orderOverdue ? 'danger' : undefined },
             clientAccount,
             { k: 'Source', v: SOURCE },
           ],
@@ -120,10 +122,10 @@ export function paymentView(o: Order, total: number, before = total): PaymentVie
           status: `Due in ${p.days} days`,
           statusDanger: false,
           fields: [
-            { k: 'Total, AED', v: totalText, strong: true },
+            { k: 'Total', money: true, v: totalText, strong: true },
             { k: 'Due', v: p.due ?? '—' },
-            { k: 'Paid', v: fmt(paid) },
-            { k: 'Balance, AED', v: fmt(balance), strong: true },
+            { k: 'Paid', money: true, v: fmt(paid) },
+            { k: 'Balance', money: true, v: fmt(balance), strong: true },
             { k: 'Reminder', v: p.reminder ?? '—' },
             { k: 'Source', v: SOURCE },
           ],
@@ -142,10 +144,10 @@ export function paymentView(o: Order, total: number, before = total): PaymentVie
         status: termsText,
         statusDanger: false,
         fields: [
-          { k: 'Total, AED', v: totalText, strong: true },
+          { k: 'Total', money: true, v: totalText, strong: true },
           { k: 'Due', v: p.due ?? '—' },
-          { k: 'Paid', v: fmt(paid) },
-          { k: 'Balance, AED', v: fmt(balance), strong: true },
+          { k: 'Paid', money: true, v: fmt(paid) },
+          { k: 'Balance', money: true, v: fmt(balance), strong: true },
           clientAccount,
           { k: 'Source', v: SOURCE },
         ],
@@ -166,10 +168,10 @@ export function paymentView(o: Order, total: number, before = total): PaymentVie
         status: p.kind === 'prepaid' ? 'Prepaid' : 'Paid',
         statusDanger: false,
         fields: [
-          { k: 'Total, AED', v: totalText, strong: true },
+          { k: 'Total', money: true, v: totalText, strong: true },
           { k: 'Paid on', v: p.paidOn ?? '—' },
-          { k: 'Paid', v: fmt(paid) },
-          { k: 'Balance, AED', v: fmt(Math.max(0, total - paid)), strong: true, tone: total - paid > 0.004 ? 'danger' : 'success' },
+          { k: 'Paid', money: true, v: fmt(paid) },
+          { k: 'Balance', money: true, v: fmt(Math.max(0, total - paid)), strong: true, tone: total - paid > 0.004 ? 'danger' : 'success' },
           { k: 'Invoice', v: o.invoice },
           { k: 'Source', v: SOURCE },
         ],
@@ -181,15 +183,15 @@ export function paymentView(o: Order, total: number, before = total): PaymentVie
       return {
         kind: p.kind,
         label: 'Link sent',
-        hint: `Prepayment · ${fmt(total)}`,
+        hint: `Prepayment · ${money(total)}`,
         tone: 'info',
         danger: false,
         status: 'Link sent · awaiting payment',
         statusDanger: false,
         fields: [
-          { k: 'Amount, AED', v: totalText, strong: true },
+          { k: 'Amount', money: true, v: totalText, strong: true },
           { k: 'Link', v: `Sent ${p.linkSent} · expires ${p.linkExpires}` },
-          { k: 'Paid', v: '0.00' },
+          { k: 'Paid', money: true, v: '0.00' },
           { k: 'Rule', v: 'Not loaded until paid' },
           { k: 'Client account', v: 'Prepayment · link' },
           { k: 'Source', v: 'Payment provider · live' },
@@ -208,10 +210,10 @@ export function paymentView(o: Order, total: number, before = total): PaymentVie
         status: 'Awaiting prepayment',
         statusDanger: false,
         fields: [
-          { k: 'Total, AED', v: totalText, strong: true },
+          { k: 'Total', money: true, v: totalText, strong: true },
           { k: 'Pay by', v: p.payBy ?? '—' },
-          { k: 'Paid', v: fmt(paid) },
-          { k: 'Balance, AED', v: fmt(balance), strong: true },
+          { k: 'Paid', money: true, v: fmt(paid) },
+          { k: 'Balance', money: true, v: fmt(balance), strong: true },
           { k: 'Rule', v: 'Moves to picklist only when paid' },
           { k: 'Source', v: SOURCE },
         ],
@@ -224,15 +226,15 @@ export function paymentView(o: Order, total: number, before = total): PaymentVie
       return {
         kind: p.kind,
         label: 'Cash on delivery',
-        hint: `Collect ${fmt(total)}`,
+        hint: `Collect ${money(total)}`,
         tone: 'info',
         danger: false,
         status: 'Cash on delivery',
         statusDanger: false,
         fields: [
-          { k: 'To collect, AED', v: totalText, strong: true },
+          { k: 'To collect', money: true, v: totalText, strong: true },
           { k: 'Driver', v: 'Assigned at loading' },
-          { k: 'Paid', v: '0.00' },
+          { k: 'Paid', money: true, v: '0.00' },
           { k: 'Invoice', v: `${o.invoice} · with delivery` },
           { k: 'Handed to finance', v: '—' },
           { k: 'Source', v: SOURCE },
@@ -245,15 +247,15 @@ export function paymentView(o: Order, total: number, before = total): PaymentVie
       return {
         kind: p.kind,
         label: 'Cash collected',
-        hint: `${fmt(total)} · ${p.collected ?? ''}`,
+        hint: `${money(total)} · ${p.collected ?? ''}`,
         tone: 'success',
         danger: false,
         status: 'Cash collected',
         statusDanger: false,
         fields: [
-          { k: 'Collected, AED', v: totalText, strong: true },
+          { k: 'Collected', money: true, v: totalText, strong: true },
           { k: 'Collected', v: p.collected ?? '—' },
-          { k: 'Paid', v: fmt(total) },
+          { k: 'Paid', money: true, v: fmt(total) },
           { k: 'Handed to finance', v: 'Pending' },
           { k: 'Invoice', v: o.invoice },
           { k: 'Source', v: SOURCE },

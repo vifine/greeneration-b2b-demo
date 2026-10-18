@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Money } from '../components/Money';
 import { Navigate, useParams } from 'react-router-dom';
 import { AddressDialog, AddressPick, emptyAddress } from '../components/Addresses';
 import { pickAddress } from '../data/addresses';
@@ -39,7 +40,7 @@ function Kv({ f }: { f: PaymentField }) {
   return (
     <div className="kv-cell">
       <span className="kv-k">{f.k}</span>
-      <span className={`kv-v ${f.strong ? 'strong' : ''} ${f.tone ? `text-${f.tone}` : ''}`}>{f.v}</span>
+      <span className={`kv-v ${f.strong ? 'strong' : ''} ${f.tone ? `text-${f.tone}` : ''}`}>{f.money ? <Money bold={f.strong}>{f.v}</Money> : f.v}</span>
     </div>
   );
 }

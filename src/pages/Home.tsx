@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Money } from '../components/Money';
 import * as I from '../components/icons';
 import { Shell } from '../components/Shell';
 import { fmt } from '../data/lines';
@@ -196,21 +197,21 @@ export function Home() {
         <Glance to={target('/crm/requests', open.map((r) => r.id), 'Open requests', 'all')} label="Requests" value={String(open.length)} hint={`${ready} ready to become orders`} />
         <Glance to={target('/crm/orders', tomorrow.map((o) => o.id), 'Orders for Tue 20 Oct')} label="Orders for tomorrow" value={String(tomorrow.length)} hint="+4 vs last Monday" />
         <Glance to={target('/crm/orders', awaitingIds, 'Awaiting client reply', 'new')} label="Awaiting client reply" value={String(awaitingIds.length)} hint="Auto to delivery at 22:00" />
-        <Glance to={target('/crm/orders', tomorrow.map((o) => o.id), 'Order value, Tue 20 Oct')} label="Order value, AED" value={fmt(value).replace(/\.\d+$/, '')} hint="Tue 20 Oct" />
+        <Glance to={target('/crm/orders', tomorrow.map((o) => o.id), 'Order value, Tue 20 Oct')} label="Order value" money value={fmt(value).replace(/\.\d+$/, '')} hint="Tue 20 Oct" />
         <Glance to="/crm/leads" label="Leads" value="11" hint="Unsorted · oldest 3 days" />
       </div>
     </Shell>
   );
 }
 
-function Glance({ to, label, value, hint }: { to: string; label: string; value: string; hint: string }) {
+function Glance({ to, label, value, hint, money }: { to: string; label: string; value: string; hint: string; money?: boolean }) {
   return (
     <Link to={to} className="glance-tile">
       <span className="glance-top">
         <b>{label}</b>
         <img src={I.icArrowUpRight} width={16} height={16} alt="" />
       </span>
-      <span className="glance-value">{value}</span>
+      <span className="glance-value">{money ? <Money bold>{value}</Money> : value}</span>
       <span className="glance-hint">{hint}</span>
     </Link>
   );
