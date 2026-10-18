@@ -2732,7 +2732,7 @@ input, select, button, textarea { font-family: inherit; }
 .glance.metrics .glance-value { color: var(--forest); }
 
 .lines-table .l-price { flex-direction: column; align-items: flex-end; gap: 4px; }
-.po-diff { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 12px; line-height: 16px; color: var(--danger); white-space: nowrap; }
+.po-diff { display: flex; align-items: baseline; gap: 8px; font-size: 12px; line-height: 16px; color: var(--danger); white-space: nowrap; }
 .po-actions { display: flex; gap: 8px; }
 .po-actions .link-sort { font-size: 12px; }
 
