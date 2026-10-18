@@ -2677,3 +2677,7 @@ button.kpi {
 
 .addr-pick-btn:hover:not(:disabled),
 .day-pick-btn:hover:not(:disabled) { background: var(--green-tea); border-color: var(--forest); }
+
+/* header cells keep the header colour */
+.tr.th > .l-base,
+.cat-cols > .c-base { color: inherit; }
