@@ -1510,8 +1510,30 @@ button.tr:hover,
   display: flex;
   gap: 8px;
 }
-.line-row.unmatched {
+.line-row.unmatched,
+.line-row.problem {
   background: var(--tint-danger);
+}
+/* amended / added / removed lines stay highlighted */
+.line-row.stripe-warning {
+  background: var(--tint-warning);
+}
+.prod-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.prod b {
+  font-weight: 700;
+}
+.prod-block .sku {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-2);
+}
+.line-row.removed .prod b {
+  font-weight: 400;
 }
 .inline-input {
   height: 32px;

@@ -87,7 +87,6 @@ export function LinesTable({ lines, variant, onQty, onPricing, onRemove, onAccep
       <div className="tr th">
         <span className="l-photo" />
         <span className="l-product">Product / pack</span>
-        <span className="l-sku">SKU</span>
         <span className="l-wrote">Client wrote</span>
         <span className="l-qty">Qty</span>
         <span className="l-base">Base price, AED</span>
@@ -106,6 +105,7 @@ export function LinesTable({ lines, variant, onQty, onPricing, onRemove, onAccep
           'tr',
           'line-row',
           unmatched ? 'unmatched stripe-danger' : '',
+          !unmatched && !l.removed && !((l.price ?? 0) > 0) ? 'problem stripe-danger' : '',
           amended ? 'stripe-warning' : '',
           l.removed ? 'removed stripe-warning' : '',
         ].join(' ');
@@ -141,13 +141,15 @@ export function LinesTable({ lines, variant, onQty, onPricing, onRemove, onAccep
                     {l.suggestion ? (
                       <>
                         <span className="prod">
-                          {l.suggestion.product}
+                          <b>{l.suggestion.product}</b>
                           <span className="pack">
                             {'  /  '}
                             {l.suggestion.pack}
                           </span>
                         </span>
-                        <small>{l.suggestion.note}</small>
+                        <small>
+                          {l.suggestion.sku.replace(/-C$/, '')} · {l.suggestion.note}
+                        </small>
                       </>
                     ) : (
                       <>
@@ -168,16 +170,18 @@ export function LinesTable({ lines, variant, onQty, onPricing, onRemove, onAccep
                   </span>
                 </>
               ) : (
+                <span className="prod-block">
                 <span className="prod">
-                  {l.product}
+                  <b>{l.product}</b>
                   <span className="pack">
                     {'  /  '}
                     {l.pack}
                   </span>
                 </span>
+                <small className="sku">{(l.sku ?? '').replace(/-C$/, '') || '—'}</small>
+                </span>
               )}
             </span>
-            <span className={`l-sku ${unmatched ? 'muted' : ''}`}>{(l.sku ?? l.suggestion?.sku ?? '—').replace(/-C$/, '')}</span>
             <span className="l-wrote ellipsis" title={l.clientWrote}>
               {l.clientWrote}
             </span>
