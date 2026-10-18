@@ -224,7 +224,6 @@ export function BalanceDetail() {
   const inv = b.invoices;
   const overdueInv = inv.filter((i) => i.status.tone === 'danger');
   const soon = inv.filter((i) => i.status.tone === 'warning');
-  const totals = inv.reduce((s, i) => ({ amount: s.amount + i.amount, paid: s.paid + i.paid }), { amount: 0, paid: 0 });
   const statusText =
     b.status.kind === 'overdue' && b.holdFrom ? `Overdue · new orders on hold from ${b.holdFrom}` : b.status.kind === 'hold' ? `On hold since ${b.holdFrom}` : b.status.text;
   const seed = b.clientId.length;
@@ -341,7 +340,7 @@ export function BalanceDetail() {
               <span className="i-date">{i.date}</span>
               <span className="i-amount"><Money v={i.amount} /></span>
               <span className="i-paid muted"><Money v={i.paid} /></span>
-              <span className={`i-bal strong ${i.status.tone === 'danger' ? 'text-danger' : ''}`}>{fmt(i.amount - i.paid)}</span>
+              <span className={`i-bal strong ${i.status.tone === 'danger' ? 'text-danger' : ''}`}><Money v={i.amount - i.paid} bold /></span>
               <span className="i-due">{i.due}</span>
               <span className="i-status">
                 <Dot tone={i.status.tone} />
@@ -354,21 +353,7 @@ export function BalanceDetail() {
               </span>
             </div>
           ))}
-          {inv.length > 0 ? (
-            <div className="tr tfoot">
-              <span className="i-no strong">Total open</span>
-              <span className="i-order" />
-              <span className="i-date" />
-              <span className="i-amount strong"><Money v={totals.amount} bold /></span>
-              <span className="i-paid strong"><Money v={totals.paid} bold /></span>
-              <span className="i-bal strong"><Money v={totals.amount - totals.paid} bold /></span>
-              <span className="i-due" />
-              <span className="i-status" />
-              <span className="i-dl" />
-            </div>
-          ) : (
-            <div className="empty">No open invoices.</div>
-          )}
+          {inv.length === 0 && <div className="empty">No open invoices.</div>}
         </div>
       ) : (
         <div className="empty-panel">
