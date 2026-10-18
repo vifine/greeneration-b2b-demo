@@ -36,7 +36,7 @@
   --disabled-bg: #e9ecef;
   --disabled-fg: #9aa0a6;
 
-  --font: 'Heebo', 'Dirham-Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font: 'Heebo', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 *,
@@ -2688,14 +2688,14 @@ button.kpi {
 }
 .line-row .l-qty .was { line-height: 20px; }
 
-/* dirham sign */
-.money { display: inline-flex; align-items: baseline; gap: 0.18em; white-space: nowrap; }
-.aed { font-family: 'Dirham-Sans', 'Dirham', sans-serif; font-weight: inherit; }
+/* AED label */
+.money { display: inline-flex; align-items: baseline; gap: 0.3em; white-space: nowrap; }
+.aed { font-size: 0.72em; font-weight: 500; letter-spacing: 0.02em; color: var(--text-2); }
 .input-prefix { position: relative; display: inline-flex; align-items: center; }
-.input-prefix .aed { position: absolute; left: 8px; color: var(--text-2); pointer-events: none; font-size: 14px; }
-.input-prefix .inline-input.has-prefix { padding-left: 20px; }
+.input-prefix .aed { position: absolute; left: 7px; pointer-events: none; font-size: 10px; }
+.input-prefix .inline-input.has-prefix { padding-left: 30px; }
 .input-prefix.is-disabled .aed { opacity: 0.5; }
-.c-price b .money, .total-v .money { gap: 0.12em; }
+.total-v .aed { font-size: 0.4em; }
 
 input, select, button, textarea { font-family: inherit; }
 
@@ -2759,3 +2759,4 @@ input, select, button, textarea { font-family: inherit; }
 .seg button + button { border-left: 1px solid var(--forest); }
 .seg button.on { background: var(--forest); color: var(--on-dark); }
 .seg button:not(.on):hover { background: var(--green-tea); }
+.lines-table .l-price { flex-basis: 108px !important; }

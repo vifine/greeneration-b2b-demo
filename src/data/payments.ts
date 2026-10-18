@@ -9,7 +9,7 @@ export interface PaymentField {
   v: string;
   tone?: 'success' | 'danger';
   strong?: boolean;
-  /** Show the dirham sign before the value. */
+  /** Show AED before the value. */
   money?: boolean;
 }
 

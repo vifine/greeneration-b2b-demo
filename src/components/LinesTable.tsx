@@ -27,7 +27,7 @@ function NumInput({
   prefix,
 }: {
   suffix?: string;
-  /** Show the dirham sign inside the field. */
+  /** Show AED inside the field. */
   prefix?: boolean;
   value: number;
   onCommit: (v: number) => void;
@@ -217,7 +217,7 @@ export function LinesTable({ lines, variant, onQty, onPricing, onRemove, onAccep
               <NumInput value={lineDiscount(l)} decimals={1} width={64} suffix="%" label={`Discount for ${l.product}`} disabled={l.removed || unmatched} highlight={lineDiscount(l) > 0} onCommit={(v) => onPricing(l.id, withDiscount(l, v))} />
             </span>
             <span className="l-price">
-              <NumInput prefix value={l.price ?? 0} decimals={2} width={76} label={`Price for ${l.product}`} disabled={l.removed || unmatched} highlight={poDiff} onCommit={(v) => onPricing(l.id, withPrice(l, v))} />
+              <NumInput prefix value={l.price ?? 0} decimals={2} width={92} label={`Price for ${l.product}`} disabled={l.removed || unmatched} highlight={poDiff} onCommit={(v) => onPricing(l.id, withPrice(l, v))} />
               {poDiff && (
                 <span className="po-diff">
                   <span>

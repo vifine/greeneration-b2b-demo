@@ -97,7 +97,7 @@ export function withDiscount(l: Line, d: number): Partial<Line> {
 }
 
 
-/** UAE dirham sign, U+20C3 (rendered by the Dirham web font until system fonts ship it). */
-export const AED = '\u20C3';
-/** Amount with the dirham sign: "⃃ 1 240.00". */
-export const money = (n: number) => `${AED}\u2009${fmt(n)}`;
+/** Currency code shown in front of amounts. */
+export const AED = 'AED';
+/** Amount with the currency: "AED 1 240.00". */
+export const money = (n: number) => `${AED} ${fmt(n)}`;
