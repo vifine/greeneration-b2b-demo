@@ -84,10 +84,9 @@ export function lineDiscount(l: Line): number {
   return Math.round((1 - p / b) * 1000) / 10;
 }
 
-/** Patch for a new base price, keeping the current discount. */
-export function withBase(l: Line, base: number): Partial<Line> {
-  const d = lineDiscount(l);
-  return { basePrice: base, price: r2(base * (1 - d / 100)), priceType: l.price ? l.priceType : 'manual' };
+/** Patch for a new customer unit price; base stays fixed, discount follows. */
+export function withPrice(l: Line, price: number): Partial<Line> {
+  return { basePrice: lineBase(l), price: r2(price), priceType: 'manual' };
 }
 
 /** Patch for a new discount %, keeping the base price. */
@@ -96,3 +95,4 @@ export function withDiscount(l: Line, d: number): Partial<Line> {
   const dd = Math.min(100, Math.max(0, d));
   return { basePrice: b, price: r2(b * (1 - dd / 100)), priceType: 'manual' };
 }
+

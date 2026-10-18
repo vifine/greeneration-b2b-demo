@@ -1422,12 +1422,13 @@ button.tr:hover,
   flex: 0 0 90px;
 }
 .lines-table .l-wrote {
-  flex: 0 0 150px;
+  flex: 0 0 140px;
 }
 .lines-table .l-base {
-  flex: 0 0 80px;
+  flex: 0 0 84px;
   display: flex;
   justify-content: flex-end;
+  color: var(--text-2);
 }
 .lines-table .l-disc {
   flex: 0 0 60px;
@@ -1445,8 +1446,7 @@ button.tr:hover,
   flex-basis: 110px;
 }
 .lines-table .l-price {
-  flex: 0 0 76px;
-  font-weight: 700;
+  flex: 0 0 96px;
   display: flex;
   justify-content: flex-end;
 }
@@ -2348,4 +2348,27 @@ button.tr:hover,
 }
 .decision-row.is-empty {
   cursor: default;
+}
+
+.input-suffix {
+  position: relative;
+  display: inline-flex;
+}
+.input-suffix .inline-input.has-suffix {
+  padding-right: 22px;
+}
+.input-suffix .sfx {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-2);
+  font-size: 14px;
+  pointer-events: none;
+}
+.input-suffix.is-disabled .sfx {
+  opacity: 0.6;
+}
+.line-row.removed .l-base {
+  text-decoration: line-through;
 }

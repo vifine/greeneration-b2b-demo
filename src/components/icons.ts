@@ -36,3 +36,4 @@ export { default as icMinusDisabled } from '../assets/icons/minus-disabled.svg';
 export { default as icPlusDisabled } from '../assets/icons/plus-disabled.svg';
 export { default as icCustomers } from '../assets/icons/nav-customers.svg';
 export { default as icBitrix24 } from '../assets/icons/bitrix24.svg';
+export { default as icCatalogWhite } from '../assets/icons/catalog-white.svg';

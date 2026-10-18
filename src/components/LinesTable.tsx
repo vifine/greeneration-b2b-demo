@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { lineImage } from '../data/catalog';
-import { fmt, lineBase, lineDiscount, withBase, withDiscount } from '../data/lines';
+import { fmt, lineBase, lineDiscount, withDiscount, withPrice } from '../data/lines';
 import type { Line, OrderLine, PriceType, Tone } from '../data/types';
 import * as I from './icons';
 import { Dot } from './ui';
@@ -21,7 +21,9 @@ function NumInput({
   label,
   disabled,
   highlight,
+  suffix,
 }: {
+  suffix?: string;
   value: number;
   onCommit: (v: number) => void;
   decimals: number;
@@ -32,9 +34,9 @@ function NumInput({
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const shown = draft ?? (decimals ? value.toFixed(decimals) : String(value));
-  return (
+  const input = (
     <input
-      className={`inline-input ${highlight ? 'highlight' : ''}`}
+      className={`inline-input ${highlight ? 'highlight' : ''} ${suffix ? 'has-suffix' : ''}`}
       style={{ width }}
       aria-label={label}
       inputMode="decimal"
@@ -56,6 +58,14 @@ function NumInput({
       }}
       onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
     />
+  );
+  return suffix ? (
+    <span className={`input-suffix ${disabled ? 'is-disabled' : ''}`}>
+      {input}
+      <span className="sfx">{suffix}</span>
+    </span>
+  ) : (
+    input
   );
 }
 
@@ -80,9 +90,9 @@ export function LinesTable({ lines, variant, onQty, onPricing, onRemove, onAccep
         <span className="l-sku">SKU</span>
         <span className="l-wrote">Client wrote</span>
         <span className="l-qty">Qty</span>
-        <span className="l-base">Base, AED</span>
-        <span className="l-disc">Disc., %</span>
-        <span className="l-price">Price, AED</span>
+        <span className="l-base">Base price, AED</span>
+        <span className="l-disc">Discount</span>
+        <span className="l-price">Client price, AED</span>
         <span className="l-type">Price type</span>
         <span className="l-sum">Sum, AED</span>
         <span className="l-del" />
@@ -152,8 +162,8 @@ export function LinesTable({ lines, variant, onQty, onPricing, onRemove, onAccep
                         <img src={I.icCheckWhite} width={18} height={18} alt="" />
                       </button>
                     )}
-                    <button type="button" className="icon-btn icon-btn-outline" title="Choose from catalog" aria-label="Choose from catalog" onClick={() => onSearch?.(l.id)}>
-                      <img src={I.icSearchForest} width={18} height={18} alt="" />
+                    <button type="button" className="icon-btn icon-btn-primary" title="Choose from catalog" aria-label="Choose from catalog" onClick={() => onSearch?.(l.id)}>
+                      <img src={I.icCatalogWhite} width={18} height={18} alt="" />
                     </button>
                   </span>
                 </>
@@ -184,13 +194,13 @@ export function LinesTable({ lines, variant, onQty, onPricing, onRemove, onAccep
                 onCommit={(v) => onQty(l.id, v)}
               />
             </span>
-            <span className="l-base">
-              <NumInput value={lineBase(l)} decimals={2} width={76} label={`Base price for ${l.product}`} disabled={l.removed || unmatched} onCommit={(v) => onPricing(l.id, withBase(l, v))} />
-            </span>
+            <span className="l-base">{lineBase(l) > 0 ? fmt(lineBase(l)) : '—'}</span>
             <span className="l-disc">
-              <NumInput value={lineDiscount(l)} decimals={1} width={56} label={`Discount for ${l.product}`} disabled={l.removed || unmatched} highlight={lineDiscount(l) > 0} onCommit={(v) => onPricing(l.id, withDiscount(l, v))} />
+              <NumInput value={lineDiscount(l)} decimals={1} width={64} suffix="%" label={`Discount for ${l.product}`} disabled={l.removed || unmatched} highlight={lineDiscount(l) > 0} onCommit={(v) => onPricing(l.id, withDiscount(l, v))} />
             </span>
-            <span className="l-price">{(l.price ?? 0) > 0 ? fmt(l.price ?? 0) : '—'}</span>
+            <span className="l-price">
+              <NumInput value={l.price ?? 0} decimals={2} width={76} label={`Price for ${l.product}`} disabled={l.removed || unmatched} onCommit={(v) => onPricing(l.id, withPrice(l, v))} />
+            </span>
             <span className="l-type">
               <Dot tone={pt.tone} />
               {pt.label}
