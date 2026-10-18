@@ -2835,3 +2835,32 @@ input, select, button, textarea { font-family: inherit; }
 
 .min-edit { display: flex; align-items: center; gap: 12px; flex: none; }
 .min-edit .inline-input { width: 120px; height: 36px; text-align: right; }
+
+/* claims */
+.claims-table .c-order { flex: 0 0 140px; }
+.claims-table .c-kind { flex: 0 0 170px; display: flex; align-items: center; gap: 8px; }
+.claims-table .c-state { flex: 0 0 220px; }
+.claims-table .c-sla { flex: 0 0 240px; }
+.text-warning { color: var(--warning); }
+.claim-photos { display: flex; gap: 8px; }
+.claim-photos img { border-radius: 8px; object-fit: cover; border: 1px solid var(--border); background: #fff; }
+.block-claim-dlv { flex: 0 0 260px; gap: 6px; align-items: flex-start; }
+.block-claim-dlv .kv-k { font-size: 12px; color: var(--text-2); }
+.block-decision { flex: 1 1 0; min-width: 0; gap: 8px; }
+.radio-line { display: flex; align-items: center; gap: 10px; min-height: 26px; cursor: pointer; }
+.radio-line input { width: 18px; height: 18px; accent-color: var(--forest); }
+.radio-line small { color: var(--text-2); font-size: 13px; margin-left: auto; }
+.radio-line.is-disabled { cursor: default; opacity: 0.7; }
+.decision-field { margin-top: 6px; gap: 4px; }
+.decision-field .input { height: 36px; font-size: 14px; }
+.decision-field .kv-k { font-size: 12px; color: var(--text-2); }
+.decision-done { margin: 4px 0 0; font-weight: 700; color: var(--forest); }
+.claim-lines { margin-top: 20px; }
+.claim-lines .tr { padding: 8px 16px; }
+.claim-lines .l-photo { flex: 0 0 44px; }
+.claim-lines .l-product { flex: 1 1 auto; }
+.claim-lines .l-qty { flex: 0 0 90px; text-align: right; padding-top: 6px; }
+.claim-lines .l-claim { flex: 0 0 140px; display: flex; justify-content: flex-end; }
+.claim-lines .l-price { flex: 0 0 120px; text-align: right; padding-top: 6px; }
+.claim-lines .l-sum { flex: 0 0 120px; text-align: right; padding-top: 6px; }
+.claim-lines .tr.th > span { padding-top: 0; }

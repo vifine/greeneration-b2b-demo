@@ -5,6 +5,7 @@ import { Shell } from '../components/Shell';
 import { fmt } from '../data/lines';
 import { ORDER_ISSUES, REQUEST_ISSUES, REQUEST_ISSUE_ORDER, type RequestIssueKey } from '../data/issues';
 import { dur, greeting, hm, toMin, useDubaiNow } from '../time';
+import type { Claim } from '../data/claims';
 import { orderCurrentTotal, orderHasChanges, requestIssue, useStore } from '../store';
 
 type RowTone = 'danger' | 'warning' | 'neutral';
@@ -92,7 +93,12 @@ function DecisionRow({ label, hint, ids, tone, base, to, count: fixed }: { label
 }
 
 export function Home() {
-  const { requests, orders } = useStore();
+  const { requests, orders, claims } = useStore();
+  const claimCount = (f: (c: Claim) => boolean) => claims.filter(f).length;
+  const claimLink = (f: (c: Claim) => boolean) => {
+    const hit = claims.filter(f);
+    return hit.length === 1 ? `/crm/claims/${hit[0].id}` : hit.length ? '/crm/claims' : undefined;
+  };
   const open = requests.filter((r) => r.status === 'open');
   const issues = open.map(requestIssue);
   const stuck = issues.filter((i) => i.tone !== 'success');
@@ -181,13 +187,13 @@ export function Home() {
               </span>
               <span className="dcard-sub">This morning · oldest 09:40</span>
             </span>
-            <span className="dcard-count">3</span>
+            <span className="dcard-count">{claims.filter((c) => c.status !== 'closed').length}</span>
           </Link>
           <div className="dcard-rows">
-            <DecisionRow label="Not delivered" count={2} tone="danger" to="/crm/claims" />
-            <DecisionRow label="Quality issue" count={1} tone="warning" to="/crm/claims" />
-            <DecisionRow label="Credit note to issue" count={0} tone="neutral" />
-            <DecisionRow label="Exchange to send" count={0} tone="neutral" />
+            <DecisionRow label="Not delivered" count={claimCount((c) => c.kind === 'not_delivered' && c.status === 'open')} tone="danger" to={claimLink((c) => c.kind === 'not_delivered' && c.status === 'open')} />
+            <DecisionRow label="Quality issue" count={claimCount((c) => c.kind === 'quality' && c.status === 'open')} tone="warning" to={claimLink((c) => c.kind === 'quality' && c.status === 'open')} />
+            <DecisionRow label="Credit note to issue" count={claimCount((c) => c.status === 'decided' && c.decision === 'credit_note')} tone="warning" to={claimLink((c) => c.status === 'decided' && c.decision === 'credit_note')} />
+            <DecisionRow label="Exchange to send" count={claimCount((c) => c.status === 'decided' && c.decision === 'exchange')} tone="warning" to={claimLink((c) => c.status === 'decided' && c.decision === 'exchange')} />
           </div>
         </div>
       </div>

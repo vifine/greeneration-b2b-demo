@@ -6,6 +6,7 @@ import { BalanceDetail, Balances } from './pages/Balances';
 import { ClientCard, ClientsJournal } from './pages/Clients';
 import { AuditLog } from './pages/AuditLog';
 import { StockCheck } from './pages/StockCheck';
+import { ClaimCard, ClaimsJournal } from './pages/Claims';
 import { CatalogPage } from './pages/CatalogPage';
 import { ComingSoon } from './pages/ComingSoon';
 import { Home } from './pages/Home';
@@ -22,7 +23,6 @@ function Private({ children }: { children: ReactNode }) {
 const SOON: [string, string, string?][] = [
   ['/crm/leads', 'Leads'],
   ['/crm/issues', 'Issues'],
-  ['/crm/claims', 'Claims'],
   ['/stock/availability', 'Stock', 'Availability (15:00)'],
   ['/references/prices', 'References', 'Prices'],
   ['/references/zones', 'References', 'Delivery zones'],
@@ -41,6 +41,8 @@ export default function App() {
             <Route path="/crm/requests/:id" element={<Private><RequestCard /></Private>} />
             <Route path="/crm/orders" element={<Private><OrdersJournal /></Private>} />
             <Route path="/crm/orders/:id" element={<Private><OrderCard /></Private>} />
+            <Route path="/crm/claims" element={<Private><ClaimsJournal /></Private>} />
+            <Route path="/crm/claims/:id" element={<Private><ClaimCard /></Private>} />
             <Route path="/customers" element={<Navigate to="/customers/balances" replace />} />
             <Route path="/stock/check" element={<Private><StockCheck /></Private>} />
             <Route path="/audit" element={<Private><AuditLog /></Private>} />

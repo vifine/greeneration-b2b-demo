@@ -4,6 +4,7 @@ import { lineSum, money } from './data/lines';
 import { INITIAL_ORDERS } from './data/orders';
 import { INITIAL_REQUESTS } from './data/requests';
 import { balanceOf } from './data/balances';
+import { INITIAL_CLAIMS, type Claim } from './data/claims';
 import { ADDRESS_BOOK, DELIVERY_DAYS_BY_EMIRATE, deliveryDays, INITIAL_ADDRESSES, MIN_OVERRIDES, minOrderFor, pickAddress, setAddressBook, setMinOverrides, type Address } from './data/addresses';
 import type { Line, Order, OrderLine, PaymentSpec, Request, Tone } from './data/types';
 import { ORDER_ISSUES, REQUEST_ISSUES, REQUEST_ISSUE_ORDER, withCount, type OrderIssueKey, type RequestIssueKey } from './data/issues';
@@ -135,6 +136,8 @@ interface Store {
   saveAddress: (a: Omit<Address, 'id'> & { id?: string }) => string;
   makeMainAddress: (id: string) => void;
   /** Invoice sending per client: coordinator approves first (start) or the system sends on its own. */
+  claims: Claim[];
+  updateClaim: (id: string, fn: (c: Claim) => Claim) => void;
   minOverrides: Record<string, number>;
   /** Set the client's own minimum order; null goes back to the emirate default. */
   setMinOrder: (clientId: string, v: number | null) => void;
@@ -153,6 +156,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [addresses, setAddresses] = useState<Address[]>(INITIAL_ADDRESSES);
   const [modes, setModes] = useState<Record<string, InvoiceMode>>(() => Object.fromEntries(AUTO_AT_START.map((id) => [id, 'auto' as InvoiceMode])));
 
+  const [claims, setClaims] = useState<Claim[]>(INITIAL_CLAIMS);
   const [minOverrides, setMinState] = useState<Record<string, number>>({ littlefig: 100 });
   setAddressBook(addresses);
   setMinOverrides(minOverrides);
@@ -187,6 +191,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return id;
       },
       makeMainAddress: (id) => setAddresses((list) => setMain(list, id)),
+      claims,
+      updateClaim: (id, fn) => setClaims((cs) => cs.map((c) => (c.id === id ? fn(c) : c))),
       minOverrides,
       setMinOrder: (id, v) =>
         setMinState((m) => {
@@ -212,7 +218,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return id;
       },
     };
-  }, [requests, orders, addresses, modes, minOverrides]);
+  }, [requests, orders, addresses, modes, minOverrides, claims]);
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }
