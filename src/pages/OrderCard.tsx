@@ -67,7 +67,7 @@ export function OrderCard() {
   const dlv = addr
     ? {
         ...base,
-        zone: `${addr.area}, ${addr.emirate} · ${base.zone.split(' · ')[1] ?? ''}`,
+        zone: `${addr.zone} · ${addr.area} · ${base.zone.split(' · ')[1] ?? ''}`,
         address: `${addr.name} · ${addr.line}`,
         recipient: [addr.contact, addr.phone].filter(Boolean).join(' · ') || '—',
         note: addr.note || base.note,

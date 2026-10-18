@@ -2764,3 +2764,16 @@ input, select, button, textarea { font-family: inherit; }
 .kv-link { text-decoration: underline; text-decoration-color: currentColor; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-style: dotted; }
 .kv-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 .kv-link img { opacity: 0.6; margin-left: 4px; vertical-align: -2px; }
+
+/* delivery fields in the request summary */
+.dlv-fields { display: flex; flex-direction: column; gap: 10px; padding: 12px 0; margin: 4px 0 4px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.dlv-field { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.dlv-field .addr-pick-btn, .dlv-field .day-pick-btn { font-size: 14px; padding: 4px 8px; max-width: 100%; }
+.dlv-field .addr-pick-btn span { overflow: hidden; text-overflow: ellipsis; }
+.dlv-field .fsel-menu { left: 0; right: auto; }
+.dlv-slot { font-size: 14px; }
+.dlv-slot small { color: var(--text-2); font-size: 12px; }
+.block-summary .kv-k { font-size: 12px; color: var(--text-2); }
+
+/* header rows: breathing room above the labels now that they align to the top */
+.journal .tr.th { height: auto; min-height: 40px; padding-top: 10px; padding-bottom: 10px; align-items: flex-start; }

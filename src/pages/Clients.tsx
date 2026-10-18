@@ -5,7 +5,7 @@ import { AddressCard, AddressDialog, emptyAddress } from '../components/Addresse
 import * as I from '../components/icons';
 import { Shell } from '../components/Shell';
 import { Btn, Dot, SearchBox, useToast } from '../components/ui';
-import { DELIVERY_DAYS_BY_EMIRATE, MIN_ORDER, type Address } from '../data/addresses';
+import { DELIVERY_DAYS_BY_EMIRATE, MIN_ORDER, ZONES, type Address } from '../data/addresses';
 import { balanceOf } from '../data/balances';
 import { CLIENTS, clientById } from '../data/clients';
 import { useStore } from '../store';
@@ -33,7 +33,7 @@ export function ClientsJournal() {
         <div className="tr th">
           <span className="c-client">Client</span>
           <span className="c-addr">Main delivery address</span>
-          <span className="c-emirate">Emirate · delivery days</span>
+          <span className="c-emirate">Emirate · zone</span>
           <span className="c-points">Addresses</span>
           <span className="c-mode">Invoices</span>
           <span className="c-min">Min order</span>
@@ -48,7 +48,10 @@ export function ClientsJournal() {
               <span className="ellipsis">{main ? `${main.line}, ${main.area}` : '—'}</span>
               <small>{main ? `${main.name} · receiving ${main.hours || '—'}` : ''}</small>
             </span>
-            <span className="c-emirate">{main ? `${main.emirate} · ${DELIVERY_DAYS_BY_EMIRATE[main.emirate]}` : '—'}</span>
+            <span className="c-emirate two">
+              <span>{main ? `${main.emirate} · ${main.zone}` : '—'}</span>
+              <small>{main ? `${DELIVERY_DAYS_BY_EMIRATE[main.emirate]} · ${ZONES[main.zone].slot}` : ''}</small>
+            </span>
             <span className="c-points">{own.length}</span>
             <span className="c-mode">
               <Dot tone={invoiceMode(c.id) === 'auto' ? 'success' : 'info'} />

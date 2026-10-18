@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Money } from '../components/Money';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { AddressDialog, AddressPick, emptyAddress } from '../components/Addresses';
-import { deliveryDays, pickAddress } from '../data/addresses';
+import { deliveryDays, pickAddress, ZONES } from '../data/addresses';
 import { ReplyDialog } from '../components/ReplyDialog';
 import { requestReplies } from '../data/replies';
 import { CatalogModal } from '../components/CatalogModal';
@@ -97,6 +97,7 @@ export function RequestCard() {
   if (!r) return <Navigate to="/crm/requests" replace />;
   const client = clientById(r.clientId);
   const checks = requestChecks(r);
+  const addr = pickAddress(addresses, r.clientId, r.addressId);
   const done = checks.filter((c) => c.ok).length;
   const allOk = done === checks.length && r.status === 'open';
   const total = requestTotal(r);
@@ -147,14 +148,12 @@ export function RequestCard() {
               Delivery {r.delivery.day}, {r.delivery.window}
               {r.poNumber ? ` · ${r.poNumber}` : ''}
             </span>
-            <AddressPick
-              key={r.id}
-              list={addresses.filter((a) => a.clientId === r.clientId)}
-              value={pickAddress(addresses, r.clientId, r.addressId)}
-              disabled={r.status !== 'open'}
-              onPick={(aid) => updateRequest(r.id, (x) => ({ ...x, addressId: aid }))}
-              onNew={() => setNewAddr(true)}
-            />
+            <span className="muted">
+              {(() => {
+                const a = pickAddress(addresses, r.clientId, r.addressId);
+                return a ? `${a.name}, ${a.area}` : client.area;
+              })()}
+            </span>
           </p>
         </div>
         <div className="card-actions">
@@ -218,6 +217,43 @@ export function RequestCard() {
         </section>
         <section className="block block-soft block-summary">
           <b className="block-heading">Summary</b>
+          <div className="dlv-fields">
+            <div className="dlv-field">
+              <span className="kv-k">Delivery address</span>
+              <AddressPick
+                key={r.id}
+                list={addresses.filter((a) => a.clientId === r.clientId)}
+                value={addr}
+                disabled={r.status !== 'open'}
+                onPick={(aid) => {
+                  const a = addresses.find((x) => x.id === aid);
+                  updateRequest(r.id, (x) => ({ ...x, addressId: aid, delivery: { ...x.delivery, window: a ? ZONES[a.zone].slot : x.delivery.window } }));
+                }}
+                onNew={() => setNewAddr(true)}
+              />
+            </div>
+            <div className="dlv-field">
+              <span className="kv-k">Delivery date</span>
+              <DeliveryDayPick
+                key={r.id}
+                days={deliveryDays(addr?.emirate ?? 'Dubai')}
+                value={r.delivery.day}
+                invalid={!checks.find((c) => c.key === 'delivery_date')?.ok}
+                disabled={r.status !== 'open'}
+                onPick={(day) => {
+                  updateRequest(r.id, (x) => ({ ...x, delivery: { day, window: addr ? ZONES[addr.zone].slot : x.delivery.window }, deliveryValid: true }));
+                  toast(`Delivery date set to ${day}`);
+                }}
+              />
+            </div>
+            <div className="dlv-field">
+              <span className="kv-k">Slot</span>
+              <span className="dlv-slot">
+                {r.delivery.window}
+                {addr && <small> · zone {addr.zone}</small>}
+              </span>
+            </div>
+          </div>
           <div className="total">
             <span className="total-k">Total</span>
             <span className="total-v"><Money v={total} bold /></span>
@@ -242,19 +278,7 @@ export function RequestCard() {
             <div key={c.key} className={`check-item ${c.ok ? 'ok' : 'fail'}`}>
               <CheckState state={c.ok ? 'done' : 'fail'} />
               <span className="check-label">{c.label}</span>
-              {c.key === 'delivery_date' ? (
-                <DeliveryDayPick
-                  key={r.id}
-                  days={deliveryDays(pickAddress(addresses, r.clientId, r.addressId)?.emirate ?? 'Dubai')}
-                  value={r.delivery.day}
-                  invalid={!c.ok}
-                  disabled={r.status !== 'open'}
-                  onPick={(day) => {
-                    updateRequest(r.id, (x) => ({ ...x, delivery: { day, window: /today|asap/i.test(x.delivery.window) ? '08:00–12:00' : x.delivery.window }, deliveryValid: true }));
-                    toast(`Delivery date set to ${day}`);
-                  }}
-                />
-              ) : !c.ok && c.detail ? (
+              {!c.ok && c.detail ? (
                 <span className="check-detail">
                   {c.detail}
                   {(c.key === 'min_order' || c.key === 'amend_or_new' || c.key === 'unrecognised') && r.status === 'open' && (

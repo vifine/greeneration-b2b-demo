@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { DELIVERY_DAYS_BY_EMIRATE, type Address, type Emirate } from '../data/addresses';
+import { DELIVERY_DAYS_BY_EMIRATE, ZONES, zoneFor, type Address, type Emirate, type ZoneId } from '../data/addresses';
 import * as I from './icons';
 import { Btn } from './ui';
 
@@ -53,7 +53,14 @@ export function AddressDialog({
           </label>
           <label className="field">
             <span className="field-k">Emirate</span>
-            <select className="input" value={a.emirate} onChange={(e) => set('emirate', e.target.value as Emirate)}>
+            <select
+              className="input"
+              value={a.emirate}
+              onChange={(e) => {
+                const em = e.target.value as Emirate;
+                setA((x) => ({ ...x, emirate: em, zone: zoneFor(em, x.area) }));
+              }}
+            >
               {EMIRATES.map((x) => (
                 <option key={x}>{x}</option>
               ))}
@@ -62,7 +69,27 @@ export function AddressDialog({
           </label>
           <label className="field">
             <span className="field-k">Area</span>
-            <input className="input" value={a.area} onChange={(e) => set('area', e.target.value)} placeholder="e.g. Dubai Marina" required />
+            <input
+              className="input"
+              value={a.area}
+              onChange={(e) => {
+                const area = e.target.value;
+                setA((x) => ({ ...x, area, zone: zoneFor(x.emirate, area) }));
+              }}
+              placeholder="e.g. Dubai Marina"
+              required
+            />
+          </label>
+          <label className="field span2">
+            <span className="field-k">Delivery zone</span>
+            <select className="input" value={a.zone} onChange={(e) => set('zone', e.target.value as ZoneId)}>
+              {(Object.keys(ZONES) as ZoneId[]).map((z) => (
+                <option key={z} value={z}>
+                  {ZONES[z].name} · slot {ZONES[z].slot}
+                </option>
+              ))}
+            </select>
+            <small className="field-hint">Suggested from the area · decides the route and the delivery slot</small>
           </label>
           <label className="field span2">
             <span className="field-k">Address</span>
@@ -116,6 +143,10 @@ export function AddressCard({ a, onEdit, onMain }: { a: Address; onEdit: () => v
         <dt>Emirate</dt>
         <dd>
           {a.emirate} · delivery {DELIVERY_DAYS_BY_EMIRATE[a.emirate]}
+        </dd>
+        <dt>Zone</dt>
+        <dd>
+          {ZONES[a.zone].name.split(' · ')[0]} · slot {ZONES[a.zone].slot}
         </dd>
         <dt>Contact</dt>
         <dd>
@@ -230,5 +261,6 @@ export const emptyAddress = (clientId: string, area = ''): Draft => ({
   phone: '',
   hours: '',
   note: '',
+  zone: zoneFor('Dubai', area),
   main: false,
 });

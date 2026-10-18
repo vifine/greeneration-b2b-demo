@@ -17,8 +17,36 @@ export interface Address {
   phone: string;
   /** When the kitchen accepts deliveries. */
   hours: string;
+  /** Delivery zone: decides the route and the delivery slot. */
+  zone: ZoneId;
   note?: string;
   main?: boolean;
+}
+
+/** Delivery zones and their slots (fictional). */
+export const ZONES = {
+  D1: { name: 'D1 · Downtown, DIFC, Business Bay', slot: '06:00–10:00' },
+  D2: { name: 'D2 · Marina, JBR, JLT, Palm', slot: '07:00–11:00' },
+  D3: { name: 'D3 · Jumeirah, Al Wasl, City Walk, Al Barsha', slot: '08:00–12:00' },
+  D4: { name: 'D4 · Al Quoz, Dubai Hills', slot: '09:00–13:00' },
+  D5: { name: 'D5 · Deira, Creek Harbour', slot: '10:00–14:00' },
+  SHJ: { name: 'SHJ · Sharjah', slot: '08:00–12:00' },
+  AUH: { name: 'AUH · Abu Dhabi', slot: '09:00–13:00' },
+} as const;
+export type ZoneId = keyof typeof ZONES;
+
+const AREA_ZONE: [RegExp, ZoneId][] = [
+  [/downtown|difc|business bay/i, 'D1'],
+  [/marina|jbr|jlt|palm/i, 'D2'],
+  [/jumeirah|wasl|city walk|barsha/i, 'D3'],
+  [/quoz|hills/i, 'D4'],
+  [/deira|creek/i, 'D5'],
+];
+/** Zone the system suggests for an area; the coordinator can change it. */
+export function zoneFor(emirate: Emirate, area: string): ZoneId {
+  if (emirate === 'Sharjah') return 'SHJ';
+  if (emirate === 'Abu Dhabi') return 'AUH';
+  return AREA_ZONE.find(([re]) => re.test(area))?.[1] ?? 'D3';
 }
 
 export const DELIVERY_DAYS_BY_EMIRATE: Record<Emirate, string> = {
@@ -33,7 +61,7 @@ const HOURS = ['Daily 07:00–12:00', 'Mon–Sat 08:00–14:00', 'Daily 06:00–
 const NOTES = ['Service entrance, call on arrival', 'Leave with security', 'Loading bay B, ask for the chef', undefined];
 
 /** Extra points for chains and hotels, so the demo shows clients with several addresses. */
-const EXTRA: Record<string, Omit<Address, 'id' | 'clientId' | 'contact' | 'phone'>[]> = {
+const EXTRA: Record<string, Omit<Address, 'id' | 'clientId' | 'contact' | 'phone' | 'zone'>[]> = {
   pearl: [
     { name: 'Pool bar', emirate: 'Dubai', area: 'Palm Jumeirah', line: 'Crescent Rd, Pearl Dunes, beach level', hours: 'Daily 09:00–11:00', note: 'Via staff gate 2' },
     { name: 'Banquet kitchen', emirate: 'Dubai', area: 'Palm Jumeirah', line: 'Crescent Rd, Pearl Dunes, level B1', hours: 'Daily 06:00–10:00' },
@@ -65,10 +93,11 @@ export const INITIAL_ADDRESSES: Address[] = CLIENTS.flatMap((c, ci) => {
     phone: phone(h),
     hours: HOURS[h % HOURS.length],
     note: NOTES[h % NOTES.length],
+    zone: zoneFor('Dubai', c.area),
     main: true,
   };
   const extra = (EXTRA[c.id] ?? []).map(
-    (a, i): Address => ({ ...a, id: `${c.id}-${i + 2}`, clientId: c.id, contact: NAMES[(h + i + 3) % NAMES.length], phone: phone(h + i + 5) }),
+    (a, i): Address => ({ ...a, id: `${c.id}-${i + 2}`, clientId: c.id, contact: NAMES[(h + i + 3) % NAMES.length], phone: phone(h + i + 5), zone: zoneFor(a.emirate, a.area) }),
   );
   return [main, ...extra];
 });
