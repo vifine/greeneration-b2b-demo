@@ -23,7 +23,6 @@ function Private({ children }: { children: ReactNode }) {
 
 const SOON: [string, string, string?][] = [
   ['/crm/leads', 'Leads'],
-  ['/crm/issues', 'Issues'],
   ['/references/prices', 'References', 'Prices'],
   ['/references/zones', 'References', 'Delivery zones'],
 ];
@@ -41,6 +40,7 @@ export default function App() {
             <Route path="/crm/requests/:id" element={<Private><RequestCard /></Private>} />
             <Route path="/crm/orders" element={<Private><OrdersJournal /></Private>} />
             <Route path="/crm/orders/:id" element={<Private><OrderCard /></Private>} />
+            <Route path="/crm/issues" element={<Navigate to="/crm/requests" replace />} />
             <Route path="/crm/claims" element={<Private><ClaimsJournal /></Private>} />
             <Route path="/crm/claims/:id" element={<Private><ClaimCard /></Private>} />
             <Route path="/customers" element={<Navigate to="/customers/balances" replace />} />

@@ -32,7 +32,6 @@ function useSections(): NavSection[] {
         { label: 'Leads', to: '/crm/leads', count: 11 },
         { label: 'Requests', to: '/crm/requests', count: requests.filter((r) => r.status === 'open').length },
         { label: 'Orders', to: '/crm/orders', count: orders.length },
-        { label: 'Issues', to: '/crm/issues', count: 12 },
         { label: 'Claims', to: '/crm/claims', count: 3 },
       ],
     },

@@ -2879,3 +2879,11 @@ input, select, button, textarea { font-family: inherit; }
 .journal-toolbar .stock-note { margin: 0; }
 
 .text-success { color: var(--success); }
+
+/* status pills in order blocks */
+.oblock-head .status.pill { padding: 4px 12px 4px 10px; border-radius: 999px; font-size: 14px; font-weight: 600; }
+.pill-success { background: #e4f1e1; color: #2a5a32; }
+.pill-warning { background: var(--tint-warning); color: #7a5a12; }
+.pill-danger { background: var(--tint-danger); color: var(--danger); }
+.pill-info { background: var(--tint-info); color: var(--info); }
+.pill-neutral, .pill-sand { background: var(--soft-light); color: var(--text); }
