@@ -9,6 +9,7 @@ import { StockCheck } from './pages/StockCheck';
 import { ClaimCard, ClaimsJournal } from './pages/Claims';
 import { Availability } from './pages/Availability';
 import { ContactsJournal } from './pages/Contacts';
+import { PortalAccount, PortalClaims, PortalHome, PortalInvoices, PortalOrder, PortalOrderDetail, PortalOrders } from './portal/Portal';
 import { CatalogPage } from './pages/CatalogPage';
 import { ComingSoon } from './pages/ComingSoon';
 import { Home } from './pages/Home';
@@ -63,6 +64,13 @@ export default function App() {
                 element={<Private><ComingSoon crumbs={sub ? [{ label: section }, { label: sub }] : [{ label: section }]} /></Private>}
               />
             ))}
+            <Route path="/portal/:clientId" element={<Private><PortalHome /></Private>} />
+            <Route path="/portal/:clientId/order" element={<Private><PortalOrder /></Private>} />
+            <Route path="/portal/:clientId/orders" element={<Private><PortalOrders /></Private>} />
+            <Route path="/portal/:clientId/orders/:orderId" element={<Private><PortalOrderDetail /></Private>} />
+            <Route path="/portal/:clientId/invoices" element={<Private><PortalInvoices /></Private>} />
+            <Route path="/portal/:clientId/claims" element={<Private><PortalClaims /></Private>} />
+            <Route path="/portal/:clientId/account" element={<Private><PortalAccount /></Private>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </HashRouter>

@@ -3007,3 +3007,11 @@ a.pt-tile:hover { border-color: var(--forest); }
 .pt-team .pt-tr { flex: 0 0 160px; }
 .pt-team .pt-tc { flex: 1 1 auto; }
 .pt-team .pt-tp { flex: 0 0 300px; padding-right: 0 !important; }
+.pt-cart { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) auto auto; }
+.pt-cart-sum { min-width: 0; }
+.pt-inv .pi-no { flex-basis: 130px; }
+.pt-inv .pi-order { flex-basis: 160px; }
+.pt-inv .pi-dl { flex: 0 0 450px; }
+.pt-seg { align-self: flex-start; }
+.pt-claim-form .pt-cart-btns { align-self: flex-end; }
+.pt-inv .pi-status { white-space: nowrap; }
