@@ -23,12 +23,12 @@ export function PortalShell({ children, title, actions }: { children: ReactNode;
   return (
     <div className="pt-app">
       <div className="pt-banner">
-        <span>
-          Viewing as <b>{client.name}</b> · client portal preview
-        </span>
         <Link to={`/customers/clients/${clientId}`} className="pt-back">
           ← Back to Order desk
         </Link>
+        <span>
+          Viewing as <b>{client.name}</b> · client portal preview
+        </span>
       </div>
       <div className="pt-body">
         <aside className="pt-side">

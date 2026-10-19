@@ -16,6 +16,7 @@ import { downloadPdf } from '../lib/pdf';
 import { orderCurrentTotal, useStore } from '../store';
 import { greeting, useDubaiNow } from '../time';
 import { claimStatus, CLIENT_STAGE, cutoffText, editable } from './portalData';
+import { ContactDialog, emptyContact } from '../components/Contacts';
 import { PortalShell } from './PortalShell';
 
 function useClient() {
@@ -120,6 +121,7 @@ function OrdersTable({ orders, base }: { orders: Order[]; base: string }) {
         <span className="po-stage">Status</span>
         <span className="po-lines">Lines</span>
         <span className="po-total">Total</span>
+        <span className="po-rep" />
       </div>
       {orders.map((o) => (
         <button type="button" key={o.id} className="tr row" onClick={() => navigate(`${base}/orders/${o.id}`)}>
@@ -138,6 +140,20 @@ function OrdersTable({ orders, base }: { orders: Order[]; base: string }) {
           <span className="po-lines">{o.lines.filter((l) => !l.removed).length}</span>
           <span className="po-total">
             <Money v={orderCurrentTotal(o)} bold />
+          </span>
+          <span className="po-rep">
+            <span
+              role="link"
+              tabIndex={0}
+              className="link-sort"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`${base}/order?repeat=${o.id}`);
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && (e.stopPropagation(), navigate(`${base}/order?repeat=${o.id}`))}
+            >
+              Repeat
+            </span>
           </span>
         </button>
       ))}
@@ -164,8 +180,11 @@ export function PortalOrder() {
   const [params] = useSearchParams();
   const last = orders.find((o) => o.clientId === c?.id);
   useEffect(() => {
-    if (params.get('repeat') && last) {
-      for (const l of last.lines) if (l.sku && !l.removed && !l.custom) s.set(l.sku, l.qty);
+    const rid = params.get('repeat');
+    const src = rid && rid !== '1' ? orders.find((o) => o.id === rid && o.clientId === c?.id) : rid ? last : undefined;
+    if (src) {
+      for (const l of src.lines) if (l.sku && !l.removed && !l.custom) s.set(l.sku, l.qty);
+      toast(`Cart filled from order #${src.id} · check quantities and the delivery day`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -173,6 +192,15 @@ export function PortalOrder() {
   const min = minOrderFor(c.id, addr?.emirate ?? 'Dubai');
   const short = Math.max(0, min - s.sum);
   const dayOk = days.includes(day);
+  const why = !s.count
+    ? 'Add products to the cart'
+    : !addr
+      ? 'Add a delivery address'
+      : !dayOk
+        ? 'Choose a delivery day'
+        : short > 0
+          ? `Minimum order is ${money(min)} — add ${money(short)} more`
+          : null;
   const repeat = () => {
     if (!last) return;
     s.clear();
@@ -235,17 +263,18 @@ export function PortalOrder() {
             {s.approx ? '≈ ' : ''}
             <Money v={s.sum} bold />
           </span>
-          <small className={short > 0 && s.count ? 'text-danger' : 'pt-hint'}>
-            {short > 0 ? `Add ${money(short)} more · minimum ${money(min)}` : `Minimum ${money(min)} reached`}
-          </small>
+          <small className="pt-hint">minimum order {money(min)}</small>
         </div>
-        <div className="pt-cart-btns">
-          <Btn kind="ghost" disabled={!s.count} onClick={s.clear}>
-            Clear
-          </Btn>
-          <Btn kind="primary" disabled={!s.count || short > 0 || !dayOk || !addr} onClick={place}>
-            Place order
-          </Btn>
+        <div className="pt-cart-act">
+          <div className="pt-cart-btns">
+            <Btn kind="ghost" disabled={!s.count} onClick={s.clear}>
+              Clear
+            </Btn>
+            <Btn kind="primary" disabled={!!why} title={why ?? 'Place order'} onClick={place}>
+              Place order
+            </Btn>
+          </div>
+          {why && <small className={`pt-why ${s.count ? 'text-danger' : ''}`}>{why}</small>}
         </div>
       </div>
       <CatalogList s={s} deliveryLabel={day} clientId={c.id} />
@@ -283,9 +312,14 @@ export function PortalOrderDetail() {
     <PortalShell
       title={`Order #${o.id}`}
       actions={
-        <Btn kind="secondary" onClick={() => invoicePdf(o, c.name)}>
-          Download invoice
-        </Btn>
+        <>
+          <Btn kind="secondary" onClick={() => invoicePdf(o, c.name)}>
+            Download invoice
+          </Btn>
+          <Link to={`/portal/${c.id}/order?repeat=${o.id}`} className="btn btn-primary">
+            Repeat order
+          </Link>
+        </>
       }
     >
       <div className="pt-order-meta">
@@ -302,18 +336,18 @@ export function PortalOrderDetail() {
         <span className="muted">{canEdit ? 'You can change quantities until 22:30 the day before delivery' : 'Changes closed · contact us for help'}</span>
       </div>
       {o.stage === 'New request' && (
-        <div className="pt-alert">
-          Please confirm this order. If we don’t hear from you by 22:00 it goes out as planned.{' '}
-          <button
-            type="button"
-            className="link-sort"
+        <div className="pt-alert pt-alert-act">
+          <span>Please confirm this order. If we don’t hear from you by 22:00 it goes out as planned.</span>
+          <Btn
+            kind="primary"
+            className="btn-sm"
             onClick={() => {
               updateOrder(o.id, (x) => ({ ...x, stage: 'Confirmed', confirmedAt: 'now', reply: 'Confirmed in portal' }));
               toast('Order confirmed · thank you');
             }}
           >
             Confirm order
-          </button>
+          </Btn>
         </div>
       )}
       <div className="table pt-lines">
@@ -629,9 +663,10 @@ function ClaimForm({ clientId, orders, nextId, onCancel, onSubmit }: { clientId:
 
 export function PortalAccount() {
   const c = useClient();
-  const { addresses, saveAddress, makeMainAddress, contacts } = useStore();
+  const { addresses, saveAddress, makeMainAddress, contacts, saveContact } = useStore();
   const toast = useToast();
   const [edit, setEdit] = useState<(Omit<Address, 'id'> & { id?: string }) | null>(null);
+  const [invite, setInvite] = useState(false);
   if (!c) return <Navigate to="/customers/clients" replace />;
   const own = addresses.filter((a) => a.clientId === c.id).sort((a, b) => Number(!!b.main) - Number(!!a.main));
   const team = contacts.filter((x) => x.clientId === c.id);
@@ -647,13 +682,20 @@ export function PortalAccount() {
           <span>+ New address</span>
         </button>
       </div>
-      <h2 className="pt-h2">Your team</h2>
+      <div className="pt-h2-row">
+        <h2 className="pt-h2">Your team</h2>
+        <Btn kind="secondary" onClick={() => setInvite(true)}>
+          + Invite a colleague
+        </Btn>
+      </div>
+      <p className="pt-lead">People with portal access can place and edit orders, see invoices and open claims.</p>
       <div className="table journal pt-team">
         <div className="tr th">
           <span className="pt-tn">Name</span>
           <span className="pt-tr">Role</span>
           <span className="pt-tc">Contact</span>
           <span className="pt-tp">Receives</span>
+          <span className="pt-ta">Portal access</span>
         </div>
         {team.map((p) => (
           <div key={p.id} className="tr row">
@@ -663,11 +705,36 @@ export function PortalAccount() {
               <span>{p.phone}</span>
               <small>{p.email}</small>
             </span>
-            <span className="pt-tp">{[p.orders && 'Orders', p.invoices && 'Invoices', p.portal && 'Portal access'].filter(Boolean).join(' · ') || '—'}</span>
+            <span className="pt-tp">{[p.orders && 'Orders', p.invoices && 'Invoices'].filter(Boolean).join(' · ') || '—'}</span>
+            <span className="pt-ta">
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={p.portal}
+                  onChange={(e) => {
+                    saveContact({ ...p, portal: e.target.checked });
+                    toast(e.target.checked ? `Invitation sent to ${p.email}` : `${p.name} no longer has portal access`);
+                  }}
+                />
+                <span />
+              </label>
+            </span>
           </div>
         ))}
         {!team.length && <div className="empty">No team members yet.</div>}
       </div>
+      {invite && (
+        <ContactDialog
+          title="Invite a colleague"
+          initial={{ ...emptyContact(c.id), portal: true, inGroup: false }}
+          onClose={() => setInvite(false)}
+          onSave={(p) => {
+            saveContact(p);
+            toast(p.portal ? `Invitation sent to ${p.email || p.phone} · they sign in with their email` : `${p.name} added to your team`);
+            setInvite(false);
+          }}
+        />
+      )}
       {edit && (
         <AddressDialog
           title={edit.id ? 'Edit address' : 'New address'}
