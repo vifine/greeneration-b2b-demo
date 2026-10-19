@@ -110,10 +110,11 @@ export function PortalHome() {
   );
 }
 
-/** Product photos of an order, like the Hadat portal: up to 8 thumbnails, then "+N", with items and units underneath. */
+/** Product photos of an order, like the Hadat portal: up to 6 thumbnails, otherwise 5 and "+N", with items and units underneath. */
 function OrderThumbs({ o }: { o: Order }) {
   const live = o.lines.filter((l) => !l.removed);
-  const shown = live.slice(0, 8);
+  // Room for 6 photos: show all if they fit, otherwise 5 and a "+N" chip.
+  const shown = live.length <= 6 ? live : live.slice(0, 5);
   return (
     <span className="po-thumbs">
       <span className="po-thumb-row">

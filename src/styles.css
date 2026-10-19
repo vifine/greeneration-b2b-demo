@@ -3056,3 +3056,4 @@ a.pt-tile:hover { border-color: var(--forest); }
 .pt-crumb-sep { margin: 0 12px; color: var(--text-2); font-weight: 400; }
 .pt-crumbs > span:last-child > span:last-child { color: var(--text-2); font-weight: 400; }
 .pt-sum-date { font-size: 13px; color: var(--text-2); margin-top: -4px; }
+.po-more { flex: none; }
