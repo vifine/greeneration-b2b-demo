@@ -390,6 +390,7 @@ export function PortalOrderDetail() {
           <div className="oblock-head">
             <b>Summary</b>
           </div>
+          <span className="pt-sum-date">Placed {placedAt(o)}</span>
           <span className="pt-sum-total">
             <Money v={after} bold />
           </span>
