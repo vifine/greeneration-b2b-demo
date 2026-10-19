@@ -6,12 +6,12 @@ import { useDubaiNow } from '../time';
 import { cutoffText } from './portalData';
 
 const NAV = [
-  { to: '', label: 'Home', end: true },
-  { to: 'order', label: 'Place order' },
-  { to: 'orders', label: 'My orders' },
-  { to: 'invoices', label: 'Invoices & statement' },
-  { to: 'claims', label: 'Claims' },
-  { to: 'account', label: 'Addresses & team' },
+  { to: '', label: 'Home', end: true, icon: I.icHome },
+  { to: 'order', label: 'Place order', icon: I.icReferences },
+  { to: 'orders', label: 'My orders', icon: I.icStock },
+  { to: 'invoices', label: 'Invoices & statement', icon: I.icFile },
+  { to: 'claims', label: 'Claims', icon: I.icCardClaims },
+  { to: 'account', label: 'Addresses & team', icon: I.icCustomers },
 ];
 
 /** Client-facing layout: preview banner, slim top bar with the client's name and portal navigation. */
@@ -30,24 +30,26 @@ export function PortalShell({ children, title, actions }: { children: ReactNode;
           ← Back to Order desk
         </Link>
       </div>
-      <header className="pt-top">
-        <Link to={base} className="pt-logo">
-          <img src={I.logoLight} width={132} height={22} alt="greeneration" />
-        </Link>
-        <nav className="pt-nav" aria-label="Portal">
-          {NAV.map((n) => (
-            <NavLink key={n.to} to={n.to ? `${base}/${n.to}` : base} end={n.end} className={({ isActive }) => `pt-nav-a ${isActive ? 'active' : ''}`}>
-              {n.label}
-            </NavLink>
-          ))}
-        </nav>
-        <div className="grow" />
-        <span className="pt-cutoff">{cutoffText(now)}</span>
-        <span className="pt-client">
-          <span className="pt-avatar">{client.name.slice(0, 1)}</span>
-          {client.name}
-        </span>
-      </header>
+      <div className="pt-body">
+        <aside className="pt-side">
+          <Link to={base} className="pt-logo">
+            <img src={I.logoLight} width={140} height={23.3} alt="greeneration" />
+          </Link>
+          <span className="pt-client">
+            <span className="pt-avatar">{client.name.slice(0, 1)}</span>
+            <span className="pt-client-name">{client.name}</span>
+          </span>
+          <nav className="pt-nav" aria-label="Portal">
+            {NAV.map((n) => (
+              <NavLink key={n.to} to={n.to ? `${base}/${n.to}` : base} end={n.end} className={({ isActive }) => `pt-nav-a ${isActive ? 'active' : ''}`}>
+                <img src={n.icon} width={20} height={20} alt="" />
+                {n.label}
+              </NavLink>
+            ))}
+          </nav>
+          <div className="grow" />
+          <span className="pt-cutoff">{cutoffText(now)}</span>
+        </aside>
       <main className="pt-main">
         {title && (
           <div className="pt-head">
@@ -57,6 +59,7 @@ export function PortalShell({ children, title, actions }: { children: ReactNode;
         )}
         {children}
       </main>
+      </div>
     </div>
   );
 }
