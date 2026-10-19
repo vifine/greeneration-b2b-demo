@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Money } from '../components/Money';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { AddressCard, AddressDialog, emptyAddress } from '../components/Addresses';
+import { ContactCard, ContactDialog, emptyContact } from '../components/Contacts';
+import type { Contact } from '../data/contacts';
 import * as I from '../components/icons';
 import { Shell } from '../components/Shell';
 import { Btn, Dot, SearchBox, useToast } from '../components/ui';
@@ -74,7 +76,9 @@ export function ClientsJournal() {
 
 export function ClientCard() {
   const { id } = useParams();
-  const { addresses, saveAddress, makeMainAddress, invoiceMode, setInvoiceMode, minOverrides, setMinOrder } = useStore();
+  const { addresses, saveAddress, makeMainAddress, invoiceMode, setInvoiceMode, minOverrides, setMinOrder, contacts, saveContact, removeContact } = useStore();
+  const navigate = useNavigate();
+  const [person, setPerson] = useState<(Omit<Contact, 'id'> & { id?: string }) | null>(null);
   const toast = useToast();
   const [edit, setEdit] = useState<(Omit<Address, 'id'> & { id?: string }) | null>(null);
   const c = id ? CLIENTS.find((x) => x.id === id) : undefined;
@@ -107,12 +111,13 @@ export function ClientCard() {
           </p>
         </div>
         <div className="card-actions">
-          <Btn kind="primary" onClick={() => setEdit({ ...emptyAddress(c.id, c.area), main: own.length === 0 })}>
-            <img src={I.icPlusWhite} width={18} height={18} alt="" /> Add address
+          <Btn kind="primary" onClick={() => navigate(`/portal/${c.id}`)}>
+            Open client portal
           </Btn>
         </div>
       </div>
 
+      <div className="set-cards">
       <MinOrderRow
         key={c.id}
         value={minOverrides[c.id]}
@@ -124,7 +129,7 @@ export function ClientCard() {
         }}
       />
 
-      <section className="mode-row">
+      <section className="set-card">
         <div>
           <h2 className="section-h">Invoices</h2>
           <p className="section-note">At the start every invoice waits for a coordinator. Once this client's orders go through without corrections, switch to automatic sending.</p>
@@ -147,6 +152,7 @@ export function ClientCard() {
           ))}
         </div>
       </section>
+      </div>
 
       <div className="section-head">
         <h2 className="section-h">Delivery addresses</h2>
@@ -169,6 +175,43 @@ export function ClientCard() {
           <span>New address</span>
         </button>
       </div>
+      <div className="section-head">
+        <h2 className="section-h">Contacts</h2>
+        <p className="section-note">People at {c.name} we work with: who sends orders, who gets invoices, who is in the WhatsApp group.</p>
+      </div>
+      <div className="addr-grid">
+        {contacts
+          .filter((p) => p.clientId === c.id)
+          .sort((a, b) => Number(!!b.primary) - Number(!!a.primary))
+          .map((p) => (
+            <ContactCard key={p.id} c={p} onEdit={() => setPerson(p)} />
+          ))}
+        <button type="button" className="addr addr-add" onClick={() => setPerson(emptyContact(c.id))}>
+          <img src={I.icPlus} width={20} height={20} alt="" />
+          <span>New contact</span>
+        </button>
+      </div>
+      {person && (
+        <ContactDialog
+          title={person.id ? 'Edit contact' : `New contact · ${c.name}`}
+          initial={person}
+          onClose={() => setPerson(null)}
+          onRemove={
+            person.id
+              ? () => {
+                  removeContact(person.id!);
+                  toast(`${person.name} removed`);
+                  setPerson(null);
+                }
+              : undefined
+          }
+          onSave={(p) => {
+            saveContact(p);
+            toast(person.id ? 'Contact saved' : `${p.name} added to ${c.name}`);
+            setPerson(null);
+          }}
+        />
+      )}
       {edit && (
         <AddressDialog
           title={edit.id ? 'Edit address' : 'New address'}
@@ -190,7 +233,7 @@ function MinOrderRow({ value, fallback, emirate, onSave }: { value?: number; fal
   const n = parseFloat(draft);
   const changed = !Number.isNaN(n) && n !== (value ?? fallback);
   return (
-    <section className="mode-row">
+    <section className="set-card">
       <div>
         <h2 className="section-h">Minimum order</h2>
         <p className="section-note">

@@ -8,6 +8,7 @@ import { AuditLog } from './pages/AuditLog';
 import { StockCheck } from './pages/StockCheck';
 import { ClaimCard, ClaimsJournal } from './pages/Claims';
 import { Availability } from './pages/Availability';
+import { ContactsJournal } from './pages/Contacts';
 import { CatalogPage } from './pages/CatalogPage';
 import { ComingSoon } from './pages/ComingSoon';
 import { Home } from './pages/Home';
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="/audit" element={<Private><AuditLog /></Private>} />
             <Route path="/customers/clients" element={<Private><ClientsJournal /></Private>} />
             <Route path="/customers/clients/:id" element={<Private><ClientCard /></Private>} />
+            <Route path="/customers/contacts" element={<Private><ContactsJournal /></Private>} />
             <Route path="/customers/balances" element={<Private><Balances /></Private>} />
             <Route path="/customers/balances/:id" element={<Private><BalanceDetail /></Private>} />
             <Route path="/references" element={<Navigate to="/references/catalog" replace />} />

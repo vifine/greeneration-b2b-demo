@@ -42,6 +42,7 @@ function useSections(): NavSection[] {
       to: '/customers/balances',
       subs: [
         { label: 'Clients', to: '/customers/clients' },
+        { label: 'Contacts', to: '/customers/contacts' },
         { label: 'Balances', to: '/customers/balances' },
       ],
     },
@@ -132,7 +133,10 @@ export function Sidebar({ pinned: pinnedByPage }: { pinned: boolean }) {
   const active = sectionOf(pathname);
   const expanded = pinned || hover;
   // Pinned shows the whole tree; the hover overlay works as an accordion: only the active section opens.
-  const showSubs = (key: string) => pinned || key === active;
+  // Accordion: only the section the user opened (by default the current one) shows its pages.
+  const [openKey, setOpenKey] = useState<string | null>(active);
+  useEffect(() => setOpenKey(active), [active]);
+  const showSubs = (key: string) => key === openKey;
 
   const doLogout = () => {
     logout();
@@ -175,24 +179,41 @@ export function Sidebar({ pinned: pinnedByPage }: { pinned: boolean }) {
         </div>
         {sections.map((s) => (
           <div key={s.key} className="sb-section">
-            <Link
-              to={s.to}
-              className={`sb-item ${active === s.key && (s.key === 'home' || !expanded) ? 'active' : ''}`}
-              title={expanded ? undefined : s.label}
-              aria-label={s.label}
-            >
-              <img src={s.icon} width={20} height={20} alt="" />
-              {expanded && <span>{s.label}</span>}
-              {!expanded && s.key === 'crm' && active !== 'crm' && <span className="sb-dot" />}
-            </Link>
+            {expanded && s.subs?.length ? (
+              <button
+                type="button"
+                className={`sb-item sb-toggle ${openKey === s.key ? 'open' : ''}`}
+                aria-expanded={openKey === s.key}
+                onClick={() => setOpenKey((k) => (k === s.key ? null : s.key))}
+              >
+                <img src={s.icon} width={20} height={20} alt="" />
+                <span>{s.label}</span>
+                <img className="sb-chev" src={I.icChevronDown} width={14} height={14} alt="" />
+              </button>
+            ) : (
+              <Link
+                to={s.to}
+                className={`sb-item ${active === s.key && (s.key === 'home' || !expanded) ? 'active' : ''}`}
+                title={expanded ? undefined : s.label}
+                aria-label={s.label}
+              >
+                <img src={s.icon} width={20} height={20} alt="" />
+                {expanded && <span>{s.label}</span>}
+                {!expanded && s.key === 'crm' && active !== 'crm' && <span className="sb-dot" />}
+              </Link>
+            )}
             {expanded &&
               showSubs(s.key) &&
-              s.subs?.map((sub) => (
-                <Link key={sub.label} to={sub.to} className={`sb-sub ${subActive(sub.to) ? 'active' : ''}`}>
-                  <span>{sub.label}</span>
-                  {sub.count != null && <span className="sb-count">{sub.count}</span>}
-                </Link>
-              ))}
+              s.subs && (
+                <div className="sb-subs">
+                  {s.subs.map((sub) => (
+                    <Link key={sub.label} to={sub.to} className={`sb-sub ${subActive(sub.to) ? 'active' : ''}`}>
+                      <span>{sub.label}</span>
+                      {sub.count != null && <span className="sb-count">{sub.count}</span>}
+                    </Link>
+                  ))}
+                </div>
+              )}
           </div>
         ))}
         <div className="sb-spacer" />

@@ -5,6 +5,7 @@ import { INITIAL_ORDERS } from './data/orders';
 import { INITIAL_REQUESTS } from './data/requests';
 import { balanceOf } from './data/balances';
 import { INITIAL_CLAIMS, type Claim } from './data/claims';
+import { INITIAL_CONTACTS, type Contact } from './data/contacts';
 import { ADDRESS_BOOK, DELIVERY_DAYS_BY_EMIRATE, deliveryDays, INITIAL_ADDRESSES, MIN_OVERRIDES, minOrderFor, pickAddress, setAddressBook, setMinOverrides, type Address } from './data/addresses';
 import type { Line, Order, OrderLine, PaymentSpec, Request, Tone } from './data/types';
 import { ORDER_ISSUES, REQUEST_ISSUES, REQUEST_ISSUE_ORDER, withCount, type OrderIssueKey, type RequestIssueKey } from './data/issues';
@@ -130,7 +131,11 @@ interface Store {
   updateRequest: (id: string, fn: (r: Request) => Request) => void;
   updateOrder: (id: string, fn: (o: Order) => Order) => void;
   createOrderFromRequest: (id: string) => string;
-  createOrder: (clientId: string, day: string, window: string, lines: Line[]) => string;
+  createOrder: (clientId: string, day: string, window: string, lines: Line[], opts?: { channel?: string; addressId?: string; poNumber?: string }) => string;
+  contacts: Contact[];
+  /** Insert or update a client contact; returns its id. */
+  saveContact: (c: Omit<Contact, 'id'> & { id?: string }) => string;
+  removeContact: (id: string) => void;
   addresses: Address[];
   /** Insert or update; returns the address id. */
   saveAddress: (a: Omit<Address, 'id'> & { id?: string }) => string;
@@ -138,6 +143,8 @@ interface Store {
   /** Invoice sending per client: coordinator approves first (start) or the system sends on its own. */
   claims: Claim[];
   updateClaim: (id: string, fn: (c: Claim) => Claim) => void;
+  /** New claim from the client portal. */
+  addClaim: (c: Claim) => void;
   minOverrides: Record<string, number>;
   /** Set the client's own minimum order; null goes back to the emirate default. */
   setMinOrder: (clientId: string, v: number | null) => void;
@@ -157,6 +164,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [modes, setModes] = useState<Record<string, InvoiceMode>>(() => Object.fromEntries(AUTO_AT_START.map((id) => [id, 'auto' as InvoiceMode])));
 
   const [claims, setClaims] = useState<Claim[]>(INITIAL_CLAIMS);
+  const [contacts, setContacts] = useState<Contact[]>(INITIAL_CONTACTS);
   const [minOverrides, setMinState] = useState<Record<string, number>>({ littlefig: 100 });
   setAddressBook(addresses);
   setMinOverrides(minOverrides);
@@ -193,6 +201,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       makeMainAddress: (id) => setAddresses((list) => setMain(list, id)),
       claims,
       updateClaim: (id, fn) => setClaims((cs) => cs.map((c) => (c.id === id ? fn(c) : c))),
+      addClaim: (c) => setClaims((cs) => [c, ...cs]),
       minOverrides,
       setMinOrder: (id, v) =>
         setMinState((m) => {
@@ -211,14 +220,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setOrders((os) => [{ ...newOrder(id, r.clientId, r.channel, r.delivery.day, r.delivery.window, r.lines), addressId: r.addressId }, ...os.filter((o) => o.id !== id)]);
         return id;
       },
-      createOrder: (clientId, day, window, lines) => {
+      createOrder: (clientId, day, window, lines, opts) => {
         const maxId = Math.max(...orders.map((o) => +o.id), ...requests.map((r) => +r.id));
         const id = String(maxId + 1);
-        setOrders((os) => [newOrder(id, clientId, 'Catalog', day, window, lines), ...os]);
+        setOrders((os) => [{ ...newOrder(id, clientId, opts?.channel ?? 'Catalog', day, window, lines), addressId: opts?.addressId }, ...os]);
         return id;
       },
+      contacts,
+      saveContact: (c) => {
+        const id = c.id ?? `${c.clientId}-p${Date.now().toString(36)}`;
+        setContacts((list) => {
+          let next = list.some((x) => x.id === id) ? list.map((x) => (x.id === id ? { ...x, ...c, id } : x)) : [...list, { ...c, id }];
+          if (c.primary) next = next.map((x) => (x.clientId === c.clientId ? { ...x, primary: x.id === id } : x));
+          return next;
+        });
+        return id;
+      },
+      removeContact: (id) => setContacts((list) => list.filter((x) => x.id !== id)),
     };
-  }, [requests, orders, addresses, modes, minOverrides, claims]);
+  }, [requests, orders, addresses, modes, minOverrides, claims, contacts]);
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }
