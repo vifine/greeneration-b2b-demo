@@ -14,7 +14,7 @@ import { downloadPdf } from '../lib/pdf';
 
 const FUNNEL_PATHS = ["icon", "Vector", "M8.33333 16.6667C8.33326 16.8215 8.37634 16.9733 8.45774 17.1051C8.53914 17.2368 8.65564 17.3433 8.79417 17.4125L10.4608 18.2458C10.5879 18.3093 10.7291 18.3393 10.871 18.3329C11.013 18.3264 11.1509 18.2838 11.2717 18.2091C11.3925 18.1344 11.4922 18.03 11.5614 17.9059C11.6305 17.7818 11.6667 17.6421 11.6667 17.5V11.6667C11.6669 11.2537 11.8204 10.8554 12.0975 10.5492L18.1167 3.89167C18.2245 3.77213 18.2955 3.6239 18.3209 3.4649C18.3463 3.3059 18.3252 3.14294 18.2599 2.99573C18.1947 2.84851 18.0882 2.72335 17.9533 2.63538C17.8185 2.5474 17.661 2.50038 17.5 2.5H2.5C2.33884 2.50006 2.18115 2.54685 2.04604 2.6347C1.91093 2.72255 1.80419 2.84769 1.73875 2.99497C1.67332 3.14225 1.65199 3.30534 1.67735 3.46449C1.70272 3.62364 1.77369 3.77203 1.88167 3.89167L7.9025 10.5492C8.17961 10.8554 8.33315 11.2537 8.33333 11.6667V16.6667Z"];
 
-function FunnelIcon() {
+export function FunnelIcon() {
   return (
     <svg className="kpi-filter" width={16} height={16} viewBox="0 0 20 20" fill="none" aria-hidden="true">
       {FUNNEL_PATHS.map((d, i) => (
@@ -24,9 +24,9 @@ function FunnelIcon() {
   );
 }
 
-type KpiTone = 'forest' | 'danger' | 'warning' | 'info' | 'hold';
+export type KpiTone = 'forest' | 'danger' | 'warning' | 'info' | 'hold';
 
-function Kpi({ label, value, hint, tone, active, onClick, color, money }: { money?: boolean; label: string; value: string; hint: string; tone?: Tone; active?: boolean; onClick?: () => void; color?: KpiTone }) {
+export function Kpi({ label, value, hint, tone, active, onClick, color, money }: { money?: boolean; label: string; value: string; hint: string; tone?: Tone; active?: boolean; onClick?: () => void; color?: KpiTone }) {
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag type={onClick ? 'button' : undefined} className={`kpi ${onClick ? 'kpi-tab' : ''} ${color ? `kpi-${color}` : ''} ${active ? 'active' : ''}`} onClick={onClick} aria-pressed={onClick ? !!active : undefined}>

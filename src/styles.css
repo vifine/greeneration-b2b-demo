@@ -2874,3 +2874,6 @@ input, select, button, textarea { font-family: inherit; }
 .avail-table .a-stop { flex: 0 0 90px; text-align: center; padding-right: 0 !important; }
 .avail-table .a-stop input { width: 18px; height: 18px; accent-color: var(--forest); }
 .avail-table .line-photo { width: 40px; height: 40px; }
+
+.avail-kpis { grid-template-columns: repeat(5, 1fr); }
+.journal-toolbar .stock-note { margin: 0; }

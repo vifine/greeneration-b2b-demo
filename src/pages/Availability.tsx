@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Shell } from '../components/Shell';
-import { CheckboxField, Dot, SearchBox, Tabs, useToast } from '../components/ui';
+import { Dot, FilterSelect, SearchBox, useToast } from '../components/ui';
+import { Kpi } from './Balances';
 import { CATEGORIES, lineImage, packChip } from '../data/catalog';
 import { ALL_PACKS, DAY, demandBySku, harvestFor } from '../data/stock';
 import type { Category, Tone } from '../data/types';
@@ -23,7 +24,7 @@ export function Availability() {
   const toast = useToast();
   const [cat, setCat] = useState<CatKey>('all');
   const [q, setQ] = useState('');
-  const [onlyIssues, setOnlyIssues] = useState(false);
+  const [f, setF] = useState<'all' | 'in' | 'low' | 'short' | 'stop'>('all');
   const [stop, setStop] = useState<Record<string, boolean>>({});
   const demand = demandBySku(orders);
 
@@ -38,53 +39,29 @@ export function Availability() {
   const visible = rows
     .filter((r) => cat === 'all' || r.group.category === cat)
     .filter((r) => !n || `${r.group.name} ${r.pack.sku} ${r.pack.label}`.toLowerCase().includes(n))
-    .filter((r) => !onlyIssues || ['over', 'out', 'low', 'stop'].includes(r.st.key));
-  const tabCount = (c: CatKey) => rows.filter((r) => c === 'all' || r.group.category === c).length;
+    .filter((r) => f === 'all' || (f === 'short' ? r.st.key === 'out' || r.st.key === 'over' : r.st.key === f));
 
   return (
     <Shell crumbs={[{ label: 'Stock' }, { label: 'Availability (15:00)' }]}>
       <div className="kpis avail-kpis">
-        <div className="kpi">
-          <span className="kpi-t">
-            <Dot tone="success" /> In stock
-          </span>
-          <span className="kpi-v">{count('in')}</span>
-          <span className="kpi-h">packs with free stock for {DAY}</span>
-        </div>
-        <div className="kpi">
-          <span className="kpi-t">
-            <Dot tone="warning" /> Low
-          </span>
-          <span className="kpi-v">{count('low')}</span>
-          <span className="kpi-h">3 or fewer left to sell</span>
-        </div>
-        <div className="kpi">
-          <span className="kpi-t">
-            <Dot tone="danger" /> Sold out · over-ordered
-          </span>
-          <span className="kpi-v">
-            {count('out')} · {count('over')}
-          </span>
-          <span className="kpi-h">
-            over-ordered go to <Link to="/stock/check" className="link-sort">Stock check 22:30</Link>
-          </span>
-        </div>
-        <div className="kpi">
-          <span className="kpi-t">
-            <Dot tone="neutral" /> Stop list
-          </span>
-          <span className="kpi-v">{count('stop')}</span>
-          <span className="kpi-h">not offered to clients today</span>
-        </div>
+        <Kpi label="All packs" value={String(rows.length)} hint={`harvest for ${DAY}`} color="forest" active={f === 'all'} onClick={() => setF('all')} />
+        <Kpi label="In stock" value={String(count('in'))} hint="free stock to sell" color="info" tone="success" active={f === 'in'} onClick={() => setF('in')} />
+        <Kpi label="Low" value={String(count('low'))} hint="3 or fewer left to sell" color="warning" tone="warning" active={f === 'low'} onClick={() => setF('low')} />
+        <Kpi label="Sold out · over-ordered" value={`${count('out')} · ${count('over')}`} hint="over-ordered are cut at 22:30" color="danger" tone="danger" active={f === 'short'} onClick={() => setF('short')} />
+        <Kpi label="Stop list" value={String(count('stop'))} hint="not offered today" color="hold" tone="neutral" active={f === 'stop'} onClick={() => setF('stop')} />
       </div>
-      <p className="stock-note">Harvest for {DAY} from the farm’s Google Sheet · updated 15:00 · ordered = all orders for {DAY} so far</p>
 
       <div className="journal-toolbar">
-        <Tabs<CatKey> value={cat} onChange={setCat} tabs={[{ key: 'all', label: 'All', count: tabCount('all') }, ...CATEGORIES.map((c) => ({ key: c, label: c, count: tabCount(c) }))]} />
+        <span className="stock-note">
+          Harvest for {DAY} from the farm’s Google Sheet · updated 15:00 · ordered = all orders for {DAY} so far ·{' '}
+          <Link to="/stock/check" className="link-sort">
+            Stock check 22:30
+          </Link>
+        </span>
         <div className="grow" />
         <div className="journal-filters">
-          <CheckboxField checked={onlyIssues} onChange={setOnlyIssues} label="Only low, sold out, over-ordered" />
           <SearchBox value={q} onChange={setQ} placeholder="Product or SKU" className="journal-search" />
+          <FilterSelect value={cat} onChange={setCat} options={[{ value: 'all', label: 'Category: all' }, ...CATEGORIES.map((c) => ({ value: c, label: `Category: ${c}` }))]} />
         </div>
       </div>
 
