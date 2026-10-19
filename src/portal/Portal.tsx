@@ -110,6 +110,25 @@ export function PortalHome() {
   );
 }
 
+/** Product photos of an order, like the Hadat portal: up to 8 thumbnails, then "+N", with items and units underneath. */
+function OrderThumbs({ o }: { o: Order }) {
+  const live = o.lines.filter((l) => !l.removed);
+  const shown = live.slice(0, 8);
+  return (
+    <span className="po-thumbs">
+      <span className="po-thumb-row">
+        {shown.map((l) => (
+          <img key={l.id} src={lineImage(l.sku)} width={40} height={40} alt={l.product} title={`${l.product} · ${l.qty}`} loading="lazy" />
+        ))}
+        {live.length > shown.length && <span className="po-more">+{live.length - shown.length}</span>}
+      </span>
+      <small>
+        {live.length} item{live.length === 1 ? '' : 's'} · {live.reduce((n, l) => n + l.qty, 0)} units
+      </small>
+    </span>
+  );
+}
+
 function OrdersTable({ orders, base }: { orders: Order[]; base: string }) {
   const navigate = useNavigate();
   if (!orders.length) return <div className="empty">No orders yet.</div>;
@@ -119,7 +138,7 @@ function OrdersTable({ orders, base }: { orders: Order[]; base: string }) {
         <span className="po-no">Order</span>
         <span className="po-day">Delivery</span>
         <span className="po-stage">Status</span>
-        <span className="po-lines">Lines</span>
+        <span className="po-items">Products</span>
         <span className="po-total">Total</span>
         <span className="po-rep" />
       </div>
@@ -137,7 +156,9 @@ function OrdersTable({ orders, base }: { orders: Order[]; base: string }) {
             <Dot tone={CLIENT_STAGE[o.stage].tone} />
             {CLIENT_STAGE[o.stage].text}
           </span>
-          <span className="po-lines">{o.lines.filter((l) => !l.removed).length}</span>
+          <span className="po-items">
+            <OrderThumbs o={o} />
+          </span>
           <span className="po-total">
             <Money v={orderCurrentTotal(o)} bold />
           </span>
