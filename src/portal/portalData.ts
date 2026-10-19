@@ -34,3 +34,11 @@ export function claimStatus(c: Claim): { text: string; tone: Tone } {
   }
   return c.received.day === 'Mon 19 Oct' ? { text: 'Received · answer within 12 h', tone: 'warning' } : { text: 'In review', tone: 'warning' };
 }
+
+/** When the client placed the order (demo: derived from the order number; portal orders keep their own time). */
+export function placedAt(o: Order): string {
+  const h = Number(o.id);
+  const time = o.channel === 'Portal' ? o.received.split(' ').pop()! : `${String(9 + (h % 12)).padStart(2, '0')}:${String((h * 7) % 60).padStart(2, '0')}`;
+  const day = o.channel === 'Portal' || o.delivery.day === 'Tue 20 Oct' ? '19 Oct' : '18 Oct';
+  return `${day}, ${time}`;
+}

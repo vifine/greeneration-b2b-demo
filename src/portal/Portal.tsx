@@ -16,7 +16,7 @@ import { downloadPdf } from '../lib/pdf';
 import { orderCurrentTotal, orderOriginalTotal, useStore } from '../store';
 import { paymentView } from '../data/payments';
 import { greeting, useDubaiNow } from '../time';
-import { claimStatus, CLIENT_STAGE, cutoffText, editable } from './portalData';
+import { claimStatus, CLIENT_STAGE, cutoffText, editable, placedAt } from './portalData';
 import { ContactDialog, emptyContact } from '../components/Contacts';
 import { PortalShell } from './PortalShell';
 
@@ -145,8 +145,8 @@ function OrdersTable({ orders, base }: { orders: Order[]; base: string }) {
       {orders.map((o) => (
         <button type="button" key={o.id} className="tr row" onClick={() => navigate(`${base}/orders/${o.id}`)}>
           <span className="po-no two">
-            <span>#{o.id}</span>
-            <small>{o.channel === 'Portal' ? 'Placed here' : o.channel.split(' · ')[0]}</small>
+            <b>#{o.id}</b>
+            <small>{placedAt(o)}</small>
           </span>
           <span className="po-day two">
             <span>{o.delivery.day}</span>
