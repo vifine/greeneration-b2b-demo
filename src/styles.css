@@ -3044,3 +3044,11 @@ a.pt-tile:hover { border-color: var(--forest); }
 .switch input:checked + span { background: var(--forest); }
 .switch input:checked + span::after { transform: translateX(16px); }
 .pt-alert-act { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.pt-addr-sel { height: 36px; font-size: 14px; width: auto; max-width: 280px; padding: 0 8px; }
+
+/* portal order: summary, delivery, payment */
+.pt-blocks { margin: 4px 0 8px; }
+.pt-blocks .pt-sum { flex: 0 0 260px; }
+.pt-sum-total { font-size: 28px; font-weight: 800; color: var(--heading); line-height: 34px; }
+.pt-kv2 { grid-template-columns: 1fr 1fr; }
+.pt-kv2 .pt-addr-sel { max-width: 100%; width: 100%; }

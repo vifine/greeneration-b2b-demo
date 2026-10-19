@@ -13,7 +13,8 @@ import { CLIENTS, clientById } from '../data/clients';
 import { fmt, line, lineSum, money } from '../data/lines';
 import type { Order } from '../data/types';
 import { downloadPdf } from '../lib/pdf';
-import { orderCurrentTotal, useStore } from '../store';
+import { orderCurrentTotal, orderOriginalTotal, useStore } from '../store';
+import { paymentView } from '../data/payments';
 import { greeting, useDubaiNow } from '../time';
 import { claimStatus, CLIENT_STAGE, cutoffText, editable } from './portalData';
 import { ContactDialog, emptyContact } from '../components/Contacts';
@@ -24,15 +25,14 @@ function useClient() {
   return CLIENTS.find((c) => c.id === clientId);
 }
 
-const invoicePdf = (o: Order, clientName: string) =>
-  downloadPdf(`${o.invoice}.pdf`, `Tax invoice ${o.invoice}`, [
+const invoiceLines = (o: Order, clientName: string) => [
     `Client: ${clientName}`,
     `Delivery: ${o.delivery.day}, ${o.delivery.window}`,
     '',
     ...o.lines.filter((l) => !l.removed).map((l) => `${l.qty} x ${l.product} / ${l.pack}  ${money(lineSum(l))}`),
     '',
     `Total: ${money(orderCurrentTotal(o))} excl. VAT`,
-  ]);
+];
 
 /* ---------------- Home ---------------- */
 
@@ -165,7 +165,8 @@ function OrdersTable({ orders, base }: { orders: Order[]; base: string }) {
 
 export function PortalOrder() {
   const c = useClient();
-  const { orders, addresses, createOrder } = useStore();
+  const { orders, addresses, createOrder, saveAddress } = useStore();
+  const [newAddr, setNewAddr] = useState(false);
   const toast = useToast();
   const navigate = useNavigate();
   const now = useDubaiNow();
@@ -221,12 +222,13 @@ export function PortalOrder() {
       <div className="pt-cart">
         <label className="field">
           <span className="pt-k">Deliver to</span>
-          <select className="input" value={addr?.id ?? ''} onChange={(e) => setAddrId(e.target.value)}>
+          <select className="input" value={addr?.id ?? ''} onChange={(e) => (e.target.value === '__new' ? setNewAddr(true) : setAddrId(e.target.value))}>
             {own.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name} · {a.area}, {a.emirate}
               </option>
             ))}
+            <option value="__new">+ New address…</option>
           </select>
         </label>
         <label className="field">
@@ -278,6 +280,20 @@ export function PortalOrder() {
         </div>
       </div>
       <CatalogList s={s} deliveryLabel={day} clientId={c.id} />
+      {newAddr && (
+        <AddressDialog
+          hideZone
+          title="New delivery address"
+          initial={emptyAddress(c.id, c.area)}
+          onClose={() => setNewAddr(false)}
+          onSave={(a) => {
+            const id = saveAddress(a);
+            setAddrId(id);
+            setNewAddr(false);
+            toast('Address added and selected · our logistics team is notified');
+          }}
+        />
+      )}
     </PortalShell>
   );
 }
@@ -298,7 +314,8 @@ export function PortalOrders() {
 export function PortalOrderDetail() {
   const c = useClient();
   const { orderId } = useParams();
-  const { orders, updateOrder, addresses } = useStore();
+  const { orders, updateOrder, addresses, saveAddress } = useStore();
+  const [newAddr, setNewAddr] = useState(false);
   const toast = useToast();
   const now = useDubaiNow();
   const o = orders.find((x) => x.id === orderId && x.clientId === c?.id);
@@ -306,6 +323,10 @@ export function PortalOrderDetail() {
   const addr = pickAddress(addresses, c.id, o.addressId);
   const canEdit = editable(o.delivery.day, deliveryDays('Dubai', 1)[0], now);
   const st = CLIENT_STAGE[o.stage];
+  const after = orderCurrentTotal(o);
+  const before = orderOriginalTotal(o);
+  const pay = paymentView(o, after, before);
+  const live = o.lines.filter((l) => !l.removed);
   const setQty = (id: string, qty: number) =>
     updateOrder(o.id, (x) => ({ ...x, lines: x.lines.map((l) => (l.id === id ? { ...l, wasQty: l.wasQty ?? l.qty, qty: Math.max(0, qty), removed: qty === 0 ? true : false } : l)) }));
   return (
@@ -313,9 +334,6 @@ export function PortalOrderDetail() {
       title={`Order #${o.id}`}
       actions={
         <>
-          <Btn kind="secondary" onClick={() => invoicePdf(o, c.name)}>
-            Download invoice
-          </Btn>
           <Link to={`/portal/${c.id}/order?repeat=${o.id}`} className="btn btn-primary">
             Repeat order
           </Link>
@@ -329,11 +347,7 @@ export function PortalOrderDetail() {
             {st.text}
           </span>
         </span>
-        <span>
-          Delivery <b>{o.delivery.day}</b> · {o.delivery.window}
-        </span>
-        <span>{addr ? `${addr.name}, ${addr.area}` : ''}</span>
-        <span className="muted">{canEdit ? 'You can change quantities until 22:30 the day before delivery' : 'Changes closed · contact us for help'}</span>
+        <span className="muted">{canEdit ? 'You can change quantities and the address until 22:30 the day before delivery' : 'Changes closed · contact us for help'}</span>
       </div>
       {o.stage === 'New request' && (
         <div className="pt-alert pt-alert-act">
@@ -350,6 +364,110 @@ export function PortalOrderDetail() {
           </Btn>
         </div>
       )}
+      <div className="order-blocks pt-blocks">
+        <section className="oblock pt-sum">
+          <div className="oblock-head">
+            <b>Summary</b>
+          </div>
+          <span className="pt-sum-total">
+            <Money v={after} bold />
+          </span>
+          <span className="muted">
+            {live.length} line{live.length === 1 ? '' : 's'} · {live.reduce((n, l) => n + l.qty, 0)} units · excl. VAT
+            {before !== after ? ` · was ${money(before)}` : ''}
+          </span>
+          <div className="oblock-foot">
+            <FileChip name={`${o.invoice}.pdf`} size="52 KB" title={`Tax invoice ${o.invoice}`} lines={invoiceLines(o, c.name)} />
+          </div>
+        </section>
+        <section className="oblock">
+          <div className="oblock-head">
+            <b>Delivery</b>
+            <span className={`status pill pill-${o.stage === 'Confirmed' ? 'success' : 'neutral'}`}>
+              <Dot tone={o.stage === 'Confirmed' ? 'success' : 'neutral'} />
+              {o.stage === 'Confirmed' ? 'Scheduled' : 'Not scheduled'}
+            </span>
+          </div>
+          <div className="kv-grid pt-kv2">
+            <div className="kv-cell">
+              <span className="kv-k">Date & slot</span>
+              <span className="kv-v strong">
+                {o.delivery.day} · {o.delivery.window}
+              </span>
+            </div>
+            <div className="kv-cell">
+              <span className="kv-k">Address</span>
+            {canEdit ? (
+              <select
+                className="input pt-addr-sel"
+                aria-label="Delivery address"
+                value={addr?.id ?? ''}
+                onChange={(e) => {
+                  if (e.target.value === '__new') return setNewAddr(true);
+                  const a = addresses.find((x) => x.id === e.target.value);
+                  updateOrder(o.id, (x) => ({ ...x, addressId: e.target.value, delivery: { ...x.delivery, window: a ? ZONES[a.zone].slot : x.delivery.window } }));
+                  toast(`Delivery address changed to ${a?.name ?? ''}`);
+                }}
+              >
+                {addresses
+                  .filter((a) => a.clientId === c.id)
+                  .map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} · {a.area}
+                    </option>
+                  ))}
+                <option value="__new">+ New address…</option>
+              </select>
+            ) : (
+              <span className="kv-v">{addr ? `${addr.name}, ${addr.area}` : ''}</span>
+            )}
+            </div>
+            <div className="kv-cell">
+              <span className="kv-k">Receiving</span>
+              <span className="kv-v">{addr?.hours || '—'}</span>
+            </div>
+            <div className="kv-cell">
+              <span className="kv-k">Note for the driver</span>
+              <span className="kv-v">{addr?.note || '—'}</span>
+            </div>
+          </div>
+          <div className="oblock-foot">
+            <span className="muted">Signed delivery note appears here after delivery.</span>
+          </div>
+        </section>
+        <section className="oblock">
+          <div className="oblock-head">
+            <b>Payment</b>
+            {pay.statusNote && <small className="status-note">{pay.statusNote}</small>}
+            <span className={`status pill pill-${pay.statusDanger ? 'danger' : pay.tone}`}>
+              <Dot tone={pay.statusDanger ? 'danger' : pay.tone === 'sand' ? 'neutral' : pay.tone} />
+              {pay.status}
+            </span>
+          </div>
+          <div className="kv-grid pt-kv2">
+            {pay.fields
+              .filter((f) => !['Source', 'Rule', 'Client account', 'Total', 'Amount', 'Handed to finance', 'Driver'].includes(f.k))
+              .slice(0, 4)
+              .map((f) => (
+                <div key={f.k} className="kv-cell">
+                  <span className="kv-k">{f.k}</span>
+                  <span className={`kv-v ${f.strong ? 'strong' : ''} ${f.tone ? `text-${f.tone}` : ''}`}>{f.money ? <Money v={parseFloat(f.v.replace(/[^\d.]/g, '')) || 0} bold={f.strong} /> : f.v}</span>
+                </div>
+              ))}
+          </div>
+          <div className="oblock-foot">
+            <Link to={`/portal/${c.id}/invoices`} className="link-sort">
+              Invoices & statement
+            </Link>
+            <div className="grow" />
+            {/awaiting|due|overdue/i.test(pay.status) && (
+              <Btn kind="secondary" className="btn-sm" onClick={() => toast(`Payment link for ${money(after)} opened`)}>
+                Pay {money(after)}
+              </Btn>
+            )}
+          </div>
+        </section>
+      </div>
       <div className="table pt-lines">
         <div className="tr th">
           <span className="pl-photo" />
@@ -380,17 +498,21 @@ export function PortalOrderDetail() {
             <span className="pl-sum">{l.removed ? '—' : <Money v={lineSum(l)} />}</span>
           </div>
         ))}
-        <div className="tr pt-total-row">
-          <span className="pl-product">Total excl. VAT</span>
-          <span className="pl-sum">
-            <Money v={orderCurrentTotal(o)} bold />
-          </span>
-        </div>
       </div>
-      <div className="pt-docs">
-        <FileChip name={`${o.invoice}.pdf`} size="52 KB" title={`Tax invoice ${o.invoice}`} />
-        <span className="muted">Signed delivery note appears here after delivery.</span>
-      </div>
+      {newAddr && (
+        <AddressDialog
+          hideZone
+          title="New delivery address"
+          initial={emptyAddress(c.id, c.area)}
+          onClose={() => setNewAddr(false)}
+          onSave={(a) => {
+            const id = saveAddress(a);
+            updateOrder(o.id, (x) => ({ ...x, addressId: id, delivery: { ...x.delivery, window: ZONES[a.zone].slot } }));
+            setNewAddr(false);
+            toast('Address added and set for this order · our logistics team is notified');
+          }}
+        />
+      )}
     </PortalShell>
   );
 }
@@ -737,6 +859,7 @@ export function PortalAccount() {
       )}
       {edit && (
         <AddressDialog
+          hideZone
           title={edit.id ? 'Edit address' : 'New address'}
           initial={edit}
           onClose={() => setEdit(null)}

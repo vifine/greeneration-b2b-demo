@@ -12,7 +12,10 @@ export function AddressDialog({
   title,
   onSave,
   onClose,
+  hideZone,
 }: {
+  /** Client portal: the zone is set by Greeneration, not by the client. */
+  hideZone?: boolean;
   initial: Draft;
   title: string;
   onSave: (a: Draft) => void;
@@ -80,6 +83,7 @@ export function AddressDialog({
               required
             />
           </label>
+          {!hideZone && (
           <label className="field span2">
             <span className="field-k">Delivery zone</span>
             <select className="input" value={a.zone} onChange={(e) => set('zone', e.target.value as ZoneId)}>
@@ -91,6 +95,7 @@ export function AddressDialog({
             </select>
             <small className="field-hint">Suggested from the area · decides the route and the delivery slot</small>
           </label>
+          )}
           <label className="field span2">
             <span className="field-k">Address</span>
             <input className="input" value={a.line} onChange={(e) => set('line', e.target.value)} placeholder="Street, building, entrance" required />
