@@ -342,7 +342,9 @@ export function PortalOrderDetail() {
   const o = orders.find((x) => x.id === orderId && x.clientId === c?.id);
   if (!c || !o) return <Navigate to={c ? `/portal/${c.id}/orders` : '/customers/clients'} replace />;
   const addr = pickAddress(addresses, c.id, o.addressId);
-  const canEdit = editable(o.delivery.day, deliveryDays('Dubai', 1)[0], now);
+  // Once confirmed, only the coordinator changes the order; the client asks for a change.
+  const confirmed = o.stage === 'Confirmed';
+  const canEdit = !confirmed && editable(o.delivery.day, deliveryDays('Dubai', 1)[0], now);
   const st = CLIENT_STAGE[o.stage];
   const after = orderCurrentTotal(o);
   const before = orderOriginalTotal(o);
@@ -368,7 +370,18 @@ export function PortalOrderDetail() {
             {st.text}
           </span>
         </span>
-        <span className="muted">{canEdit ? 'You can change quantities and the address until 22:30 the day before delivery' : 'Changes closed · contact us for help'}</span>
+        <span className="muted">
+          {canEdit
+            ? 'You can change quantities and the address until 22:30 the day before delivery'
+            : confirmed
+              ? 'Order confirmed · changes go through your coordinator'
+              : 'Changes closed · contact us for help'}
+        </span>
+        {confirmed && (
+          <Btn kind="secondary" className="btn-sm" onClick={() => toast('Change request sent · your coordinator will reply in WhatsApp')}>
+            Ask for a change
+          </Btn>
+        )}
       </div>
       {o.stage === 'New request' && (
         <div className="pt-alert pt-alert-act">
