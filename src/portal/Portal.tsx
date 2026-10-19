@@ -352,7 +352,7 @@ export function PortalOrderDetail() {
     updateOrder(o.id, (x) => ({ ...x, lines: x.lines.map((l) => (l.id === id ? { ...l, wasQty: l.wasQty ?? l.qty, qty: Math.max(0, qty), removed: qty === 0 ? true : false } : l)) }));
   return (
     <PortalShell
-      title={`Order #${o.id}`}
+      crumbs={[{ label: 'My orders', to: `/portal/${c.id}/orders` }, { label: `#${o.id}` }]}
       actions={
         <>
           <Link to={`/portal/${c.id}/order?repeat=${o.id}`} className="btn btn-primary">

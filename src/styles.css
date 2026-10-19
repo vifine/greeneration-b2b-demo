@@ -3049,3 +3049,9 @@ a.pt-tile:hover { border-color: var(--forest); }
 .po-more { font-size: 12px; font-weight: 700; color: var(--text-2); background: var(--soft-light); border-radius: 999px; padding: 1px 7px; }
 .po-thumbs small { font-size: 13px; color: var(--text-2); }
 .pt-orders .tr.row { height: auto; padding-top: 12px; padding-bottom: 10px; }
+
+.pt-crumbs { display: flex; align-items: baseline; gap: 0; }
+.pt-crumb-link { color: var(--heading); text-decoration: none; }
+.pt-crumb-link:hover { text-decoration: underline; text-underline-offset: 4px; }
+.pt-crumb-sep { margin: 0 12px; color: var(--text-2); font-weight: 400; }
+.pt-crumbs > span:last-child > span:last-child { color: var(--text-2); font-weight: 400; }

@@ -15,7 +15,7 @@ const NAV = [
 ];
 
 /** Client-facing layout: preview banner, slim top bar with the client's name and portal navigation. */
-export function PortalShell({ children, title, actions }: { children: ReactNode; title?: string; actions?: ReactNode }) {
+export function PortalShell({ children, title, actions, crumbs }: { children: ReactNode; title?: string; actions?: ReactNode; crumbs?: { label: string; to?: string }[] }) {
   const { clientId = '' } = useParams();
   const client = clientById(clientId);
   const now = useDubaiNow();
@@ -49,9 +49,26 @@ export function PortalShell({ children, title, actions }: { children: ReactNode;
         </span>
       </header>
       <main className="pt-main">
-        {title && (
+        {(title || crumbs) && (
           <div className="pt-head">
-            <h1>{title}</h1>
+            {crumbs ? (
+              <h1 className="pt-crumbs">
+                {crumbs.map((c, i) => (
+                  <span key={c.label}>
+                    {i > 0 && <span className="pt-crumb-sep">/</span>}
+                    {c.to ? (
+                      <Link to={c.to} className="pt-crumb-link">
+                        {c.label}
+                      </Link>
+                    ) : (
+                      <span>{c.label}</span>
+                    )}
+                  </span>
+                ))}
+              </h1>
+            ) : (
+              <h1>{title}</h1>
+            )}
             {actions && <div className="pt-actions">{actions}</div>}
           </div>
         )}
