@@ -96,7 +96,7 @@ export function paymentView(o: Order, total: number, before = total): PaymentVie
           hint: orderOverdue ? `Due ${p.due} · ${money(balance)}` : `${money(clientOverdue!.overdue)} · ${clientOverdue!.oldestDays} days`,
           tone: 'danger',
           danger: true,
-          status: orderOverdue ? `Overdue ${p.days} days` : `${termsText} · client overdue`,
+          status: orderOverdue ? `Overdue ${p.days} days` : 'Client overdue',
           statusDanger: true,
           fields: [
             { k: 'Total', money: true, v: totalText, strong: true },
@@ -186,7 +186,7 @@ export function paymentView(o: Order, total: number, before = total): PaymentVie
         hint: `Prepayment · ${money(total)}`,
         tone: 'info',
         danger: false,
-        status: 'Link sent · awaiting payment',
+        status: 'Link sent',
         statusDanger: false,
         fields: [
           { k: 'Amount', money: true, v: totalText, strong: true },
