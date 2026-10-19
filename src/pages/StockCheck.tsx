@@ -1,11 +1,13 @@
 import { Fragment, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Money } from '../components/Money';
+import { money } from '../data/lines';
 import { Shell } from '../components/Shell';
 import { Btn, Dot, useToast } from '../components/ui';
 import { lineImage } from '../data/catalog';
 import { clientById } from '../data/clients';
-import { AVAILABLE, DAY, demandBySku, isLive } from '../data/stock';
+import { AVAILABLE, DAY, demandBySku, isLive, SHORT_AT_CHECK } from '../data/stock';
+import { Kpi } from './Balances';
 import type { Order, OrderLine } from '../data/types';
 import { useStore } from '../store';
 
@@ -29,6 +31,7 @@ export function StockCheck() {
   const [open, setOpen] = useState<string | null>(null);
   const [cutValue, setCutValue] = useState(0);
   const [cutLines, setCutLines] = useState(0);
+  const [tab, setTab] = useState<'all' | 'short' | 'resolved'>('short');
 
   const demand = demandBySku(orders);
   const rows: Row[] = [...AVAILABLE.entries()]
@@ -42,10 +45,13 @@ export function StockCheck() {
       const first = affected[0]?.line;
       return { sku, product: first?.product ?? sku, pack: first?.pack ?? '', ordered, available, short: Math.max(0, ordered - available), affected };
     })
-    .filter((r) => r.short > 0)
+    .filter((r) => SHORT_AT_CHECK.has(r.sku))
     .sort((a, b) => b.short - a.short || a.sku.localeCompare(b.sku));
+  const still = rows.filter((r) => r.short > 0);
+  const resolved = rows.filter((r) => r.short === 0);
+  const visible = tab === 'all' ? rows : tab === 'short' ? still : resolved;
 
-  const ordersAffected = new Set(rows.flatMap((r) => r.affected.map((a) => a.order.id))).size;
+  const ordersAffected = new Set(still.flatMap((r) => r.affected.map((a) => a.order.id))).size;
 
   const cut = (order: Order, line: OrderLine, by: number) => {
     const qty = Math.max(0, line.qty - by);
@@ -80,31 +86,25 @@ export function StockCheck() {
   return (
     <Shell crumbs={[{ label: 'Stock' }, { label: 'Stock check 22:30' }]}>
       <div className="kpis stock-kpis">
-        <div className="kpi">
-          <span className="kpi-t">
-            <Dot tone={rows.length ? 'danger' : 'success'} /> SKUs short for {DAY}
-          </span>
-          <span className="kpi-v">{rows.length}</span>
-          <span className="kpi-h">{rows.reduce((s, r) => s + r.short, 0)} units over farm stock</span>
-        </div>
-        <div className="kpi">
-          <span className="kpi-t">
-            <Dot tone="warning" /> Orders affected
-          </span>
-          <span className="kpi-v">{ordersAffected}</span>
-          <span className="kpi-h">Newest orders are cut first</span>
-        </div>
-        <div className="kpi">
-          <span className="kpi-t">
-            <Dot tone="info" /> Value cut so far
-          </span>
-          <span className="kpi-v">
-            <Money v={cutValue} />
-          </span>
-          <span className="kpi-h">
-            {cutLines} line{cutLines === 1 ? '' : 's'} cut · invoices recalculated
-          </span>
-        </div>
+        <Kpi label="Short at 22:30" value={String(rows.length)} hint={`SKUs over farm stock for ${DAY}`} color="forest" active={tab === 'all'} onClick={() => setTab('all')} />
+        <Kpi
+          label="Still short"
+          value={String(still.length)}
+          hint={`${still.reduce((s, r) => s + r.short, 0)} units · ${ordersAffected} orders · newest cut first`}
+          color="danger"
+          tone="danger"
+          active={tab === 'short'}
+          onClick={() => setTab('short')}
+        />
+        <Kpi
+          label="Resolved"
+          value={String(resolved.length)}
+          hint={`${money(cutValue)} cut · ${cutLines} line${cutLines === 1 ? '' : 's'} · invoices recalculated`}
+          color="info"
+          tone="success"
+          active={tab === 'resolved'}
+          onClick={() => setTab('resolved')}
+        />
       </div>
       <p className="stock-note">Farm stock from Google Sheets · updated 15:00 · check runs after intake closes at 22:30</p>
 
@@ -118,12 +118,12 @@ export function StockCheck() {
           <span className="s-orders">Affected orders</span>
           <span className="s-act" />
         </div>
-        {rows.map((r) => {
+        {visible.map((r) => {
           const img = lineImage(r.sku);
           const isOpen = open === r.sku;
           return (
             <Fragment key={r.sku}>
-              <div className={`tr row stripe-danger stock-row ${isOpen ? 'open' : ''}`}>
+              <div className={`tr row ${r.short > 0 ? 'stripe-danger' : ''} stock-row ${isOpen ? 'open' : ''}`}>
                 <span className="s-photo">{img ? <img className="line-photo" src={img} width={44} height={44} alt="" loading="lazy" /> : null}</span>
                 <span className="s-product two">
                   <span>
@@ -134,16 +134,23 @@ export function StockCheck() {
                 </span>
                 <span className="s-num">{r.ordered}</span>
                 <span className="s-num">{r.available}</span>
-                <span className="s-num text-danger strong">−{r.short}</span>
+                <span className={`s-num strong ${r.short > 0 ? 'text-danger' : 'text-success'}`}>{r.short > 0 ? `−${r.short}` : '0'}</span>
                 <span className="s-orders">
                   <button type="button" className="link-sort" onClick={() => setOpen(isOpen ? null : r.sku)} aria-expanded={isOpen}>
                     {r.affected.length} order{r.affected.length === 1 ? '' : 's'} {isOpen ? '▴' : '▾'}
                   </button>
                 </span>
                 <span className="s-act">
-                  <Btn kind="secondary" className="btn-sm" onClick={() => autoCut(r)}>
-                    Cut {r.short}
-                  </Btn>
+                  {r.short > 0 ? (
+                    <Btn kind="secondary" className="btn-sm" onClick={() => autoCut(r)}>
+                      Cut {r.short}
+                    </Btn>
+                  ) : (
+                    <span className="stage">
+                      <Dot tone="success" />
+                      Resolved
+                    </span>
+                  )}
                 </span>
               </div>
               {isOpen && (
@@ -178,7 +185,7 @@ export function StockCheck() {
             </Fragment>
           );
         })}
-        {!rows.length && <div className="empty">Everything ordered for {DAY} is covered by farm stock.</div>}
+        {!visible.length && <div className="empty">{tab === 'resolved' ? 'Nothing resolved yet.' : `Everything ordered for ${DAY} is covered by farm stock.`}</div>}
       </div>
     </Shell>
   );

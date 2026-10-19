@@ -2877,3 +2877,5 @@ input, select, button, textarea { font-family: inherit; }
 
 .avail-kpis { grid-template-columns: repeat(5, 1fr); }
 .journal-toolbar .stock-note { margin: 0; }
+
+.text-success { color: var(--success); }

@@ -46,3 +46,9 @@ export function harvestFor(p: Pack): number | null {
 }
 
 export const ALL_PACKS = CATALOG.flatMap((g) => g.packs.map((p) => ({ group: g, pack: p })));
+
+/** SKUs that were over farm stock when the 22:30 check started. */
+export const SHORT_AT_CHECK: Set<string> = (() => {
+  const d = demandBySku(INITIAL_ORDERS);
+  return new Set([...AVAILABLE.entries()].filter(([sku, a]) => (d.get(sku) ?? 0) > a).map(([sku]) => sku));
+})();
