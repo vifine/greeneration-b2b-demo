@@ -24,6 +24,8 @@ export interface PaymentView {
   danger: boolean;
   /** Status in the order card's Payment block heading. */
   status: string;
+  /** Short clarification shown as a caption next to the status pill. */
+  statusNote?: string;
   statusDanger: boolean;
   fields: PaymentField[];
   action?: 'Resend invoice' | 'Resend link' | 'Send SOA';
@@ -88,7 +90,6 @@ export function paymentView(o: Order, total: number, before = total): PaymentVie
     case 'due_soon':
     case 'overdue': {
       const orderOverdue = p.kind === 'overdue';
-      const termsText = `On account · ${p.terms ?? 30} days`;
       if (clientOverdue || orderOverdue) {
         return {
           kind: p.kind,
@@ -96,7 +97,8 @@ export function paymentView(o: Order, total: number, before = total): PaymentVie
           hint: orderOverdue ? `Due ${p.due} · ${money(balance)}` : `${money(clientOverdue!.overdue)} · ${clientOverdue!.oldestDays} days`,
           tone: 'danger',
           danger: true,
-          status: orderOverdue ? `Overdue ${p.days} days` : 'Client overdue',
+          status: orderOverdue ? 'Overdue' : 'Client overdue',
+          statusNote: orderOverdue ? `${p.days} days` : `${p.terms ?? 30}-day terms`,
           statusDanger: true,
           fields: [
             { k: 'Total', money: true, v: totalText, strong: true },
@@ -119,7 +121,8 @@ export function paymentView(o: Order, total: number, before = total): PaymentVie
           hint: `Invoice · due ${p.due}`,
           tone: 'warning',
           danger: false,
-          status: `Due in ${p.days} days`,
+          status: 'Due soon',
+          statusNote: `in ${p.days} days`,
           statusDanger: false,
           fields: [
             { k: 'Total', money: true, v: totalText, strong: true },
@@ -141,7 +144,8 @@ export function paymentView(o: Order, total: number, before = total): PaymentVie
         hint: `${p.terms ?? 30} days · due ${p.due}`,
         tone: 'sand',
         danger: false,
-        status: termsText,
+        status: 'On account',
+        statusNote: `${p.terms ?? 30}-day terms`,
         statusDanger: false,
         fields: [
           { k: 'Total', money: true, v: totalText, strong: true },
@@ -186,7 +190,8 @@ export function paymentView(o: Order, total: number, before = total): PaymentVie
         hint: `Prepayment · ${money(total)}`,
         tone: 'info',
         danger: false,
-        status: 'Link sent',
+        status: 'Awaiting payment',
+        statusNote: 'link sent',
         statusDanger: false,
         fields: [
           { k: 'Amount', money: true, v: totalText, strong: true },
@@ -250,7 +255,8 @@ export function paymentView(o: Order, total: number, before = total): PaymentVie
         hint: `${money(total)} · ${p.collected ?? ''}`,
         tone: 'success',
         danger: false,
-        status: 'Cash collected',
+        status: 'Collected',
+        statusNote: 'cash',
         statusDanger: false,
         fields: [
           { k: 'Collected', money: true, v: totalText, strong: true },

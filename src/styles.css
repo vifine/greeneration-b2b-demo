@@ -2887,3 +2887,4 @@ input, select, button, textarea { font-family: inherit; }
 .pill-danger { background: var(--tint-danger); color: var(--danger); }
 .pill-info { background: var(--tint-info); color: var(--info); }
 .pill-neutral, .pill-sand { background: var(--soft-light); color: var(--text); }
+.oblock-head .status-note { font-size: 13px; color: var(--text-2); white-space: nowrap; }

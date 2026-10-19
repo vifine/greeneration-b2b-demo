@@ -158,7 +158,7 @@ export function OrderCard() {
             <b>Delivery</b>
             <span className={`status pill pill-${dlv.status === 'Scheduled' ? 'success' : 'neutral'}`}>
               <Dot tone={dlv.status === 'Scheduled' ? 'success' : 'neutral'} />
-              {dlv.status}
+              {dlv.status === 'Scheduled' ? 'Scheduled' : 'Not scheduled'}
             </span>
           </div>
           <div className="kv-grid">
@@ -186,6 +186,7 @@ export function OrderCard() {
         <section className="oblock">
           <div className="oblock-head">
             <b>Payment</b>
+            {pay.statusNote && <small className="status-note">{pay.statusNote}</small>}
             <span className={`status pill pill-${pay.statusDanger ? 'danger' : pay.tone}`}>
               <Dot tone={pay.tone} />
               {pay.status}
