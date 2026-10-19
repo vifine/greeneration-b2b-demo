@@ -1,5 +1,5 @@
 import type { Claim } from '../data/claims';
-import type { OrderStage, Tone } from '../data/types';
+import type { Order, OrderStage, Tone } from '../data/types';
 import { dur, INTAKE_CLOSES } from '../time';
 
 /** Next delivery day the cart can still go to tonight (demo today: Mon 19 Oct). */
