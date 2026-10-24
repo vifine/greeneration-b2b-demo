@@ -5,6 +5,7 @@ import { ToastProvider } from './components/ui';
 import { BalanceDetail, Balances } from './pages/Balances';
 import { ClientCard, ClientsJournal } from './pages/Clients';
 import { AuditLog } from './pages/AuditLog';
+import { TableResizer } from './components/TableResizer';
 import { StockCheck } from './pages/StockCheck';
 import { ClaimCard, ClaimsJournal } from './pages/Claims';
 import { Availability } from './pages/Availability';
@@ -42,6 +43,7 @@ export default function App() {
     <StoreProvider>
       <ToastProvider>
         <HashRouter>
+          <TableResizer />
           <Routes>
             <Route path="/login" element={isLoggedIn() ? <Navigate to="/" replace /> : <Login />} />
             <Route path="/" element={<Private><Home /></Private>} />

@@ -1,4 +1,5 @@
-import { allDeals, BitrixOrdersKanban, BitrixOrdersTable, kanbanColStyle, stageColor } from '../components/BitrixDeals';
+import { allDeals, BitrixOrdersKanban, BitrixOrdersTable, bitrixRows, BX_STAGE_ORDER, BxCard, isActiveDeal, kanbanColStyle, stageColor, stageName } from '../components/BitrixDeals';
+import type { LiveDeal } from '../data/live';
 import { ClientFilterChip } from '../components/ClientActivity';
 import { LIVE } from '../data/live';
 import type React from 'react';
@@ -211,26 +212,67 @@ type OrdView = 'list' | 'kanban';
 const BX_CODE_OF: Record<OrderStage, string> = { 'New request': 'FINAL_INVOICE', Preorder: 'UC_SO2AUI', Confirmed: 'NEW' };
 type OrdRow = { o: Order; client: Client; pay: PaymentView };
 
-/** Orders as columns by stage. Shows the stage of the active tab (all three on "All"). */
-function OrdersKanban({ rows, tab, onOpen }: { rows: OrdRow[]; tab: OrdTab; onOpen: (id: string) => void }) {
+type BxRow = { clientId: string; d: LiveDeal };
+/** Cards shown per column; the rest is behind "Show all" (the 90-day Bitrix24 window holds thousands of deals). */
+const KANBAN_PAGE = 60;
+
+/** Real Bitrix24 deals for the merged kanban: active ones, same delivery / payment filters (read-only). */
+function bxForKanban(q: string, client: string | null, dday: DeliveryFilter, payF: PaymentFilter): BxRow[] {
+  if (!LIVE?.deals) return [];
+  const iso = (dt: Date) => dt.toISOString().slice(0, 10);
+  const today = iso(new Date());
+  const tomorrow = iso(new Date(Date.now() + 864e5));
+  const byDay = (d: LiveDeal) =>
+    dday === 'all' || (!!d[2] && (dday === 'upcoming' ? d[2] >= today : dday === 'tomorrow' ? d[2] === tomorrow : d[2] > tomorrow));
+  const byPay = (d: LiveDeal) =>
+    payF === 'all' || (payF === 'paid' ? d[5] === 'Paid' : payF === 'unpaid' || payF === 'overdue' ? d[5] === 'Not paid' : false);
+  return bitrixRows(q, client).filter((x) => isActiveDeal(x.d) && byDay(x.d) && byPay(x.d));
+}
+
+/**
+ * Orders as columns by Bitrix24 stage: the portal's test orders and the real Bitrix24 orders together.
+ * Test orders sit in the stage they map to (New request, Preorder, Confirmed). Nothing is written to Bitrix24.
+ */
+function OrdersKanban({ rows, bx, tab, onOpen }: { rows: OrdRow[]; bx: BxRow[]; tab: OrdTab; onOpen: (id: string) => void }) {
   const { clientClass } = useStore();
-  const stages: OrderStage[] = tab === 'all' || tab === 'bitrix' ? ['New request', 'Preorder', 'Confirmed'] : [STAGE_OF[tab]];
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const only = tab === 'all' || tab === 'bitrix' ? null : BX_CODE_OF[STAGE_OF[tab]];
+  const portalStages: OrderStage[] = only ? [STAGE_OF[tab as Exclude<OrdTab, 'all' | 'bitrix'>]] : ['New request', 'Preorder', 'Confirmed'];
+  const bxRows = only ? bx.filter((x) => x.d[3] === only) : bx;
+  const rank = (c: string) => {
+    const i = BX_STAGE_ORDER.indexOf(c);
+    return i < 0 ? BX_STAGE_ORDER.length : i;
+  };
+  const codes = [...new Set([...portalStages.map((st) => BX_CODE_OF[st]), ...bxRows.map((x) => x.d[3])])].sort((a, b) => rank(a) - rank(b));
+  const portalOf = (code: string) => portalStages.find((st) => BX_CODE_OF[st] === code);
   return (
     <div className="kanban">
-      {stages.map((stage) => {
-        const col = rows.filter((x) => x.o.stage === stage);
-        const sum = col.reduce((s, x) => s + orderOriginalTotal(x.o), 0);
+      {codes.map((code) => {
+        const pst = portalOf(code);
+        const test = pst ? rows.filter((x) => x.o.stage === pst) : [];
+        const real = bxRows.filter((x) => x.d[3] === code);
+        const total = test.length + real.length;
+        const sum = test.reduce((n, x) => n + orderOriginalTotal(x.o), 0) + real.reduce((n, x) => n + x.d[4], 0);
+        const limit = expanded[code] ? Infinity : KANBAN_PAGE;
+        const realShown = real.slice(0, limit);
+        const testShown = test.slice(0, Math.max(0, limit - realShown.length));
+        const hidden = total - realShown.length - testShown.length;
+        const c = stageColor(code);
+        const title = (LIVE?.dealStages?.[code] ? stageName(code) : null) ?? pst ?? code;
         return (
-          <section key={stage} className="kanban-col" aria-label={stage} style={kanbanColStyle(stageColor(BX_CODE_OF[stage]))}>
+          <section key={code} className="kanban-col" aria-label={title} style={kanbanColStyle(c)}>
             <header className="kanban-head">
-              <span className="dot" style={{ background: stageColor(BX_CODE_OF[stage]) }} aria-hidden="true" />
-              <b>{stage}</b>
-              <span className="kanban-count">{col.length}</span>
+              <span className="dot" style={{ background: c }} aria-hidden="true" />
+              <b className="ellipsis">{title}</b>
+              <span className="kanban-count">{total}</span>
               <span className="kanban-sum">
                 <Money v={sum} />
               </span>
             </header>
-            {col.map(({ o, client, pay }) => {
+            {realShown.map(({ clientId, d }) => (
+              <BxCard key={`bx${d[0]}`} clientId={clientId} d={d} />
+            ))}
+            {testShown.map(({ o, client, pay }) => {
               const issue = orderIssue(o)?.text;
               const n = o.lines.filter((l) => !l.added).length;
               return (
@@ -238,6 +280,7 @@ function OrdersKanban({ rows, tab, onOpen }: { rows: OrdRow[]; tab: OrdTab; onOp
                   <span className="kcard-top">
                     <ClassBadge k={clientClass(o.clientId)} />
                     <span className="kcard-name ellipsis">{client.name}</span>
+                    <span className="kcard-test" title="Test order of the portal, not in Bitrix24">Test</span>
                   </span>
                   <span className="kcard-meta">
                     #{o.id} · {o.channel}
@@ -265,7 +308,12 @@ function OrdersKanban({ rows, tab, onOpen }: { rows: OrdRow[]; tab: OrdTab; onOp
                 </button>
               );
             })}
-            {!col.length && <div className="kcard-empty">No orders</div>}
+            {hidden > 0 && (
+              <button type="button" className="kcard-more" onClick={() => setExpanded((e) => ({ ...e, [code]: true }))}>
+                Show {hidden} more
+              </button>
+            )}
+            {!total && <div className="kcard-empty">No orders</div>}
           </section>
         );
       })}
@@ -336,7 +384,7 @@ export function OrdersJournal() {
       <>
       {ids && <FromHome n={visible.length} from={from} onClear={clearIds} />}
       {view === 'kanban' ? (
-        <OrdersKanban rows={visible} tab={tab} onOpen={(id) => navigate(`/crm/orders/${id}`)} />
+        <OrdersKanban rows={visible} bx={ids ? [] : bxForKanban(q, client, dday, payF)} tab={tab} onOpen={(id) => navigate(`/crm/orders/${id}`)} />
       ) : (
       <div className="table journal ord-table">
         <div className="tr th">

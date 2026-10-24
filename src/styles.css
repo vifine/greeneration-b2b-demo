@@ -3320,7 +3320,7 @@ a.pt-tile:hover { border-color: var(--forest); }
 .kanban-head {
   position: sticky;
   top: -10px;
-  z-index: 1;
+  z-index: 3;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -3477,3 +3477,15 @@ a.pt-tile:hover { border-color: var(--forest); }
 .msg-preview { white-space: pre-wrap; font-size: 15px; line-height: 22px; background: var(--soft-light); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; overflow-wrap: anywhere; }
 .msg-preview .bx-chat-from { display: block; font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
 .msg-note { margin-top: 12px; font-size: 13px; color: var(--text-2); line-height: 18px; }
+
+/* Column resize handles on every table (components/TableResizer.tsx; the Users table has its own). */
+.table > .tr.th > * { position: relative; }
+.table > .tr.th { user-select: none; }
+.table > .tr.th > * > .col-resize { right: 0; z-index: 2; }
+body.rz-dragging, body.rz-dragging * { cursor: col-resize !important; user-select: none !important; }
+
+/* Merged orders kanban: test orders of the portal are tagged; long columns are paged. */
+.kanban-head b.ellipsis { min-width: 0; }
+.kcard-test { margin-left: auto; flex: none; font-size: 11px; font-weight: 700; line-height: 16px; padding: 0 6px; border-radius: 4px; color: var(--text-2); background: var(--soft-light); border: 1px solid var(--border); }
+.kcard-more { padding: 8px; border-radius: 8px; font-size: 13px; font-weight: 700; color: var(--forest); background: rgba(255, 255, 255, 0.6); }
+.kcard-more:hover { background: var(--white); }

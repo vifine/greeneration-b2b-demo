@@ -3,7 +3,7 @@ import * as I from './icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { Money } from './Money';
 import { Dot } from './ui';
-import { ClassBadge, tint } from './ClassBadge';
+import { ClassBadge } from './ClassBadge';
 import { useStore } from '../store';
 import { clientById } from '../data/clients';
 import { bitrixDealUrl, LIVE, shortDate, type LiveDeal } from '../data/live';
@@ -93,7 +93,7 @@ export function allDeals() {
 
 /** Orders journal tab: real Bitrix24 orders (read-only). With `clientId`, all of that client's deals. */
 /** Bitrix24 orders matching the search and the client filter (shared by the list and the kanban). */
-function bitrixRows(q: string, clientId?: string | null) {
+export function bitrixRows(q: string, clientId?: string | null) {
   const n = q.trim().toLowerCase().replace(/^#/, '');
   return allDeals()
     .filter((x) => !clientId || x.clientId === clientId)
@@ -101,15 +101,63 @@ function bitrixRows(q: string, clientId?: string | null) {
 }
 
 /** Bitrix24 stage order for the kanban columns; stages not listed here go last. */
-const BX_STAGE_ORDER = ['FINAL_INVOICE', 'UC_SO2AUI', 'NEW', 'UC_E182GD', 'UC_1MU1K8', 'WON', 'UC_UZKA34'];
+export const BX_STAGE_ORDER = ['FINAL_INVOICE', 'UC_SO2AUI', 'NEW', 'UC_E182GD', 'UC_1MU1K8', 'WON', 'UC_UZKA34'];
 
-/** Column colours: a light tint of the stage colour for the background, the stage colour for the scrollbar. */
-export const kanbanColStyle = (c: string) => ({ '--stage': c, '--col-bg': tint(c, 0.12) }) as CSSProperties;
+/** Stage colour mixed with white, as a solid colour (sticky column headers must not let cards show through). */
+function mixWhite(hex: string, amount: number) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  const ch = (shift: number) => Math.round(255 - (255 - ((n >> shift) & 255)) * amount);
+  return `rgb(${ch(16)}, ${ch(8)}, ${ch(0)})`;
+}
+
+/** Column colours: a light solid tint of the stage colour for the background, the stage colour for the scrollbar. */
+export const kanbanColStyle = (c: string) => ({ '--stage': c, '--col-bg': mixWhite(c, 0.12) }) as CSSProperties;
 
 /** Bitrix24 orders as columns by Bitrix stage. Canceled and lost deals are left out. */
-export function BitrixOrdersKanban({ q, clientId }: { q: string; clientId?: string | null }) {
+/** Kanban card of a Bitrix24 order (opens the portal order card; read-only). */
+export function BxCard({ clientId: cid, d }: { clientId: string; d: LiveDeal }) {
   const { clientClass } = useStore();
   const openDeal = useOpenBxDeal();
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      className="kcard bx-kcard"
+      onClick={() => openDeal(d[0])}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openDeal(d[0]);
+        }
+      }}
+    >
+      <span className="kcard-top">
+        <ClassBadge k={clientClass(cid)} />
+        <span className="kcard-name ellipsis">{clientById(cid)?.name ?? cid}</span>
+      </span>
+      <span className="kcard-meta">
+        <DealLink id={d[0]} /> · created {day(d[1])}
+        {d[7] ? ` · LPO ${d[7]}` : ''}
+      </span>
+      <span className="kcard-meta kcard-row">
+        <img src={I.icTruck} alt="" className="kcard-ico" />
+        Delivery {day(d[2])}
+        {d[6] ? ` · ${d[6]}` : ''}
+      </span>
+      <span className="kcard-foot">
+        <span>
+          <PayCell d={d} />
+        </span>
+        <span className="kcard-row">
+          <img src={I.icMoney} alt="" className="kcard-ico" />
+          <Money v={d[4]} bold />
+        </span>
+      </span>
+    </div>
+  );
+}
+
+export function BitrixOrdersKanban({ q, clientId }: { q: string; clientId?: string | null }) {
   const rows = bitrixRows(q, clientId).filter((x) => isActiveDeal(x.d));
   const rank = (c: string) => {
     const i = BX_STAGE_ORDER.indexOf(c);
@@ -133,42 +181,7 @@ export function BitrixOrdersKanban({ q, clientId }: { q: string; clientId?: stri
               </span>
             </header>
             {col.map(({ clientId: cid, d }) => (
-              <div
-                key={d[0]}
-                role="button"
-                tabIndex={0}
-                className="kcard bx-kcard"
-                onClick={() => openDeal(d[0])}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    openDeal(d[0]);
-                  }
-                }}
-              >
-                <span className="kcard-top">
-                  <ClassBadge k={clientClass(cid)} />
-                  <span className="kcard-name ellipsis">{clientById(cid)?.name ?? cid}</span>
-                </span>
-                <span className="kcard-meta">
-                  <DealLink id={d[0]} /> · created {day(d[1])}
-                  {d[7] ? ` · LPO ${d[7]}` : ''}
-                </span>
-                <span className="kcard-meta kcard-row">
-                  <img src={I.icTruck} alt="" className="kcard-ico" />
-                  Delivery {day(d[2])}
-                  {d[6] ? ` · ${d[6]}` : ''}
-                </span>
-                <span className="kcard-foot">
-                  <span>
-                    <PayCell d={d} />
-                  </span>
-                  <span className="kcard-row">
-                    <img src={I.icMoney} alt="" className="kcard-ico" />
-                    <Money v={d[4]} bold />
-                  </span>
-                </span>
-              </div>
+              <BxCard key={d[0]} clientId={cid} d={d} />
             ))}
             {!col.length && <div className="kcard-empty">No orders</div>}
           </section>
