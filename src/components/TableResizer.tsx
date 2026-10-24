@@ -6,6 +6,10 @@ import { useEffect } from 'react';
  * Dragging sets a fixed width for that column in every row of the table (by position); double-click resets it.
  * Widths are remembered per page and table header in this browser (localStorage, best effort).
  * The Users table has its own grid-based handles and is skipped.
+ *
+ * Also pins what is above the tables on list pages: the block holding the table (or kanban) becomes the scroll area
+ * (`data-scroll-host`), so the toolbar, tabs and filters above it stay in place and table headers stick to its top.
+ * Card pages (`.card-page`), Home and the map are left as they are.
  */
 
 const KEY = 'gr-cols:';
@@ -106,7 +110,26 @@ function attach(table: HTMLElement, head: HTMLElement) {
   });
 }
 
+const HAS_DATA = '.table, .kanban';
+
+function pinLayout() {
+  document.querySelectorAll<HTMLElement>('.content').forEach((content) => {
+    const skip = /\b(card-page|home|map-page)\b/.test(content.className);
+    const kids = Array.from(content.children) as HTMLElement[];
+    const withData = kids.filter((k) => k.matches(HAS_DATA) || !!k.querySelector(HAS_DATA));
+    const host = !skip && withData.length === 1 ? withData[0] : null;
+    for (const k of kids) {
+      if (k !== host && k.hasAttribute('data-scroll-host')) k.removeAttribute('data-scroll-host');
+    }
+    if (host) {
+      if (!host.hasAttribute('data-scroll-host')) host.setAttribute('data-scroll-host', '');
+      if (!content.hasAttribute('data-split')) content.setAttribute('data-split', '');
+    } else if (content.hasAttribute('data-split')) content.removeAttribute('data-split');
+  });
+}
+
 function scan() {
+  pinLayout();
   document.querySelectorAll<HTMLElement>('.table:not(.users-table)').forEach((table) => {
     const head = table.querySelector<HTMLElement>(':scope > .tr.th');
     if (head && head.children.length > 1) attach(table, head);
@@ -122,7 +145,7 @@ export function TableResizer() {
     };
     schedule();
     const obs = new MutationObserver(schedule);
-    obs.observe(document.body, { childList: true, subtree: true });
+    obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
     window.addEventListener('hashchange', schedule);
     return () => {
       obs.disconnect();
