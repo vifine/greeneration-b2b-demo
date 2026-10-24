@@ -173,8 +173,8 @@ export function ClientsJournal() {
     c.live
       ? isBlockedClass(clientClass(c.id))
         ? clientClass(c.id) === 'D'
-          ? 'Class D · do not deliver'
-          : 'Class H · needs Head approval'
+          ? 'Do not deliver'
+          : 'Needs Head approval'
         : null
       : c.creditHold
         ? 'Credit hold'
