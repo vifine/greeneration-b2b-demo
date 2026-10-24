@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { SERVER_AUTH } from '../auth';
-import { fileUrl, loadDocs, saveBxField, type BxDocs } from '../bx';
+import { fileUrl, saveBxField } from '../bx';
 import { bitrixCompanyUrl, LIVE, type LiveBitrix } from '../data/live';
 import * as I from './icons';
 import { Dropdown, MultiDropdown, Stepper, useToast } from './ui';
@@ -132,79 +132,59 @@ export function BitrixDetails({
   );
 }
 
-/** Client documents from the Bitrix24 company file fields, opened through the portal (server build). */
+/** Client documents: copies stored on the portal server (synced from the Bitrix24 company card every hour). */
 export function ClientDocuments({ clientId, bx, bitrixId }: { clientId: string; bx?: LiveBitrix; bitrixId?: string | number }) {
-  const [docs, setDocs] = useState<BxDocs | null>(null);
-  const [error, setError] = useState('');
-  const fileDefs = (LIVE?.bxFields ?? []).filter((d) => d.t === 'f' && bx?.x?.[d.k] != null);
   const href = bitrixCompanyUrl(bitrixId);
-  useEffect(() => {
-    if (!SERVER_AUTH || !fileDefs.length) return;
-    loadDocs(clientId).then(setDocs, (e) => setError((e as Error).message));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientId]);
-  if (!fileDefs.length) return null;
+  const docs = bx?.docs ?? [];
+  const idDocs = bx?.idDocs ?? [];
+  const pending = (LIVE?.bxFields ?? []).filter((d) => d.t === 'f' && !d.id && bx?.x?.[d.k] != null).length > 0 && !docs.length;
+  if (!docs.length && !idDocs.length && !pending) return null;
   return (
     <section className="set-card docs-card">
       <div className="section-head">
         <h2 className="section-h">Documents</h2>
-        <p className="section-note">Files on the Bitrix24 company card. Click to open.</p>
+        <p className="section-note">Stored on the portal, copied from the Bitrix24 company card every hour. Click to open.</p>
       </div>
-      {SERVER_AUTH && docs ? (
-        <ul className="docs-list">
-          {docs.docs.map((g) =>
-            g.files.map((f) => (
-              <li key={`${g.field}-${f.id}`}>
-                <a className="doc-link" href={fileUrl(clientId, g.field, f.id)} target="_blank" rel="noopener noreferrer">
+      <ul className="docs-list">
+        {docs.map((g) =>
+          g.files.map(([id, name]) => (
+            <li key={`${g.f}-${id}`}>
+              {SERVER_AUTH ? (
+                <a className="doc-link" href={fileUrl(clientId, g.f, id)} target="_blank" rel="noopener noreferrer">
                   <img src={I.icFile} width={16} height={16} alt="" />
-                  <span className="ellipsis">{f.name}</span>
+                  <span className="ellipsis">{name}</span>
                 </a>
-                <span className="muted doc-kind">{g.label}</span>
-              </li>
-            )),
-          )}
-          {docs.identity.map((l) => (
-            <li key={l}>
-              <span className="doc-link is-static">
-                <img src={I.icFile} width={16} height={16} alt="" />
-                <span className="ellipsis">{l}: on file</span>
-              </span>
-              <span className="muted doc-kind">
-                Identity document ·{' '}
-                {href ? (
-                  <a className="link-sort" href={href} target="_blank" rel="noopener noreferrer">
-                    open in Bitrix24
-                  </a>
-                ) : (
-                  'in Bitrix24'
-                )}
-              </span>
-            </li>
-          ))}
-          {!docs.docs.length && !docs.identity.length && <li className="muted">No files on the company card.</li>}
-        </ul>
-      ) : SERVER_AUTH && !error ? (
-        <p className="muted">Loading documents from Bitrix24…</p>
-      ) : (
-        <ul className="docs-list">
-          {error && <li className="muted">Documents not loaded ({error}). Counts from the last sync:</li>}
-          {fileDefs.map((d) => (
-            <li key={d.k}>
-              <span className="doc-link is-static">
-                <img src={I.icFile} width={16} height={16} alt="" />
-                <span>
-                  {d.l}: {typeof bx?.x?.[d.k] === 'number' && (bx?.x?.[d.k] as number) > 1 ? `${bx?.x?.[d.k]} files` : 'on file'}
+              ) : (
+                <span className="doc-link is-static">
+                  <img src={I.icFile} width={16} height={16} alt="" />
+                  <span className="ellipsis">{name}</span>
                 </span>
-              </span>
-              {href && (
-                <a className="link-sort doc-kind" href={href} target="_blank" rel="noopener noreferrer">
-                  open in Bitrix24
-                </a>
               )}
+              <span className="muted doc-kind">{g.l}</span>
             </li>
-          ))}
-        </ul>
-      )}
+          )),
+        )}
+        {idDocs.map((l) => (
+          <li key={l}>
+            <span className="doc-link is-static">
+              <img src={I.icFile} width={16} height={16} alt="" />
+              <span className="ellipsis">{l}: on file</span>
+            </span>
+            <span className="muted doc-kind">
+              Identity document, kept in Bitrix24 only
+              {href && (
+                <>
+                  {' · '}
+                  <a className="link-sort" href={href} target="_blank" rel="noopener noreferrer">
+                    open
+                  </a>
+                </>
+              )}
+            </span>
+          </li>
+        ))}
+        {pending && <li className="muted">The files are being copied from Bitrix24 and will appear after the next hourly sync.</li>}
+      </ul>
     </section>
   );
 }

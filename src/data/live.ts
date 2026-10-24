@@ -70,6 +70,10 @@ export interface LiveBitrix {
   contacts?: LiveBitrixContact[];
   /** Extra company fields by key (see LiveData.bxFields): text, or a file / linked-item count, or true. */
   x?: Record<string, string | number | true>;
+  /** Documents copied from the company card to the portal server (scripts/sync_docs.py): field, label, [file id, name]. */
+  docs?: { f: string; l: string; files: [string, string][] }[];
+  /** Identity documents on the company card (not copied): their labels. */
+  idDocs?: string[];
   /** Bitrix24 user id of the responsible person (see LiveData.staff for the photo). */
   managerId?: string;
   /** Raw ids of the editable list fields (see LiveData.bxEdit): one id, or several for multiple fields. */

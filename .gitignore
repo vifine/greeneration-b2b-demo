@@ -9,3 +9,5 @@ public/live/
 .geo-cache.json
 .geo-cache.json.tmp
 __pycache__/
+# client documents copied from Bitrix24 on the server (scripts/sync_docs.py)
+.docs/
