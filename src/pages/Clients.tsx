@@ -18,7 +18,7 @@ import { SERVER_AUTH } from '../auth';
 import { SharedNotesCard } from '../components/SharedNotes';
 import { LIVE } from '../data/live';
 import { MiniMap } from '../components/MapLazy';
-import { BitrixDetails, bxLabel, ClientDocuments } from '../components/BitrixDetails';
+import { BitrixDetails, bxLabel, ClientDocuments, IdentityDocuments } from '../components/BitrixDetails';
 import { clientPoint } from '../data/geo';
 import { ClientsMapView } from './MapPage';
 import { ClassBadge, CLASS_COLOR, CLASS_HINT, CLASS_ORDER, classFilterOptions, isBlockedClass, matchesClass, NO_COLOR, tint, ZoneDot, zoneColor } from '../components/ClassBadge';
@@ -222,7 +222,7 @@ export function ClientsJournal() {
   const toggleGroup = (k: string) => setExpanded((x) => ({ ...x, [k]: !x[k] }));
   const minOf = (id: string, emirate?: Address['emirate']) => minOverrides[id] ?? MIN_ORDER[emirate ?? 'Dubai'];
   const rows = CLIENTS.map((c) => {
-    const own = addresses.filter((a) => a.clientId === c.id);
+    const own = addresses.filter((a) => a.clientId === c.id && !a.fromBitrix); // real clients: the list shows the Bitrix24 fields
     return { c, own, main: own.find((a) => a.main) ?? own[0] };
   });
   // Zone: Bitrix24 zone for real clients, demo address zone for test clients.
@@ -480,7 +480,8 @@ export function ClientCard() {
   const [bxEdits, setBxEdits] = useState<Record<string, Record<string, string | string[]>>>({});
   const c = id ? CLIENTS.find((x) => x.id === id) : undefined;
   if (!c) return <Navigate to="/customers/clients" replace />;
-  const own = addresses.filter((a) => a.clientId === c.id).sort((a, b) => Number(!!b.main) - Number(!!a.main));
+  // The Bitrix24 main point is shown by its own card below; it is in the address list for orders and the portal.
+  const own = addresses.filter((a) => a.clientId === c.id && !a.fromBitrix).sort((a, b) => Number(!!b.main) - Number(!!a.main));
   // Editable Bitrix24 lists as changed on this card (shown in Details and in the header), per client.
   const bxRaw = { ...(c.live?.bx?.xr ?? {}), ...(bxEdits[c.id] ?? {}) };
   const setBxValue = (k: string, v: string | string[]) => setBxEdits((e) => ({ ...e, [c.id]: { ...(e[c.id] ?? {}), [k]: v } }));
@@ -500,8 +501,11 @@ export function ClientCard() {
           <ClientFacts c={c} ownCount={own.length} raw={bxRaw} />
         </div>
         <div className="card-actions">
-          <Btn kind="primary" onClick={() => navigate(`/portal/${c.id}`)}>
+          <Btn kind="secondary" onClick={() => navigate(`/portal/${c.id}`)}>
             Open client portal
+          </Btn>
+          <Btn kind="primary" onClick={() => navigate(`/references/catalog?client=${encodeURIComponent(c.id)}`)}>
+            New order
           </Btn>
         </div>
       </div>
@@ -675,6 +679,7 @@ export function ClientCard() {
           <span>New contact</span>
         </button>
       </div>
+      {c.live?.bx && <IdentityDocuments clientId={c.id} bx={c.live.bx} />}
       {person && (
         <ContactDialog
           title={person.id ? 'Edit contact' : `New contact · ${c.name}`}

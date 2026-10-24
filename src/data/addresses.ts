@@ -21,6 +21,8 @@ export interface Address {
   zone: ZoneId;
   note?: string;
   main?: boolean;
+  /** Built from the Bitrix24 company card (real clients): read-only there, shown as "Main delivery point". */
+  fromBitrix?: boolean;
 }
 
 /** Delivery zones and their slots (fictional). */
@@ -102,6 +104,32 @@ export const INITIAL_ADDRESSES: Address[] = CLIENTS.filter((c) => !c.live).flatM
   return [main, ...extra];
 });
 
+/** Real clients: the Bitrix24 delivery address as the main point, so orders can be placed for them like for test clients. */
+function emirateOfText(t: string): Emirate {
+  return /sharjah|ajman/i.test(t) ? 'Sharjah' : /abu\s*dhabi|saadiyat|yas|al ain|reem|khalifa/i.test(t) ? 'Abu Dhabi' : 'Dubai';
+}
+export const BITRIX_ADDRESSES: Address[] = CLIENTS.filter((c) => c.live?.bx && (c.live.bx.address || c.live.bx.zone)).map((c) => {
+  const bx = c.live!.bx!;
+  const text = `${bx.address ?? ''} ${bx.zone ?? ''}`;
+  const emirate = emirateOfText(text);
+  const person = bx.contacts?.find((p) => p.phone) ?? bx.contacts?.[0];
+  return {
+    id: `${c.id}-bx`,
+    clientId: c.id,
+    name: 'Main delivery point',
+    emirate,
+    area: bx.zone ?? '',
+    line: bx.address ?? 'Address in Bitrix24',
+    contact: person?.name ?? '',
+    phone: person?.phone ?? bx.phone ?? '',
+    hours: bx.deliveryTime ?? '',
+    note: bx.deliveryNote,
+    zone: zoneFor(emirate, text),
+    main: true,
+    fromBitrix: true,
+  };
+});
+
 export const addressText = (a: Address) => `${a.line}, ${a.area}, ${a.emirate}`;
 
 /** The order's delivery point: the chosen one, else the client's main address. */
@@ -129,7 +157,7 @@ export function deliveryDays(emirate: Emirate, count = 6): string[] {
 }
 
 /** Address book the derived checks read; the store keeps it in sync with edits. */
-export let ADDRESS_BOOK: Address[] = INITIAL_ADDRESSES;
+export let ADDRESS_BOOK: Address[] = [...INITIAL_ADDRESSES, ...BITRIX_ADDRESSES];
 export function setAddressBook(list: Address[]) {
   ADDRESS_BOOK = list;
 }

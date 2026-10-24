@@ -3608,3 +3608,4 @@ textarea.input { height: auto; padding: 10px 12px; }
 
 /* Contacts: "+ Add contact" at the end of each client group (as "Add line" in orders) */
 .contacts-add { margin: 2px 0 6px 4px; padding: 8px 12px; font-size: 14px; font-weight: 600; color: var(--forest); }
+.journal-filters .btn { height: 40px; padding: 0 16px; font-size: 15px; }

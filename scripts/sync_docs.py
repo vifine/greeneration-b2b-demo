@@ -6,7 +6,8 @@ company document fields are downloaded once (by Bitrix24 file id) into DOCS_DIR/
 and listed in DOCS_DIR/index.json. Files removed in Bitrix24 are removed here too. sync_sheets.py puts the list into
 live.json (bx.docs); the notes service serves the files from disk, only with a portal session (/api/bx/file).
 
-Identity documents (Passport(s), Emirates ID(s)) are not copied: only the fact that they exist is recorded.
+Identity documents (Passport(s), Emirates ID(s)) are copied too, into "people": the card shows them with Contacts and
+only admins can open them.
 The webhook and the Bitrix24 download links (they contain the webhook secret) never leave this script.
 
 Env: BITRIX_WEBHOOK (required), DOCS_DIR (default /opt/greeneration-portal/.docs), PORTAL_LIVE_JSON (previous
@@ -107,12 +108,10 @@ def main():
             cid = str(it["id"])
             seen_companies.add(cid)
             old = index.get(cid, {})
-            new = {"docs": {}, "identity": []}
-            for uf, key in IDENTITY.items():
-                if any(True for _ in entries(it.get(key))):
-                    new["identity"].append(labels.get(uf, uf))
-            for uf, key in FIELDS.items():
-                have = {f["id"]: f for f in old.get("docs", {}).get(uf, {}).get("files", [])}
+            # "docs": company documents; "people": identity documents of the client's people (shown with Contacts).
+            new = {"docs": {}, "people": {}, "identity": []}
+            for uf, key, bucket in [*((u, k, "docs") for u, k in FIELDS.items()), *((u, k, "people") for u, k in IDENTITY.items())]:
+                have = {f["id"]: f for f in old.get(bucket, {}).get(uf, {}).get("files", [])}
                 files = []
                 for fid, url in entries(it.get(key)):
                     if fid in have and os.path.exists(os.path.join(DOCS_DIR, have[fid]["path"])):
@@ -157,8 +156,10 @@ def main():
                             pass
                         removed += 1
                 if files:
-                    new["docs"][uf] = {"label": labels.get(uf, uf), "files": files}
-            if new["docs"] or new["identity"]:
+                    new[bucket][uf] = {"label": labels.get(uf, uf), "files": files}
+                    if bucket == "people":
+                        new["identity"].append(labels.get(uf, uf))
+            if new["docs"] or new["people"]:
                 index[cid] = new
             else:
                 index.pop(cid, None)
@@ -169,7 +170,7 @@ def main():
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(index, f, ensure_ascii=False)
     os.replace(tmp, idx_path)
-    total = sum(len(g["files"]) for c in index.values() for g in c.get("docs", {}).values())
+    total = sum(len(g["files"]) for c in index.values() for b in ("docs", "people") for g in c.get(b, {}).values())
     print(f"docs: companies {len(index)}, files {total}, new {new_files}, removed {removed}, failed {failed}"
           + (f", {skipped} left for the next run" if skipped else ""))
 

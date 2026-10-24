@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { SERVER_AUTH } from '../auth';
+import { isAdmin, SERVER_AUTH } from '../auth';
 import { fileUrl, saveBxField } from '../bx';
-import { bitrixCompanyUrl, LIVE, type LiveBitrix } from '../data/live';
+import { LIVE, type LiveBitrix } from '../data/live';
 import * as I from './icons';
 import { Dropdown, MultiDropdown, Stepper, useToast } from './ui';
 
@@ -133,12 +133,10 @@ export function BitrixDetails({
 }
 
 /** Client documents: copies stored on the portal server (synced from the Bitrix24 company card every hour). */
-export function ClientDocuments({ clientId, bx, bitrixId }: { clientId: string; bx?: LiveBitrix; bitrixId?: string | number }) {
-  const href = bitrixCompanyUrl(bitrixId);
+export function ClientDocuments({ clientId, bx }: { clientId: string; bx?: LiveBitrix; bitrixId?: string | number }) {
   const docs = bx?.docs ?? [];
-  const idDocs = bx?.idDocs ?? [];
   const pending = (LIVE?.bxFields ?? []).filter((d) => d.t === 'f' && !d.id && bx?.x?.[d.k] != null).length > 0 && !docs.length;
-  if (!docs.length && !idDocs.length && !pending) return null;
+  if (!docs.length && !pending) return null;
   return (
     <section className="set-card docs-card">
       <div className="section-head">
@@ -164,26 +162,42 @@ export function ClientDocuments({ clientId, bx, bitrixId }: { clientId: string; 
             </li>
           )),
         )}
-        {idDocs.map((l) => (
-          <li key={l}>
-            <span className="doc-link is-static">
-              <img src={I.icFile} width={16} height={16} alt="" />
-              <span className="ellipsis">{l}: on file</span>
-            </span>
-            <span className="muted doc-kind">
-              Identity document, kept in Bitrix24 only
-              {href && (
-                <>
-                  {' · '}
-                  <a className="link-sort" href={href} target="_blank" rel="noopener noreferrer">
-                    open
-                  </a>
-                </>
-              )}
-            </span>
-          </li>
-        ))}
         {pending && <li className="muted">The files are being copied from Bitrix24 and will appear after the next hourly sync.</li>}
+      </ul>
+    </section>
+  );
+}
+
+/** Identity documents of the client's people (passports, Emirates IDs): shown with Contacts; only admins can open them. */
+export function IdentityDocuments({ clientId, bx }: { clientId: string; bx?: LiveBitrix }) {
+  const groups = bx?.idFiles ?? [];
+  if (!groups.length) return null;
+  const canOpen = SERVER_AUTH && isAdmin();
+  return (
+    <section className="set-card docs-card id-docs">
+      <div className="section-head">
+        <h3 className="section-h">Identity documents</h3>
+        <p className="section-note">Passports and Emirates IDs from the Bitrix24 company card. Only admins can open them.</p>
+      </div>
+      <ul className="docs-list">
+        {groups.map((g) =>
+          g.files.map(([id, name]) => (
+            <li key={`${g.f}-${id}`}>
+              {canOpen ? (
+                <a className="doc-link" href={fileUrl(clientId, g.f, id)} target="_blank" rel="noopener noreferrer">
+                  <img src={I.icFile} width={16} height={16} alt="" />
+                  <span className="ellipsis">{name}</span>
+                </a>
+              ) : (
+                <span className="doc-link is-static">
+                  <img src={I.icFile} width={16} height={16} alt="" />
+                  <span className="ellipsis">{g.l}: on file</span>
+                </span>
+              )}
+              <span className="muted doc-kind">{g.l}</span>
+            </li>
+          )),
+        )}
       </ul>
     </section>
   );

@@ -10,7 +10,7 @@ import { Shell } from '../components/Shell';
 import { ClassBadge } from '../components/ClassBadge';
 import * as I from '../components/icons';
 import { ClientName } from '../components/ClientName';
-import { Dot, FilterSelect, SearchBox, Tabs } from '../components/ui';
+import { Btn, Dot, FilterSelect, SearchBox, Tabs } from '../components/ui';
 import { matchesPaymentFilter, PAYMENT_FILTERS, paymentView, type PaymentFilter, type PaymentView } from '../data/payments';
 import { clientById } from '../data/clients';
 import type { Client, Order, OrderStage } from '../data/types';
@@ -368,6 +368,9 @@ export function OrdersJournal() {
         setQ={setQ}
       >
         {tab !== 'bitrix' && <FilterSelect value={dday} onChange={setDday} options={DELIVERY_FILTERS('upcoming')} />}
+        <Btn kind="primary" className="journal-new" onClick={() => navigate(`/references/catalog${client ? `?client=${encodeURIComponent(client)}` : ''}`)}>
+          New order
+        </Btn>
         {tab !== 'bitrix' && <FilterSelect value={payF} onChange={setPayF} options={PAYMENT_FILTERS} />}
       </Toolbar>
       {tab === 'bitrix' && !ids ? (

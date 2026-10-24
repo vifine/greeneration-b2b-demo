@@ -118,11 +118,11 @@ def list_files(bitrix_call, cid):
     }
 
 
-def stream_file(handler, bitrix_call, cid, field, fid):
-    """Serve the copy stored by scripts/sync_docs.py."""
-    if field in IDENTITY_FIELDS:
-        return handler.send(403, {"error": "identity documents are opened in Bitrix24 only"})
-    g = docs_index().get(str(cid), {}).get("docs", {}).get(field, {})
+def stream_file(handler, bitrix_call, cid, field, fid, admin=False):
+    """Serve the copy stored by scripts/sync_docs.py. Identity documents (passports, Emirates IDs): admins only."""
+    if field in IDENTITY_FIELDS and not admin:
+        return handler.send(403, {"error": "identity documents can be opened by admins only"})
+    g = docs_index().get(str(cid), {}).get("people" if field in IDENTITY_FIELDS else "docs", {}).get(field, {})
     f = next((x for x in g.get("files", []) if x.get("id") == fid), None)
     root = os.path.realpath(DOCS_DIR)
     path = os.path.realpath(os.path.join(root, f["path"])) if f else ""

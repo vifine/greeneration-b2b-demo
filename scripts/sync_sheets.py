@@ -707,8 +707,9 @@ def bitrix_sync():
             if dd.get("docs"):
                 bx["docs"] = [{"f": uf, "l": g.get("label") or uf, "files": [[f["id"], f["name"]] for f in g.get("files", [])]}
                               for uf, g in dd["docs"].items()]
-            if dd.get("identity"):
-                bx["idDocs"] = dd["identity"]
+            if dd.get("people"):
+                bx["idFiles"] = [{"f": uf, "l": g.get("label") or uf, "files": [[f["id"], f["name"]] for f in g.get("files", [])]}
+                                 for uf, g in dd["people"].items()]
         cm = bx_clean_text(co.get("COMMENTS"))
         if cm:
             bx["comment"] = cm[:800]

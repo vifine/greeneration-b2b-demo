@@ -6,7 +6,7 @@ import { INITIAL_REQUESTS } from './data/requests';
 import { balanceOf } from './data/balances';
 import { INITIAL_CLAIMS, type Claim } from './data/claims';
 import { INITIAL_CONTACTS, type Contact } from './data/contacts';
-import { ADDRESS_BOOK, DELIVERY_DAYS_BY_EMIRATE, deliveryDays, INITIAL_ADDRESSES, MIN_OVERRIDES, minOrderFor, pickAddress, setAddressBook, setMinOverrides, type Address } from './data/addresses';
+import { ADDRESS_BOOK, BITRIX_ADDRESSES, DELIVERY_DAYS_BY_EMIRATE, deliveryDays, INITIAL_ADDRESSES, MIN_OVERRIDES, minOrderFor, pickAddress, setAddressBook, setMinOverrides, type Address } from './data/addresses';
 import type { Line, Order, OrderLine, PaymentSpec, Request, Tone } from './data/types';
 import { ORDER_ISSUES, REQUEST_ISSUES, REQUEST_ISSUE_ORDER, withCount, type OrderIssueKey, type RequestIssueKey } from './data/issues';
 
@@ -170,7 +170,7 @@ const Ctx = createContext<Store | null>(null);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [requests, setRequests] = useState<Request[]>(INITIAL_REQUESTS);
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
-  const [addresses, setAddresses] = useState<Address[]>(INITIAL_ADDRESSES);
+  const [addresses, setAddresses] = useState<Address[]>(() => [...INITIAL_ADDRESSES, ...BITRIX_ADDRESSES]);
   const [modes, setModes] = useState<Record<string, InvoiceMode>>(() => Object.fromEntries(AUTO_AT_START.map((id) => [id, 'auto' as InvoiceMode])));
 
   const [claims, setClaims] = useState<Claim[]>(INITIAL_CLAIMS);

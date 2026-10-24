@@ -257,7 +257,9 @@ class Handler(BaseHTTPRequestHandler):
             fid = (qs.get("id") or [""])[0]
             if not re.fullmatch(r"UF_CRM_[A-Z0-9_]{1,40}", field) or not fid.isdigit():
                 return self.send(400, {"error": "bad request"})
-            return portal_bxfields.stream_file(self, bitrix_call, cid, field, fid)
+            with db() as con:
+                admin = portal_users.is_admin(con, self.session_email(), portal_auth.admin_emails())
+            return portal_bxfields.stream_file(self, bitrix_call, cid, field, fid, admin)
         except Exception as e:
             msg = str(e).replace(WEBHOOK, "<webhook>")
             sys.stderr.write(f"bx: {path} failed for company {cid} ({type(e).__name__}: {msg[:160]})\n")

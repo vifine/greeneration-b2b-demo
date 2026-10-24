@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CatalogList, CatalogSummary, useCatalogSelection } from '../components/Catalog';
 import { Shell } from '../components/Shell';
 import { SelectBox, useToast } from '../components/ui';
@@ -15,7 +15,9 @@ const SLOTS = [
 ];
 
 export function CatalogPage() {
-  const [client, setClient] = useState('verdant');
+  const [params] = useSearchParams();
+  // ?client=<id> from "New order" on the client card / Orders page.
+  const [client, setClient] = useState(() => (CLIENTS.some((c) => c.id === params.get('client')) ? params.get('client')! : 'verdant'));
   const s = useCatalogSelection(client);
   const { createOrder } = useStore();
   const navigate = useNavigate();
