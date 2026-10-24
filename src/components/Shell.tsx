@@ -218,6 +218,10 @@ export function Sidebar({ pinned: pinnedByPage }: { pinned: boolean }) {
           </div>
         ))}
         <div className="sb-spacer" />
+        <Link to="/users" className={`sb-item ${active === 'users' ? 'active' : ''}`} title={expanded ? undefined : 'Users'} aria-label="Users">
+          <img src={I.icCustomers} width={20} height={20} alt="" />
+          {expanded && <span>Users</span>}
+        </Link>
         <Link to="/audit" className={`sb-item ${active === 'audit' ? 'active' : ''}`} title={expanded ? undefined : 'Audit log'} aria-label="Audit log">
           <img src={I.icAudit} width={20} height={20} alt="" />
           {expanded && <span>Audit log</span>}

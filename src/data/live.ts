@@ -129,6 +129,10 @@ export interface LiveData {
   deals?: Record<string, LiveDeal[]>;
   /** Stage code (without the "C1:" prefix) → stage name. */
   dealStages?: Record<string, string>;
+  /** Bitrix24 users: owners of order deals (last 90 days) and the portal coordinators (coordinator, login). */
+  bxUsers?: Record<string, { name: string; position?: string | null; deals: number; coordinator?: boolean; login?: string }>;
+  /** Order deal id → Bitrix24 user id of the responsible person. */
+  dealOwners?: Record<string, string>;
   /** Portal accounts (lower-case email) → Bitrix24 profile; photo is relative to BASE_URL (live/avatars/…). */
   users?: Record<string, LivePortalUser>;
 }

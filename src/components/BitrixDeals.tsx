@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import * as I from './icons';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Money } from './Money';
 import { Dot } from './ui';
 import { ClassBadge, tint } from './ClassBadge';
@@ -78,8 +78,11 @@ export function clientDealSummary(clientId: string) {
   return { count: active.length, avg: priced.length ? total / priced.length : 0, last };
 }
 
-/** A Bitrix24 deal has no card in the portal: clicking it opens the deal in Bitrix24. */
-const openDeal = (id: number) => window.open(bitrixDealUrl(id), '_blank', 'noopener');
+/** Opens the portal card of a Bitrix24 order. */
+function useOpenBxDeal() {
+  const navigate = useNavigate();
+  return (id: number) => navigate(`/crm/orders/bx/${id}`);
+}
 
 /** All recent Bitrix24 orders across portal clients, newest first. */
 export function allDeals() {
@@ -106,6 +109,7 @@ export const kanbanColStyle = (c: string) => ({ '--stage': c, '--col-bg': tint(c
 /** Bitrix24 orders as columns by Bitrix stage. Canceled and lost deals are left out. */
 export function BitrixOrdersKanban({ q, clientId }: { q: string; clientId?: string | null }) {
   const { clientClass } = useStore();
+  const openDeal = useOpenBxDeal();
   const rows = bitrixRows(q, clientId).filter((x) => isActiveDeal(x.d));
   const rank = (c: string) => {
     const i = BX_STAGE_ORDER.indexOf(c);
@@ -177,6 +181,7 @@ export function BitrixOrdersKanban({ q, clientId }: { q: string; clientId?: stri
 
 export function BitrixOrdersTable({ q, clientId }: { q: string; clientId?: string | null }) {
   const { clientClass } = useStore();
+  const openDeal = useOpenBxDeal();
   const rows = bitrixRows(q, clientId);
   const shown = clientId ? rows : rows.slice(0, 300);
   const canceled = rows.filter((x) => !isActiveDeal(x.d)).length;
@@ -184,7 +189,7 @@ export function BitrixOrdersTable({ q, clientId }: { q: string; clientId?: strin
     <>
       <p className="section-note">
         {rows.length} orders from Bitrix24 (Orders pipeline, last 90 days){canceled ? ` · ${canceled} canceled` : ''}
-        {rows.length > shown.length ? ` · showing the latest ${shown.length}, use search to narrow` : ''} · click a row to open the deal in Bitrix24 · read-only
+        {rows.length > shown.length ? ` · showing the latest ${shown.length}, use search to narrow` : ''} · click a row to open the order card · read-only
       </p>
       <div className="table journal ord-table bx-ord-table">
         <div className="tr th">

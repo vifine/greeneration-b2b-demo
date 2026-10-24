@@ -699,6 +699,8 @@ def portal_users_sync(call, hook):
 
 
 deals_out, deal_stages, deals_stats = {}, {}, "skipped"
+# Responsible users of order deals (read-only user.get): {bitrix id: {name, position, deals}}, deal id -> owner id.
+bx_people, deal_owner = {}, {}
 
 
 def deals_sync(call, all_pages, by_bitrix):
@@ -719,7 +721,7 @@ def deals_sync(call, all_pages, by_bitrix):
             enums[f["FIELD_NAME"]] = {str(i["ID"]): i["VALUE"] for i in f["LIST"]}
     since = (datetime.date.today() - datetime.timedelta(days=90)).isoformat()
     sel = ["ID", "STAGE_ID", "COMPANY_ID", "DATE_CREATE", "OPPORTUNITY", "CURRENCY_ID", "UF_CRM_1698261656",
-           "UF_CRM_PAYMENT_STATUS", "UF_CRM_DELIVERY_STATUS", "UF_CRM_LPO"]
+           "UF_CRM_PAYMENT_STATUS", "UF_CRM_DELIVERY_STATUS", "UF_CRM_LPO", "ASSIGNED_BY_ID"]
     deals = all_pages("crm.deal.list", {"filter": {"CATEGORY_ID": order_cat, ">=DATE_CREATE": since}, "select": sel, "order": {"ID": "DESC"}})
 
     def d10(v):
@@ -734,11 +736,28 @@ def deals_sync(call, all_pages, by_bitrix):
     def lab(field, v):
         return enums.get(field, {}).get(str(v)) if v else None
 
+    # Everyone who is responsible for an order deal in the window (all deals, not only portal clients).
+    counts = {}
+    for d in deals:
+        if d.get("ASSIGNED_BY_ID"):
+            uid = str(d["ASSIGNED_BY_ID"])
+            counts[uid] = counts.get(uid, 0) + 1
+    try:
+        ids = sorted(counts)
+        for i in range(0, len(ids), 50):
+            for u in call("user.get", {"FILTER": {"ID": ids[i:i + 50]}}).get("result", []):
+                uid = str(u["ID"])
+                bx_people[uid] = {"name": " ".join(x for x in (u.get("NAME"), u.get("LAST_NAME")) if x).strip() or f"#{uid}",
+                                  "position": (u.get("WORK_POSITION") or "").strip() or None, "deals": counts[uid]}
+    except Exception as e:  # names are optional; deals stay
+        print("Bitrix24: deal owners skipped:", type(e).__name__, str(e)[:120])
+
     per_client = {}
     for d in deals:
         c = by_bitrix.get(str(d.get("COMPANY_ID") or ""))
         if not c:
             continue
+        deal_owner[int(d["ID"])] = str(d.get("ASSIGNED_BY_ID") or "")
         per_client.setdefault(c["id"], []).append([
             int(d["ID"]), d10(d.get("DATE_CREATE")), d10(d.get("UF_CRM_1698261656")),
             str(d.get("STAGE_ID") or "").split(":")[-1], num0(d.get("OPPORTUNITY")),
@@ -812,6 +831,18 @@ def map_key():
     return None
 
 
+# Users: everyone responsible for an order deal, plus the portal coordinators (the portal logins).
+bx_users_out = {uid: dict(p, coordinator=False) for uid, p in bx_people.items()}
+for email, p in portal_users.items():
+    uid = str(p.get("bitrixId") or "")
+    if not uid:
+        continue
+    e = bx_users_out.setdefault(uid, {"name": p.get("name") or email, "deals": 0})
+    e["coordinator"] = True
+    e["login"] = email
+    if p.get("position") and not e.get("position"):
+        e["position"] = p["position"]
+
 out = {
     "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
     "sources": {"stockDates": dates, "arTab": ar_tab, "paymentsTab": paid_tab, "inventoryAt": inventory_at},
@@ -832,6 +863,8 @@ out = {
     "dealStages": deal_stages,
     "dealFields": ["id", "created", "delivery", "stage", "amount", "payment", "deliveryStatus", "lpo", "rows"],
     "users": portal_users,
+    "bxUsers": bx_users_out,
+    "dealOwners": {str(k): v for k, v in deal_owner.items() if v},
     "mapKey": map_key(),
 }
 dest = os.path.join(os.path.dirname(__file__), "..", "public", "live", "live.json")

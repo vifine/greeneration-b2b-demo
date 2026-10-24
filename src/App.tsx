@@ -14,6 +14,8 @@ import { CatalogPage } from './pages/CatalogPage';
 import { ComingSoon } from './pages/ComingSoon';
 import { Home } from './pages/Home';
 import { OrdersJournal, RequestsJournal } from './pages/Journals';
+import { BitrixOrderCard } from './pages/BitrixOrderCard';
+import { UsersPage } from './pages/UsersPage';
 import { Login } from './pages/Login';
 import { OrderCard } from './pages/OrderCard';
 import { RequestCard } from './pages/RequestCard';
@@ -42,6 +44,8 @@ export default function App() {
             <Route path="/crm/requests/:id" element={<Private><RequestCard /></Private>} />
             <Route path="/crm/orders" element={<Private><OrdersJournal /></Private>} />
             <Route path="/crm/orders/:id" element={<Private><OrderCard /></Private>} />
+            <Route path="/crm/orders/bx/:id" element={<Private><BitrixOrderCard /></Private>} />
+            <Route path="/users" element={<Private><UsersPage /></Private>} />
             <Route path="/crm/issues" element={<Navigate to="/crm/requests" replace />} />
             <Route path="/crm/claims" element={<Private><ClaimsJournal /></Private>} />
             <Route path="/crm/claims/:id" element={<Private><ClaimCard /></Private>} />
