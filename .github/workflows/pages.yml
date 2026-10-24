@@ -23,7 +23,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: mkdir site && cp deploy/pages-closed/index.html site/ && cp public/CNAME site/ && printf 'User-agent: *\nDisallow: /\n' > site/robots.txt
+      - name: Build the 'moved' page
+        run: |
+          mkdir site
+          cp deploy/pages-closed/index.html site/
+          cp public/CNAME site/
+          printf 'User-agent: *\nDisallow: /\n' > site/robots.txt
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
