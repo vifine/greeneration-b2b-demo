@@ -2,6 +2,7 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useRef } from 'react';
+import { LIVE } from '../data/live';
 
 const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors';
@@ -10,7 +11,16 @@ const UAE_CENTER: L.LatLngTuple = [25.12, 55.22];
 function baseMap(el: HTMLElement, opts: L.MapOptions) {
   const map = L.map(el, { preferCanvas: true, zoomControl: true, attributionControl: true, ...opts });
   map.attributionControl.setPrefix(false);
-  L.tileLayer(TILES, { maxZoom: 19, attribution: ATTRIBUTION }).addTo(map);
+  const key = LIVE?.mapKey;
+  if (key) {
+    // MapTiler Streets with English labels (key restricted to b2b.greeneration.ae, kept in the private keys sheet).
+    L.tileLayer(`https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=${key}&language=en`, {
+      maxZoom: 20,
+      attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener noreferrer">&copy; MapTiler</a> ' + ATTRIBUTION,
+    }).addTo(map);
+  } else {
+    L.tileLayer(TILES, { maxZoom: 19, attribution: ATTRIBUTION }).addTo(map);
+  }
   return map;
 }
 

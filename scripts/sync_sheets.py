@@ -698,6 +698,22 @@ except requests.HTTPError as e:
     print("SOP not readable, using defaults:", e)
 rules["classes"] = {"D": "Legal case: do not deliver", "H": "Deliver only after Head approval"}
 
+def map_key():
+    """MapTiler key (browser key, restricted to b2b.greeneration.ae) from the keys sheet: row with «maptiler» in column A."""
+    if os.environ.get("GITHUB_ACTIONS"):
+        return None  # public GitHub Pages copy: no key there
+    k = (os.environ.get("MAPTILER_KEY") or "").strip()
+    if k:
+        return k
+    try:
+        for row in values(KEYS_SHEET, "A1:B10"):
+            if len(row) > 1 and str(row[0]).strip().lower() == "maptiler" and re.match(r"^[A-Za-z0-9]{10,64}$", str(row[1]).strip()):
+                return str(row[1]).strip()
+    except Exception as e:
+        print("MapTiler: keys sheet not readable:", type(e).__name__)
+    return None
+
+
 out = {
     "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
     "sources": {"stockDates": dates, "arTab": ar_tab, "paymentsTab": paid_tab, "inventoryAt": inventory_at},
@@ -717,6 +733,7 @@ out = {
     "dealStages": deal_stages,
     "dealFields": ["id", "created", "delivery", "stage", "amount", "payment", "deliveryStatus", "lpo", "rows"],
     "users": portal_users,
+    "mapKey": map_key(),
 }
 dest = os.path.join(os.path.dirname(__file__), "..", "public", "live", "live.json")
 os.makedirs(os.path.dirname(dest), exist_ok=True)

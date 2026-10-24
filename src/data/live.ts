@@ -106,6 +106,8 @@ export type LivePriceRow = [number?, string?, number?, number?, number?, string?
 export type LiveDeal = [number, string | null, string | null, string, number, string | null, string | null, string | null, [string, number, number][]?];
 
 export interface LiveData {
+  /** MapTiler browser key (English map labels); absent → OpenStreetMap tiles. */
+  mapKey?: string | null;
   generatedAt: string;
   sources: { stockDates: string[]; arTab: string; paymentsTab?: string; inventoryAt?: string };
   rules: { minOrder: number; cutoff: string; sameDay: { before: string; minAmount: number; window: string }; classes: Record<string, string> };
