@@ -3212,7 +3212,7 @@ a.pt-tile:hover { border-color: var(--forest); }
 .user-menu { position: relative; }
 .avatar-btn { border: 0; padding: 0; background: none; border-radius: 50%; cursor: pointer; display: inline-flex; }
 .avatar-btn:focus-visible { outline: 2px solid var(--fern); outline-offset: 2px; }
-.avatar-img { object-fit: cover; display: block; }
+.avatar-img { object-fit: cover; object-position: center; display: block; padding: 0; overflow: hidden; }
 .avatar-lg { width: 44px; height: 44px; border-radius: 22px; flex: none; }
 .user-pop {
   position: absolute;

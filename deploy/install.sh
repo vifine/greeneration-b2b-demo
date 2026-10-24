@@ -5,7 +5,7 @@
 #
 # What it does:
 #   - system user `portal`, code in /opt/greeneration-portal (public repo, HTTPS clone)
-#   - Node.js 20 + Python venv with google-auth/requests (read-only data sync) and bcrypt (login service)
+#   - Node.js 20 + Python venv with google-auth/requests/pillow (read-only data sync, avatars) and bcrypt (login service)
 #   - secrets file /etc/greeneration-portal/env (placeholders + generated PORTAL_SESSION_SECRET, chmod 600)
 #   - login service greeneration-portal-auth (127.0.0.1:8089): the portal's own sign-in page, session cookie
 #   - notes service greeneration-portal-notes (127.0.0.1:8090): shared client notes, SQLite in /var/lib/greeneration-portal
@@ -51,7 +51,7 @@ fi
 
 log "Python venv for the sync"
 [ -x "$APP_DIR/.venv/bin/python" ] || sudo -u portal python3 -m venv "$APP_DIR/.venv"
-sudo -u portal "$APP_DIR/.venv/bin/pip" install -q --upgrade pip google-auth requests bcrypt
+sudo -u portal "$APP_DIR/.venv/bin/pip" install -q --upgrade pip google-auth requests bcrypt pillow
 
 log "Secrets file (placeholders only — fill in by hand)"
 if [ ! -f "$ETC_DIR/env" ]; then

@@ -667,6 +667,37 @@ PORTAL_ACCOUNTS = ["vifine767@gmail.com", "levkova@greeneration.ae", "nikolaychi
 portal_users = {}
 
 
+def avatar_square(data):
+    """Profile photo -> JPEG bytes: transparent / white margins trimmed, centred square crop, 256x256.
+    None when Pillow is missing or the image cannot be read (then the original file is saved)."""
+    try:
+        from io import BytesIO
+        from PIL import Image, ImageChops, ImageOps
+    except ImportError:
+        return None
+    try:
+        im = ImageOps.exif_transpose(Image.open(BytesIO(data)))
+        if im.mode in ("RGBA", "LA", "P"):
+            im = im.convert("RGBA")
+            bg = Image.new("RGBA", im.size, (255, 255, 255, 255))
+            bg.alpha_composite(im)
+            im = bg
+        im = im.convert("RGB")
+        # Content = pixels clearly different from white (covers transparent corners and white bands).
+        diff = ImageChops.difference(im, Image.new("RGB", im.size, (255, 255, 255))).convert("L")
+        box = diff.point(lambda v: 255 if v > 18 else 0).getbbox() or (0, 0, im.width, im.height)
+        cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
+        side = max(16, min(box[2] - box[0], box[3] - box[1]))  # fill the circle: crop to the shorter side of the content
+        left = int(max(0, min(im.width - side, cx - side / 2)))
+        top = int(max(0, min(im.height - side, cy - side / 2)))
+        im = im.crop((left, top, left + side, top + side)).resize((256, 256), Image.LANCZOS)
+        out = BytesIO()
+        im.save(out, "JPEG", quality=88, optimize=True)
+        return out.getvalue()
+    except Exception:
+        return None
+
+
 def portal_users_sync(call, hook):
     """Read-only user.get by email; photos saved under public/live/avatars (served only with a session)."""
     from urllib.parse import urljoin
@@ -682,8 +713,13 @@ def portal_users_sync(call, hook):
             r = requests.get(urljoin(base + "/", src), timeout=30)
             ctype = r.headers.get("content-type", "")
             if r.ok and ctype.startswith("image/") and len(r.content) < 5_000_000:
-                ext = {"image/png": "png", "image/webp": "webp", "image/gif": "gif"}.get(ctype.split(";")[0], "jpg")
                 os.makedirs(av_dir, exist_ok=True)
+                square = avatar_square(r.content)
+                if square:  # trimmed, centred, 256x256 JPEG
+                    with open(os.path.join(av_dir, f"{uid}.jpg"), "wb") as f:
+                        f.write(square)
+                    return f"live/avatars/{uid}.jpg"
+                ext = {"image/png": "png", "image/webp": "webp", "image/gif": "gif"}.get(ctype.split(";")[0], "jpg")
                 with open(os.path.join(av_dir, f"{uid}.{ext}"), "wb") as f:
                     f.write(r.content)
                 return f"live/avatars/{uid}.{ext}"
