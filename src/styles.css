@@ -3236,6 +3236,8 @@ a.pt-tile:hover { border-color: var(--forest); }
 .up-id .up-role { align-self: flex-start; margin-top: 6px; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 700; line-height: 18px; }
 .up-id .up-role-admin { background: var(--forest); color: #fff; }
 .up-id .up-role-user { background: var(--soft-primary); color: var(--forest); }
+.up-id .up-role-owner { background: var(--fern, #2f7a45); color: #fff; }
+.u-owner { font-weight: 700; color: var(--forest); }
 .up-item {
   display: flex;
   align-items: center;

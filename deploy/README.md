@@ -169,6 +169,8 @@ curl -s http://127.0.0.1:8089/auth/healthz && curl -sI https://b2b.greeneration.
 и координаторы: фото, должность, почта из Bitrix24 (`live.json` → `bxUsers`, собирает `scripts/sync_sheets.py`).
 Роль показана в профиле (меню аватара); её отдаёт `/auth/me`.
 
+- **Owner** — Aleksandra Levkova (`PORTAL_OWNERS` в env юнитов, по умолчанию levkova@greeneration.ae): права админа, но её роль никто
+  не может поменять и её нельзя закрыть от портала (No access на неё не действует).
 - **Роли:** Admin / User / No access, менять может любой админ у любого пользователя. Нельзя менять свою роль и нельзя
   оставить портал без админов. Пользователи из `/etc/greeneration-portal/web-auth/htpasswd` (`make-users.sh`) стартуют
   админами со своим серверным паролем. No access сразу закрывает вход и открытые сессии (сервис входа читает роли из `notes.db`).

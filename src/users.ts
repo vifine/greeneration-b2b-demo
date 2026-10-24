@@ -2,7 +2,8 @@
 // (deploy/notes/portal_users.py) behind /api/users. Passwords reach the browser only for admins.
 import { SERVER_AUTH } from './auth';
 
-export type Role = 'admin' | 'user' | 'none';
+/** owner: admin rights, cannot be changed or locked out (set on the server). */
+export type Role = 'owner' | 'admin' | 'user' | 'none';
 
 export interface Account {
   role: Role;

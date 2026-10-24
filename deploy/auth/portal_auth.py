@@ -14,7 +14,7 @@ Users and bcrypt hashes come from two htpasswd files, re-read when they change:
   PORTAL_ACCOUNTS_HTPASSWD (written by the notes service from the Users page); wins over the first file
 Roles live in the notes DB (table accounts, see deploy/notes/portal_users.py): role "none" = no sign-in at all.
 A successful sign-in is recorded in the notes DB (table logins) so the Users page can show it.
-  GET /auth/me -> {"email", "role"}   (role: admin | user)
+  GET /auth/me -> {"email", "role"}   (role: owner | admin | user)
 Session cookie = base64(email|expiry) + HMAC-SHA256 with PORTAL_SESSION_SECRET (from the env file).
 """
 import base64
@@ -35,6 +35,8 @@ PORT = int(os.environ.get("PORTAL_AUTH_PORT", "8089"))
 HTPASSWD = os.environ.get("PORTAL_HTPASSWD", "/etc/greeneration-portal/web-auth/htpasswd")
 ACCOUNTS_HTPASSWD = os.environ.get("PORTAL_ACCOUNTS_HTPASSWD", "/var/lib/greeneration-portal/accounts.htpasswd")
 NOTES_DB = os.environ.get("PORTAL_NOTES_DB", "/var/lib/greeneration-portal/notes.db")
+# Owners: admin rights, and nobody can change their role or lock them out (not from the portal, not by role "none").
+OWNERS = {e.strip().lower() for e in os.environ.get("PORTAL_OWNERS", "levkova@greeneration.ae").split(",") if e.strip()}
 SECRET = os.environ.get("PORTAL_SESSION_SECRET", "").encode()
 COOKIE = "gp_session"
 TTL = 30 * 24 * 3600
@@ -115,11 +117,13 @@ def blocked_emails():
     if not none:
         return none
     ok = {r[0] for r in _db_rows("SELECT email FROM accounts WHERE role!='none' AND email IS NOT NULL")}
-    return none - ok
+    return none - ok - OWNERS
 
 
 def role_of(email):
-    """admin | user | none. Without a row in the notes DB: the first admins are admins, everyone else a user."""
+    """owner | admin | user | none. Without a row in the notes DB: the first admins are admins, everyone else a user."""
+    if email in OWNERS:
+        return "owner"
     r = _db_rows("SELECT role FROM accounts WHERE email=? ORDER BY active DESC LIMIT 1", (email,))
     if r:
         return r[0][0]

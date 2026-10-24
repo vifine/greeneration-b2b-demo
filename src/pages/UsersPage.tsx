@@ -5,7 +5,9 @@ import { Btn, useToast } from '../components/ui';
 import { LIVE, shortDate, type LiveBxUser } from '../data/live';
 import { loadUsers, newPassword, previewMessage, sendInvite, setRole, type Account, type Role, type UsersState } from '../users';
 
-const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', user: 'User', none: 'No access' };
+const ROLE_LABEL: Record<Role, string> = { owner: 'Owner', admin: 'Admin', user: 'User', none: 'No access' };
+/** Roles an admin can pick; Owner is set on the server only. */
+const PICKABLE: Role[] = ['admin', 'user', 'none'];
 const day = (iso?: string | null) => (iso ? shortDate(iso.slice(0, 10)) : '');
 
 /* ---------- column widths: dragged in the header, remembered in this browser ---------- */
@@ -233,7 +235,7 @@ export function UsersPage() {
   };
 
   const admin = !!state?.admin;
-  const rank = (id: string) => ({ admin: 2, user: 1, none: 0 })[state?.accounts[id]?.role ?? 'user'];
+  const rank = (id: string) => ({ owner: 3, admin: 2, user: 1, none: 0 })[state?.accounts[id]?.role ?? 'user'];
   const people = Object.entries(LIVE?.bxUsers ?? {}).sort((a, b) => rank(b[0]) - rank(a[0]) || a[1].name.localeCompare(b[1].name));
 
   const w = cols.w;
@@ -290,10 +292,10 @@ export function UsersPage() {
               </span>
               <span className="u-email ellipsis">{u.email ? <a href={`mailto:${u.email}`}>{u.email}</a> : <span className="muted">—</span>}</span>
               <span className="u-role">
-                {admin && a && !self ? (
+                {admin && a && !self && a.role !== 'owner' ? (
                   <span className="selectbox selectbox-sm">
                     <select value={a.role} aria-label={`Role of ${u.name}`} onChange={(e) => changeRole(id, e.target.value as Role)}>
-                      {(Object.keys(ROLE_LABEL) as Role[]).map((r) => (
+                      {PICKABLE.map((r) => (
                         <option key={r} value={r}>
                           {ROLE_LABEL[r]}
                         </option>
@@ -302,7 +304,9 @@ export function UsersPage() {
                     <img src={I.icChevronDown} width={16} height={16} alt="" />
                   </span>
                 ) : (
-                  <span title={self ? 'You cannot change your own role' : undefined}>{a ? ROLE_LABEL[a.role] : '—'}</span>
+                  <span className={a?.role === 'owner' ? 'u-owner' : undefined} title={a?.role === 'owner' ? 'Owner: admin rights, cannot be changed or locked out' : self ? 'You cannot change your own role' : undefined}>
+                    {a ? ROLE_LABEL[a.role] : '—'}
+                  </span>
                 )}
               </span>
               <span className={`u-access ellipsis ${st.tone}`}>{st.text}</span>

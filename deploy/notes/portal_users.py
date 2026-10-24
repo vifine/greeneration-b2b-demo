@@ -3,7 +3,8 @@
 Who is listed: live.json "bxUsers" (built by scripts/sync_sheets.py from Bitrix24). E-mails come from there, never
 from the browser.
 
-Roles (any user's role can be changed by an admin)
+Roles (any user's role can be changed by an admin, except the owner's)
+  owner  - same rights as admin; nobody can change the role or lock the owner out (PORTAL_OWNERS, see portal_auth.py).
   admin  - sees Users and Audit log, passwords, changes roles, sends access.
   user   - may sign in.
   none   - no access: the login service refuses the e-mail at once (open sessions stop working too).
@@ -34,6 +35,7 @@ import threading
 from datetime import datetime, timezone
 
 import bcrypt
+from portal_auth import OWNERS  # deploy/auth is on sys.path (portal_notes.py)
 
 ACCOUNTS_HTPASSWD = os.environ.get("PORTAL_ACCOUNTS_HTPASSWD", "/var/lib/greeneration-portal/accounts.htpasswd")
 PORTAL_URL = os.environ.get("PORTAL_PUBLIC_URL", "https://b2b.greeneration.ae")
@@ -164,6 +166,8 @@ def sync_rows(con, people, root_admins):
 def role_of(con, email, root_admins):
     if not email:
         return "none"
+    if email in OWNERS:
+        return "owner"
     r = con.execute("SELECT role FROM accounts WHERE email=? ORDER BY active DESC LIMIT 1", (email,)).fetchone()
     if r is not None:
         return r["role"]
@@ -171,14 +175,14 @@ def role_of(con, email, root_admins):
 
 
 def is_admin(con, email, root_admins):
-    return role_of(con, email, root_admins) == "admin"
+    return role_of(con, email, root_admins) in ("owner", "admin")
 
 
 def listing(con, me, people, root_admins):
     with _lock:
         sync_rows(con, people, root_admins)
     role = role_of(con, me, root_admins)
-    admin = role == "admin"
+    admin = role in ("owner", "admin")
     logins = {r["email"]: r["ts"] for r in con.execute("SELECT email, ts FROM logins").fetchall()}
     rows = {r["bitrix_id"]: r for r in con.execute("SELECT * FROM accounts").fetchall()}
     out = {}
@@ -187,7 +191,7 @@ def listing(con, me, people, root_admins):
         if r is None:
             continue
         a = {
-            "role": r["role"],
+            "role": "owner" if (r["email"] or "") in OWNERS else r["role"],
             "active": bool(r["active"]) and r["role"] != "none",
             "invitedAt": r["invited_at"],
             "invitedBy": r["invited_by"],
@@ -204,7 +208,7 @@ def listing(con, me, people, root_admins):
 def admins_left(con, except_uid):
     return con.execute(
         "SELECT COUNT(*) FROM accounts WHERE role='admin' AND active=1 AND bitrix_id!=?", (except_uid,)
-    ).fetchone()[0]
+    ).fetchone()[0] + len(OWNERS)
 
 
 def set_role(con, uid, role, me, people, root_admins):
@@ -217,6 +221,8 @@ def set_role(con, uid, role, me, people, root_admins):
         r = con.execute("SELECT * FROM accounts WHERE bitrix_id=?", (uid,)).fetchone()
         if r is None:
             return 404, {"error": "no such user"}
+        if (r["email"] or "") in OWNERS:
+            return 409, {"error": "the owner's role cannot be changed"}
         if r["email"] and r["email"] == me:
             return 409, {"error": "you cannot change your own role"}
         if r["role"] == "admin" and role != "admin" and admins_left(con, uid) == 0:

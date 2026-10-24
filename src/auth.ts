@@ -21,13 +21,13 @@ const PEOPLE: Record<string, string> = {
 /** Signed-in user on the server build (null until checkSession() confirms a session). */
 let serverUser: string | null = null;
 /** Portal role of the signed-in user (from /auth/me). The demo build acts as an admin. */
-export type PortalRole = 'admin' | 'user';
+export type PortalRole = 'owner' | 'admin' | 'user';
 let serverRole: PortalRole = 'user';
 
-export const ROLE_LABEL: Record<PortalRole, string> = { admin: 'Admin', user: 'User' };
+export const ROLE_LABEL: Record<PortalRole, string> = { owner: 'Owner', admin: 'Admin', user: 'User' };
 
-/** Users and Audit log are for admins only. */
-export const isAdmin = () => !SERVER_AUTH || serverRole === 'admin';
+/** Users and Audit log are for admins (and the owner) only. */
+export const isAdmin = () => !SERVER_AUTH || serverRole === 'admin' || serverRole === 'owner';
 
 export interface CurrentUser {
   name: string;
@@ -82,7 +82,7 @@ export async function checkSession(): Promise<boolean> {
     if (r.ok) {
       const body = (await r.json()) as { email?: string; role?: string };
       serverUser = body.email ?? null;
-      serverRole = body.role === 'admin' ? 'admin' : 'user';
+      serverRole = body.role === 'owner' || body.role === 'admin' ? body.role : 'user';
     } else serverUser = null;
   } catch {
     serverUser = null;
