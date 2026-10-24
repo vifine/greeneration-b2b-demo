@@ -3439,3 +3439,25 @@ a.pt-tile:hover { border-color: var(--forest); }
 .bx-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px 24px; margin: 16px 0 8px; }
 .bx-facts dt { font-size: 12px; color: var(--text-2); }
 .bx-facts dd { margin: 4px 0 0; font-size: 14px; color: var(--text); }
+
+/* ---------- Users page ---------- */
+.users-table .tr.row { min-height: 60px; align-items: center; padding-top: 0; }
+.users-table .u-name { flex: 2 1 0; display: flex; align-items: center; gap: 12px; min-width: 0; }
+.users-table .u-name .two { min-width: 0; }
+.users-table .u-email { flex: 2 1 0; padding-right: 12px; }
+.users-table .u-role { flex: 0 0 136px; }
+.users-table .u-orders { flex: 0 0 72px; text-align: right; padding-right: 20px; }
+.users-table .u-access { flex: 0 0 136px; white-space: nowrap; }
+.users-table .u-pwc { flex: 0 0 232px; }
+.users-table .u-act { flex: 0 0 150px; display: flex; justify-content: flex-end; }
+.u-ava { width: 36px; height: 36px; border-radius: 18px; flex: none; font-size: 13px; }
+.selectbox-sm { height: 32px; width: 128px; }
+.selectbox-sm select { font-size: 14px; padding: 0 30px 0 10px; }
+.selectbox-sm img { right: 8px; }
+.u-pw { display: inline-flex; align-items: center; gap: 2px; }
+.u-pw-text { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; letter-spacing: 0.02em; min-width: 132px; margin-right: 4px; }
+.u-pw .icon-btn { width: 28px; height: 28px; flex: 0 0 28px; }
+.u-pw .icon-btn:hover:not(:disabled) { background: var(--soft-light); }
+.u-pw .icon-btn:disabled { opacity: 0.4; cursor: default; }
+.u-invite { gap: 6px; white-space: nowrap; }
+.u-invite.btn-primary img { filter: brightness(0) invert(1); }

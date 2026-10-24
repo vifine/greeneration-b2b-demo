@@ -9,7 +9,10 @@ Caddy sends /auth/* here and asks /auth/check (forward_auth) before serving /liv
   GET  /auth/me      -> 200 {"email"} | 401
   GET  /auth/check   -> 200 | 401     (for Caddy forward_auth)
 
-Users and bcrypt hashes come from the htpasswd file (make-users.sh), re-read when it changes.
+Users and bcrypt hashes come from two htpasswd files, re-read when they change:
+  PORTAL_HTPASSWD          (root-owned, make-users.sh): the admins, cannot be changed from the portal
+  PORTAL_ACCOUNTS_HTPASSWD (written by the notes service from the Users page: invited Bitrix24 users)
+A successful sign-in is recorded in the notes DB (table logins) so the Users page can show it.
 Session cookie = base64(email|expiry) + HMAC-SHA256 with PORTAL_SESSION_SECRET (from the env file).
 """
 import base64
@@ -17,6 +20,7 @@ import hashlib
 import hmac
 import json
 import os
+import sqlite3
 import sys
 import threading
 import time
@@ -27,6 +31,8 @@ import bcrypt
 HOST = os.environ.get("PORTAL_AUTH_HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORTAL_AUTH_PORT", "8089"))
 HTPASSWD = os.environ.get("PORTAL_HTPASSWD", "/etc/greeneration-portal/web-auth/htpasswd")
+ACCOUNTS_HTPASSWD = os.environ.get("PORTAL_ACCOUNTS_HTPASSWD", "/var/lib/greeneration-portal/accounts.htpasswd")
+NOTES_DB = os.environ.get("PORTAL_NOTES_DB", "/var/lib/greeneration-portal/notes.db")
 SECRET = os.environ.get("PORTAL_SESSION_SECRET", "").encode()
 COOKIE = "gp_session"
 TTL = 30 * 24 * 3600
@@ -46,28 +52,67 @@ _fails = {}  # key -> [timestamps]
 _DUMMY = bcrypt.hashpw(b"dummy-password", bcrypt.gensalt(rounds=10))
 
 
-def users():
-    """email (lower case) -> bcrypt hash bytes; re-read when the file changes."""
-    global _users, _users_mtime
+def read_htpasswd(path):
+    """email (lower case) -> bcrypt hash bytes."""
+    out = {}
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or ":" not in line:
+                continue
+            name, h = line.split(":", 1)
+            if h.startswith("$2y$"):  # htpasswd -B writes $2y$, python bcrypt wants $2b$
+                h = "$2b$" + h[4:]
+            if h.startswith(("$2a$", "$2b$")):
+                out[name.strip().lower()] = h.encode()
+    return out
+
+
+def mtime(path):
     try:
-        mtime = os.stat(HTPASSWD).st_mtime_ns
+        return os.stat(path).st_mtime_ns
     except OSError:
+        return None
+
+
+def users():
+    """email (lower case) -> bcrypt hash bytes from both files; the admin file wins on a clash."""
+    global _users, _users_mtime
+    key = (mtime(HTPASSWD), mtime(ACCOUNTS_HTPASSWD))
+    if key[0] is None and key[1] is None:
         return _users
     with _lock:
-        if mtime != _users_mtime:
+        if key != _users_mtime:
             fresh = {}
-            with open(HTPASSWD, encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line or line.startswith("#") or ":" not in line:
-                        continue
-                    name, h = line.split(":", 1)
-                    if h.startswith("$2y$"):  # htpasswd -B writes $2y$, python bcrypt wants $2b$
-                        h = "$2b$" + h[4:]
-                    if h.startswith(("$2a$", "$2b$")):
-                        fresh[name.strip().lower()] = h.encode()
-            _users, _users_mtime = fresh, mtime
+            for path, m in ((ACCOUNTS_HTPASSWD, key[1]), (HTPASSWD, key[0])):
+                if m is not None:
+                    try:
+                        fresh.update(read_htpasswd(path))
+                    except OSError:
+                        pass
+            _users, _users_mtime = fresh, key
         return _users
+
+
+def admin_emails():
+    """The fixed admins: everyone in the root-owned htpasswd file."""
+    try:
+        return set(read_htpasswd(HTPASSWD))
+    except OSError:
+        return set()
+
+
+def record_login(email):
+    """Last successful sign-in per email, for the Users page. Optional: never blocks the login."""
+    try:
+        con = sqlite3.connect(NOTES_DB, timeout=5)
+        with con:
+            con.execute("CREATE TABLE IF NOT EXISTS logins (email TEXT PRIMARY KEY, ts TEXT NOT NULL)")
+            con.execute("INSERT OR REPLACE INTO logins (email, ts) VALUES (?, ?)",
+                        (email, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())))
+        con.close()
+    except Exception as e:
+        sys.stderr.write(f"login not recorded: {type(e).__name__}\n")
 
 
 def sign(payload: bytes) -> str:
@@ -193,6 +238,7 @@ class Handler(BaseHTTPRequestHandler):
             note_fail(keys)
             return self.send(401, {"error": "wrong email or password"})
         clear_fails(keys)
+        record_login(email)
         cookie = f"{COOKIE}={make_token(email)}; Max-Age={TTL}; Path=/; HttpOnly; Secure; SameSite=Lax"
         self.send(200, {"email": email}, cookie=cookie)
 

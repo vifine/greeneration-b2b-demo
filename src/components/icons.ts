@@ -41,3 +41,8 @@ export { default as icBitrix24 } from '../assets/icons/bitrix24.svg';
 export { default as icOdoo } from '../assets/icons/odoo.svg';
 export { default as icCatalogWhite } from '../assets/icons/catalog-white.svg';
 export { default as icPin } from '../assets/icons/pin-location.svg';
+export { default as icEye } from '../assets/icons/eye.svg';
+export { default as icEyeOff } from '../assets/icons/eye-off.svg';
+export { default as icCopy } from '../assets/icons/copy.svg';
+export { default as icRefresh } from '../assets/icons/refresh.svg';
+export { default as icSend } from '../assets/icons/send.svg';

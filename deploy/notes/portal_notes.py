@@ -9,6 +9,7 @@ Caddy sends /api/* here; every request needs a valid gp_session cookie (same che
                                      (`at` only for the one-time move of old browser notes: kept if it is a past ISO time)
   DELETE /api/notes/<id>           -> 200 | 403 (only the author) | 404
   GET    /api/healthz              -> 200 (no session needed, no data)
+  /api/users ...                   -> portal access for Bitrix24 users, see portal_users.py
 
 Bitrix24: a note is also appended to the company COMMENTS field ONLY when the company TITLE, checked live with
 crm.company.get right before the write, starts with "[TEST] ". Real companies are never written.
@@ -29,6 +30,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "auth"))
 import portal_auth  # noqa: E402  (session cookie check: same secret, same htpasswd)
+import portal_users  # noqa: E402  (Users page: roles, passwords, invitations)
 
 HOST = os.environ.get("PORTAL_NOTES_HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORTAL_NOTES_PORT", "8090"))
@@ -72,6 +74,7 @@ def init_db():
                )"""
         )
         con.execute("CREATE INDEX IF NOT EXISTS notes_client ON notes(client)")
+        portal_users.init(con)
 
 
 def now_iso():
@@ -190,10 +193,50 @@ class Handler(BaseHTTPRequestHandler):
         parts = urllib.parse.urlsplit(self.path)
         return parts.path.rstrip("/"), urllib.parse.parse_qs(parts.query)
 
+    def users_api(self, path):
+        """/api/users[/<bitrix id>/<action>]; every call needs a session, changes need an admin."""
+        me = self.session_email()
+        if not me:
+            return self.send(401, {"error": "not signed in"})
+        people = portal_users.bx_users(LIVE_JSON)
+        fixed = portal_auth.admin_emails()
+        code, body = self.users_call(path, me, people, fixed)
+        return self.send(code, body)  # after the transaction is committed
+
+    def users_call(self, path, me, people, fixed):
+        with db() as con:
+            if self.command == "GET" and path == "/api/users":
+                return 200, portal_users.listing(con, me, people, fixed)
+            m = re.fullmatch(r"/api/users/(\d{1,10})/(role|password|invite)", path)
+            if self.command != "POST" or not m:
+                return 404, {"error": "not found"}
+            if not portal_users.is_admin(con, me, fixed):
+                return 403, {"error": "only admins can change access"}
+            uid, action = m.groups()
+            if action == "role":
+                try:
+                    n = int(self.headers.get("Content-Length") or 0)
+                    if n <= 0 or n > MAX_BODY:
+                        raise ValueError
+                    role = str(json.loads(self.rfile.read(n)).get("role", ""))
+                except Exception:
+                    return 400, {"error": "bad request"}
+                return portal_users.set_role(con, uid, role, me, people, fixed)
+            if action == "password":
+                return portal_users.regenerate(con, uid, me, people, fixed)
+            try:
+                with open(LIVE_JSON, encoding="utf-8") as f:
+                    sender = (json.load(f).get("users") or {}).get(me, {}).get("name") or NAMES.get(me, me)
+            except Exception:
+                sender = NAMES.get(me, me)
+            return portal_users.invite(con, uid, me, people, fixed, bitrix_call if WEBHOOK else None, sender)
+
     def do_GET(self):
         path, qs = self.route()
         if path == "/api/healthz":
             return self.send(200, {"ok": True})
+        if path.startswith("/api/users"):
+            return self.users_api(path)
         if path != "/api/notes":
             return self.send(404, {"error": "not found"})
         if not self.session_email():
@@ -210,6 +253,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path, _ = self.route()
+        if path.startswith("/api/users/"):
+            return self.users_api(path)
         if path != "/api/notes":
             return self.send(404, {"error": "not found"})
         email = self.session_email()

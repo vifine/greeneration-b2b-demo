@@ -162,3 +162,20 @@ sudo systemctl start greeneration-portal-update && journalctl -u greeneration-po
 # then wire b2b.greeneration.ae in Caddy: /auth/* → 8089, /api/* → 8090 (notes), /live/* forward_auth /auth/check + 8088, rest → 8088
 curl -s http://127.0.0.1:8089/auth/healthz && curl -sI https://b2b.greeneration.ae/live/live.json | head -1   # ok / 401
 ```
+
+## Users: доступ для пользователей Bitrix24
+
+Раздел **Users** портала: все, кто отвечает за сделки в воронке Orders за 90 дней, и координаторы — фото, должность, почта
+из Bitrix24 (`live.json` → `bxUsers`, собирает `scripts/sync_sheets.py`). Права выдают только админы.
+
+- **Админы** — пользователи из `/etc/greeneration-portal/web-auth/htpasswd` (`make-users.sh`): Victoria Fine, Aleksandra Levkova,
+  Ivan Nikolaychik. С портала их не поменять и не заблокировать. Админ может назначить админом и другого пользователя.
+- Сервис заметок (`deploy/notes/portal_users.py`, `/api/users`) генерирует каждому уникальный пароль (14 знаков) и хранит его
+  открытым текстом в `notes.db` (таблица `accounts`) только до первого входа пользователя — дальше пароль стирается, админ может
+  выпустить новый. Пароли получают только админы.
+- Логин включается кнопкой **Send invite**: хеш пишется в `/var/lib/greeneration-portal/accounts.htpasswd` (его читает сервис
+  входа вместе с основным файлом), пользователю уходит сообщение в чат Bitrix24 (`im.message.add` от аккаунта вебхука).
+  Без нажатия кнопки никому ничего не отправляется. Роль **No access** сразу убирает логин и закрывает открытые сессии.
+- Сервис входа записывает время входа в `notes.db` (таблица `logins`), поэтому юниту нужен `ReadWritePaths=/var/lib/greeneration-portal`.
+- После изменения `deploy/auth/*.py`, `deploy/notes/*.py` или юнитов: скопировать юниты в `/etc/systemd/system/`,
+  `systemctl daemon-reload`, `systemctl restart greeneration-portal-auth greeneration-portal-notes`.

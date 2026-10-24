@@ -672,6 +672,25 @@ def portal_users_sync(call, hook):
     from urllib.parse import urljoin
     base = re.match(r"^https://[^/]+", hook).group(0)
     av_dir = os.path.join(os.path.dirname(__file__), "..", "public", "live", "avatars")
+
+    def save_avatar(uid, src):
+        """Bitrix24 profile photo -> public/live/avatars/<uid>.<ext> (served only with a session); relative path or None."""
+        src = (src or "").strip()
+        if not src:
+            return None
+        try:
+            r = requests.get(urljoin(base + "/", src), timeout=30)
+            ctype = r.headers.get("content-type", "")
+            if r.ok and ctype.startswith("image/") and len(r.content) < 5_000_000:
+                ext = {"image/png": "png", "image/webp": "webp", "image/gif": "gif"}.get(ctype.split(";")[0], "jpg")
+                os.makedirs(av_dir, exist_ok=True)
+                with open(os.path.join(av_dir, f"{uid}.{ext}"), "wb") as f:
+                    f.write(r.content)
+                return f"live/avatars/{uid}.{ext}"
+        except requests.RequestException:
+            pass
+        return None
+
     for email in PORTAL_ACCOUNTS:
         res = call("user.get", {"FILTER": {"EMAIL": email}}).get("result", [])
         u = next((x for x in res if str(x.get("EMAIL", "")).strip().lower() == email), None)
@@ -681,21 +700,17 @@ def portal_users_sync(call, hook):
         entry = {"bitrixId": uid,
                  "name": " ".join(x for x in (u.get("NAME"), u.get("LAST_NAME")) if x).strip() or email,
                  "position": (u.get("WORK_POSITION") or "").strip() or None}
-        photo = (u.get("PERSONAL_PHOTO") or "").strip()
+        photo = save_avatar(uid, u.get("PERSONAL_PHOTO"))
         if photo:
-            try:
-                r = requests.get(urljoin(base + "/", photo), timeout=30)
-                ctype = r.headers.get("content-type", "")
-                if r.ok and ctype.startswith("image/") and len(r.content) < 5_000_000:
-                    ext = {"image/png": "png", "image/webp": "webp", "image/gif": "gif"}.get(ctype.split(";")[0], "jpg")
-                    os.makedirs(av_dir, exist_ok=True)
-                    with open(os.path.join(av_dir, f"{uid}.{ext}"), "wb") as f:
-                        f.write(r.content)
-                    entry["photo"] = f"live/avatars/{uid}.{ext}"
-            except requests.RequestException:
-                pass
+            entry["photo"] = photo
         portal_users[email] = {k: v for k, v in entry.items() if v}
     print(f"Bitrix24: portal users {len(portal_users)} of {len(PORTAL_ACCOUNTS)}, photos {sum('photo' in v for v in portal_users.values())}")
+    # Photos of the order-deal owners (Users page).
+    for uid, p in bx_people.items():
+        photo = save_avatar(uid, p.pop("_photo_src", None))
+        if photo:
+            p["photo"] = photo
+    print(f"Bitrix24: deal owners {len(bx_people)}, photos {sum('photo' in v for v in bx_people.values())}")
 
 
 deals_out, deal_stages, deals_stats = {}, {}, "skipped"
@@ -748,7 +763,9 @@ def deals_sync(call, all_pages, by_bitrix):
             for u in call("user.get", {"FILTER": {"ID": ids[i:i + 50]}}).get("result", []):
                 uid = str(u["ID"])
                 bx_people[uid] = {"name": " ".join(x for x in (u.get("NAME"), u.get("LAST_NAME")) if x).strip() or f"#{uid}",
-                                  "position": (u.get("WORK_POSITION") or "").strip() or None, "deals": counts[uid]}
+                                  "position": (u.get("WORK_POSITION") or "").strip() or None, "deals": counts[uid],
+                                  "email": str(u.get("EMAIL") or "").strip().lower() or None,
+                                  "_photo_src": u.get("PERSONAL_PHOTO")}
     except Exception as e:  # names are optional; deals stay
         print("Bitrix24: deal owners skipped:", type(e).__name__, str(e)[:120])
 
@@ -832,7 +849,8 @@ def map_key():
 
 
 # Users: everyone responsible for an order deal, plus the portal coordinators (the portal logins).
-bx_users_out = {uid: dict(p, coordinator=False) for uid, p in bx_people.items()}
+bx_users_out = {uid: {k: v for k, v in dict(p, coordinator=False).items() if not k.startswith("_") and v is not None}
+                for uid, p in bx_people.items()}
 for email, p in portal_users.items():
     uid = str(p.get("bitrixId") or "")
     if not uid:
@@ -840,6 +858,9 @@ for email, p in portal_users.items():
     e = bx_users_out.setdefault(uid, {"name": p.get("name") or email, "deals": 0})
     e["coordinator"] = True
     e["login"] = email
+    e["email"] = email
+    if p.get("photo") and not e.get("photo"):
+        e["photo"] = p["photo"]
     if p.get("position") and not e.get("position"):
         e["position"] = p["position"]
 
