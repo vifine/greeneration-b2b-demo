@@ -2926,7 +2926,10 @@ input, select, button, textarea { font-family: inherit; }
 .contacts-group-head { display: flex; align-items: baseline; gap: 10px; padding: 14px 20px 6px; border-bottom: 1px solid var(--border); }
 .contacts-group-head a { font-weight: 800; color: var(--forest); text-decoration: none; }
 .contacts-group-head a:hover { text-decoration: underline; }
-.contacts-group-head span { font-size: 13px; color: var(--text-2); }
+.contacts-group-head > span:not(.cls-badge) { font-size: 13px; color: var(--text-2); }
+.contacts-group-head { align-items: center; }
+.contacts-group-head b { font-weight: 800; color: var(--forest); }
+.contacts-group-head .cls-badge { height: 22px; min-width: 24px; font-size: 12px; }
 
 /* sidebar accordion */
 .sb-toggle { width: 100%; text-align: left; font: inherit; background: none; cursor: pointer; }
@@ -3092,3 +3095,26 @@ a.pt-tile:hover { border-color: var(--forest); }
 .sticky-journal { --tb-h: 84px; }
 .sticky-journal > .journal-toolbar { position: sticky; top: -24px; z-index: 6; background: var(--white, #fff); margin-top: -24px; padding-top: 24px; min-height: var(--tb-h); box-sizing: border-box; }
 .sticky-journal .table .tr.th { position: sticky; top: calc(var(--tb-h) - 24px); z-index: 5; }
+
+/* client card: notes and mini tables */
+.notes-card { gap: 10px; }
+.notes-input { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; resize: vertical; min-height: 72px; }
+.notes-input:focus { outline: 2px solid var(--forest); outline-offset: -1px; }
+.notes-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
+.mini-table .m-sku { flex: 0 0 220px; }
+.mini-table .m-wide { flex: 1 1 auto; min-width: 0; }
+.mini-table .m-date { flex: 0 0 80px; }
+.mini-table .m-order { flex: 0 0 90px; }
+.mini-table .m-num { flex: 0 0 80px; text-align: right; }
+.mini-table .m-reason { flex: 0 0 160px; padding-left: 16px; }
+.special-req { display: block; color: var(--info, #2b5d8a); font-size: 12px; line-height: 16px; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.cn-table .n-date { flex: 0 0 80px; }
+.cn-table .n-client { flex: 0 0 260px; }
+.cn-table .n-client a { color: var(--forest); text-decoration: none; font-weight: 600; }
+.cn-table .n-deal { flex: 0 0 90px; }
+.cn-table .n-text { flex: 1 1 auto; min-width: 0; }
+.cn-table .n-status { flex: 0 0 130px; display: flex; align-items: center; gap: 6px; }
+.cn-table .n-by { flex: 0 0 110px; }
+.cn-table .n-copy { flex: 0 0 150px; }
+.mini-table .tr.row { min-height: 0; padding-top: 8px; padding-bottom: 8px; }

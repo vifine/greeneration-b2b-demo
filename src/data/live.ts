@@ -15,6 +15,8 @@ export interface LiveAvailability {
   kind: 'in' | 'low' | 'out';
   left: number | null;
   note: string;
+  total?: number | null;
+  picklist?: number | null;
 }
 
 export interface LiveClient {
@@ -26,6 +28,37 @@ export interface LiveClient {
   rule?: 'block' | 'approval';
   ar?: { current: number; d30: number; d60: number; d61: number; total: number };
   lastPayment?: { date: string; amount: number };
+  /** From the Bitrix24 company export in AR TRACKER. */
+  bitrixId?: string | number;
+  phone?: string;
+  email?: string;
+  responsible?: string;
+  group?: string;
+  paymentDelay?: string;
+  paymentType?: string;
+}
+
+export interface LiveSpecial {
+  req: string;
+  /** Client label as written in the Product Matrix. */
+  for: string;
+  clients: string[];
+}
+
+/** [date, order, item, sku, ordered, removed, reason] */
+export type LiveShortage = [string, string, string, string, number, number, string];
+
+export interface LiveCreditNote {
+  date: string;
+  client: string;
+  clientId: string | null;
+  deal: string;
+  driver: string;
+  by: string;
+  text: string;
+  status: string;
+  file: string;
+  hardCopy: string;
 }
 
 export interface LiveReplacement {
@@ -39,13 +72,16 @@ export type LivePriceRow = [number?, string?, number?, number?, number?, string?
 
 export interface LiveData {
   generatedAt: string;
-  sources: { stockDates: string[]; arTab: string; paymentsTab?: string };
+  sources: { stockDates: string[]; arTab: string; paymentsTab?: string; inventoryAt?: string };
   rules: { minOrder: number; cutoff: string; sameDay: { before: string; minAmount: number; window: string }; classes: Record<string, string> };
   products: Record<string, LiveProduct>;
   availability: Record<string, LiveAvailability>;
   clients: LiveClient[];
   prices: Record<string, Record<string, LivePriceRow>>;
   replacements: Record<string, LiveReplacement[]>;
+  special?: Record<string, LiveSpecial[]>;
+  shortages?: Record<string, LiveShortage[]>;
+  creditNotes?: LiveCreditNote[];
 }
 
 export let LIVE: LiveData | null = null;

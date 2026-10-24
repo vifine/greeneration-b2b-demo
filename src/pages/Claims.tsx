@@ -11,9 +11,10 @@ import { clientById } from '../data/clients';
 import { deliveryDays } from '../data/addresses';
 import { line, money } from '../data/lines';
 import { useStore } from '../store';
+import { LIVE, shortDate } from '../data/live';
 import { dur, hm, toMin, useDubaiNow } from '../time';
 
-const TABS = ['open', 'not_delivered', 'quality', 'closed'] as const;
+const TABS = ['open', 'not_delivered', 'quality', 'closed', 'sheet'] as const;
 type Tab = (typeof TABS)[number];
 
 const DECISION: Record<ClaimDecision, string> = {
@@ -50,8 +51,11 @@ export function ClaimsJournal() {
     not_delivered: open.filter((c) => c.kind === 'not_delivered'),
     quality: open.filter((c) => c.kind === 'quality'),
     closed: claims.filter((c) => c.status === 'closed'),
+    sheet: [],
   };
+
   const n = q.trim().toLowerCase().replace(/^#/, '');
+  const notes = (LIVE?.creditNotes ?? []).filter((x) => !n || `${x.client} ${x.deal} ${x.text} ${x.by}`.toLowerCase().includes(n));
   const rows = groups[tab].filter((c) => !n || `${clientById(c.clientId).name} ${c.id} ${c.orderId}`.toLowerCase().includes(n));
   return (
     <Shell crumbs={[{ label: 'Claims' }]}>
@@ -62,6 +66,7 @@ export function ClaimsJournal() {
             { key: 'not_delivered', label: 'Not delivered', count: groups.not_delivered.length },
             { key: 'quality', label: 'Quality issue', count: groups.quality.length },
             { key: 'closed', label: 'Closed', count: groups.closed.length },
+            ...(LIVE?.creditNotes ? [{ key: 'sheet' as Tab, label: 'Credit notes (sheet)', count: LIVE.creditNotes.length }] : []),
           ]}
           value={tab}
           onChange={setTab}
@@ -71,6 +76,39 @@ export function ClaimsJournal() {
           <SearchBox value={q} onChange={setQ} placeholder="Search client, claim or order #" className="journal-search" />
         </div>
       </div>
+      {tab === 'sheet' ? (
+        <div className="table journal cn-table">
+          <div className="tr th">
+            <span className="n-date">Date</span>
+            <span className="n-client">Client</span>
+            <span className="n-deal">Deal</span>
+            <span className="n-text">What to amend</span>
+            <span className="n-status">Credit note</span>
+            <span className="n-by">Requested by</span>
+            <span className="n-copy">Hard copy</span>
+          </div>
+          {notes.map((x, i) => {
+            const tone = /issued/i.test(x.status) ? 'success' : /hold/i.test(x.status) ? 'warning' : 'neutral';
+            return (
+              <div key={i} className="tr row">
+                <span className="n-date">{/^\d{4}-/.test(x.date) ? shortDate(x.date) : x.date || '—'}</span>
+                <span className="n-client ellipsis">{x.clientId ? <Link to={`/customers/clients/${x.clientId}`}>{x.client}</Link> : x.client || '—'}</span>
+                <span className="n-deal">{x.deal ? `#${x.deal}` : '—'}</span>
+                <span className="n-text ellipsis" title={x.text}>
+                  {x.text || '—'}
+                </span>
+                <span className="n-status">
+                  <Dot tone={tone} />
+                  {x.status || '—'}
+                </span>
+                <span className="n-by">{x.by || '—'}</span>
+                <span className="n-copy muted ellipsis">{x.hardCopy || '—'}</span>
+              </div>
+            );
+          })}
+          {!notes.length && <div className="empty">No credit notes match.</div>}
+        </div>
+      ) : (
       <div className="table journal claims-table">
         <div className="tr th">
           <span className="c-client">Client</span>
@@ -115,6 +153,7 @@ export function ClaimsJournal() {
         })}
         {!rows.length && <div className="empty">No claims here.</div>}
       </div>
+      )}
     </Shell>
   );
 }

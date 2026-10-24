@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Money } from './Money';
+import { LIVE } from '../data/live';
 import { availability, CATALOG, CATEGORIES, findPack, packChip, lineImage, replacementsFor, stockNote } from '../data/catalog';
 import { fmt, line } from '../data/lines';
 import { customerPrice } from '../data/customerPrices';
@@ -187,6 +188,12 @@ export function CatalogList({ s, deliveryLabel = 'Tue 20 Oct', clientId }: { s: 
   );
 }
 
+/** Requirements agreed for this client on this SKU (Product Matrix → Special req.). */
+function specialReq(clientId: string | undefined, sku: string) {
+  if (!clientId) return [];
+  return (LIVE?.special?.[sku.replace(/-C$/, '')] ?? []).filter((x) => x.clients.includes(clientId)).map((x) => x.req);
+}
+
 const PT = { special: { label: 'Special price', tone: 'info' as const }, last: { label: 'Last price', tone: 'success' as const }, base: { label: 'Base price', tone: 'sand' as const } };
 
 function PackRow({ pack, value, onChange, clientId }: { pack: Pack; value: number; onChange: (v: number) => void; clientId?: string }) {
@@ -209,6 +216,11 @@ function PackRow({ pack, value, onChange, clientId }: { pack: Pack; value: numbe
       <span className="c-pack">
         <b>{pack.label}</b>
         <small>{pack.sku}</small>
+        {specialReq(clientId, pack.sku).map((r, i) => (
+          <small key={i} className="special-req" title={r}>
+            Special: {r}
+          </small>
+        ))}
       </span>
       <span className="c-base">
         <span className={cp.discount > 0 ? 'struck' : ''}><Money>{custom ? `${fmt(pack.price)} / 10 g` : fmt(pack.price)}</Money></span>

@@ -12,31 +12,8 @@ import { balanceOf } from '../data/balances';
 import { CLIENTS, clientById } from '../data/clients';
 import { fmt } from '../data/lines';
 import { useStore } from '../store';
-import { LIVE } from '../data/live';
-
-/** AR TRACKER classes: D blocked (legal case), H only with Head approval, the rest deliver. */
-const CLASS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { A: 'success', B: 'success', C: 'neutral', E: 'neutral', X: 'neutral', H: 'warning', D: 'danger', T: 'info' };
-const CLASS_HINT: Record<string, string> = {
-  A: 'Good payment discipline · deliver',
-  B: 'Pays, needs pushing · deliver',
-  C: 'Poor discipline or no contacts · deliver',
-  E: 'Paid after C, still under watch · deliver',
-  X: 'Delayed by war situation · deliver',
-  H: 'Escalated · deliver only after Head approval',
-  D: 'Legal case · do not deliver',
-  T: 'Test client · demo data',
-};
-const CLASS_ORDER = ['A', 'B', 'C', 'E', 'X', 'H', 'D'];
-const isBlockedClass = (k?: string) => k === 'D' || k === 'H';
-
-function ClassBadge({ k }: { k?: string }) {
-  if (!k) return <span className="muted">—</span>;
-  return (
-    <span className={`cls-badge pill-${CLASS_TONE[k] ?? 'neutral'}`} title={CLASS_HINT[k] ?? ''}>
-      {k}
-    </span>
-  );
-}
+import { LIVE, shortDate } from '../data/live';
+import { ClassBadge, CLASS_HINT, CLASS_ORDER, classFilterOptions, isBlockedClass, matchesClass } from '../components/ClassBadge';
 
 function ClassRow({ sheet, value, onChange, demo }: { sheet?: string; value?: string; onChange: (v: string | null) => void; demo?: boolean }) {
   const changed = value !== sheet;
@@ -71,6 +48,44 @@ function ClassRow({ sheet, value, onChange, demo }: { sheet?: string; value?: st
   );
 }
 
+/** Special requirements agreed for this client, from the Product Matrix. */
+function specialFor(clientId: string) {
+  const out: { sku: string; req: string }[] = [];
+  for (const [sku, list] of Object.entries(LIVE?.special ?? {})) for (const x of list) if (x.clients.includes(clientId)) out.push({ sku, req: x.req });
+  return out;
+}
+
+function NotesCard({ clientId }: { clientId: string }) {
+  const { clientNotes, setClientNote } = useStore();
+  const saved = clientNotes[clientId];
+  const [draft, setDraft] = useState(saved?.text ?? '');
+  const toast = useToast();
+  const changed = draft !== (saved?.text ?? '');
+  return (
+    <section className="set-card notes-card">
+      <div>
+        <h2 className="section-h">Notes</h2>
+        <p className="section-note">Free-text notes about the client. Kept in this browser only.</p>
+      </div>
+      <textarea className="notes-input" rows={3} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Delivery quirks, preferences, agreements…" aria-label="Client notes" />
+      <div className="notes-foot">
+        <span className="muted">{saved ? `Last edited ${new Date(saved.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'No notes yet'}</span>
+        <Btn
+          kind="secondary"
+          className="btn-sm"
+          disabled={!changed}
+          onClick={() => {
+            setClientNote(clientId, draft);
+            toast('Saved');
+          }}
+        >
+          Save
+        </Btn>
+      </div>
+    </section>
+  );
+}
+
 export function ClientsJournal() {
   const { addresses, invoiceMode, minOverrides, clientClass } = useStore();
   const navigate = useNavigate();
@@ -78,6 +93,7 @@ export function ClientsJournal() {
   const [cls, setCls] = useState('all');
   const [zone, setZone] = useState('all');
   const [minF, setMinF] = useState('all');
+  const [groupBy, setGroupBy] = useState<'none' | 'class' | 'zone'>('none');
   const minOf = (id: string, emirate?: Address['emirate']) => minOverrides[id] ?? MIN_ORDER[emirate ?? 'Dubai'];
   const rows = CLIENTS.map((c) => {
     const own = addresses.filter((a) => a.clientId === c.id);
@@ -89,51 +105,12 @@ export function ClientsJournal() {
   const visible = rows.filter(({ c, own, main }) => {
     if (zone !== 'all' && zoneOf(main) !== zone) return false;
     if (minF !== 'all' && String(minOf(c.id, main?.emirate)) !== minF) return false;
-    const k = clientClass(c.id) ?? '';
-    if (cls === 'none' ? !!k : cls !== 'all' && k !== cls) return false;
+    if (!matchesClass(cls, clientClass(c.id))) return false;
     const n = q.trim().toLowerCase();
     return !n || c.name.toLowerCase().includes(n) || own.some((a) => `${a.name} ${a.area} ${a.line}`.toLowerCase().includes(n));
   });
-  return (
-    <Shell crumbs={[{ label: 'Clients' }]} contentClass="sticky-journal">
-      <div className="journal-toolbar">
-        <div className="grow" />
-        <div className="journal-filters">
-          {LIVE && (
-            <SelectBox
-              value={cls}
-              onChange={setCls}
-              options={[
-                { value: 'all', label: 'All classes' },
-                ...[...CLASS_ORDER, 'T'].map((k) => ({ value: k, label: `${k === 'T' ? 'Test' : 'Class'} ${k} · ${CLIENTS.filter((c) => clientClass(c.id) === k).length}` })),
-                { value: 'none', label: 'No class' },
-              ]}
-            />
-          )}
-          <SelectBox
-            value={zone}
-            onChange={setZone}
-            options={[{ value: 'all', label: 'All zones' }, ...zoneOptions.map((z) => ({ value: z, label: z }))]}
-          />
-          <SelectBox
-            value={minF}
-            onChange={setMinF}
-            options={[{ value: 'all', label: 'Any min order' }, ...minOptions.map((m) => ({ value: String(m), label: `Min AED ${fmt(m)}` }))]}
-          />
-          <SearchBox value={q} onChange={setQ} placeholder="Search client, area, address" className="journal-search" />
-        </div>
-      </div>
-      <div className="table journal clients-table">
-        <div className="tr th">
-          <span className="c-client">Client</span>
-          <span className="c-class">Class</span>
-          <span className="c-addr">Main delivery address</span>
-          <span className="c-emirate">Emirate · zone</span>
-          <span className="c-points">Addresses</span>
-          <span className="c-mode">Invoices</span>
-          <span className="c-min">Min order</span>
-        </div>
-        {visible.map(({ c, own, main }) => (
+  type Row = (typeof visible)[number];
+  const renderRow = ({ c, own, main }: Row) => (
           <button type="button" key={c.id} className={`tr row ${(c.live ? isBlockedClass(clientClass(c.id)) : c.creditHold) ? 'stripe-danger' : ''}`} onClick={() => navigate(`/customers/clients/${c.id}`)}>
             <span className="c-client two">
               <span>{c.name}</span>
@@ -162,7 +139,80 @@ export function ClientsJournal() {
               <small>{minOverrides[c.id] != null ? 'client' : 'by emirate'}</small>
             </span>
           </button>
-        ))}
+  );
+  const GROUP_ORDER = [...CLASS_ORDER, 'T', ''];
+  const groups: { label: string | null; rows: Row[] }[] = (() => {
+    if (groupBy === 'none') return [{ label: null, rows: visible }];
+    const m = new Map<string, Row[]>();
+    for (const r of visible) {
+      const key = groupBy === 'class' ? clientClass(r.c.id) ?? '' : zoneOf(r.main);
+      m.set(key, [...(m.get(key) ?? []), r]);
+    }
+    const keys = [...m.keys()].sort((a, b) =>
+      groupBy === 'class' ? GROUP_ORDER.indexOf(a) - GROUP_ORDER.indexOf(b) : a === '—' ? 1 : b === '—' ? -1 : a.localeCompare(b),
+    );
+    return keys.map((k) => ({ label: k, rows: m.get(k)! }));
+  })();
+  return (
+    <Shell crumbs={[{ label: 'Clients' }]} contentClass="sticky-journal">
+      <div className="journal-toolbar">
+        <div className="grow" />
+        <div className="journal-filters">
+          {LIVE && (
+            <SelectBox
+              value={cls}
+              onChange={setCls}
+              options={classFilterOptions((k) => CLIENTS.filter((c) => clientClass(c.id) === k).length)}
+            />
+          )}
+          <SelectBox
+            value={zone}
+            onChange={setZone}
+            options={[{ value: 'all', label: 'All zones' }, ...zoneOptions.map((z) => ({ value: z, label: z }))]}
+          />
+          <SelectBox
+            value={minF}
+            onChange={setMinF}
+            options={[{ value: 'all', label: 'Any min order' }, ...minOptions.map((m) => ({ value: String(m), label: `Min AED ${fmt(m)}` }))]}
+          />
+          <SelectBox
+            value={groupBy}
+            onChange={(v) => setGroupBy(v as 'none' | 'class' | 'zone')}
+            options={[
+              { value: 'none', label: 'Group: none' },
+              { value: 'class', label: 'Group by class' },
+              { value: 'zone', label: 'Group by zone' },
+            ]}
+          />
+          <SearchBox value={q} onChange={setQ} placeholder="Search client, area, address" className="journal-search" />
+        </div>
+      </div>
+      <div className="table journal clients-table">
+        <div className="tr th">
+          <span className="c-client">Client</span>
+          <span className="c-class">Class</span>
+          <span className="c-addr">Main delivery address</span>
+          <span className="c-emirate">Emirate · zone</span>
+          <span className="c-points">Addresses</span>
+          <span className="c-mode">Invoices</span>
+          <span className="c-min">Min order</span>
+        </div>
+        {groups.map((g) =>
+          g.label == null ? (
+            g.rows.map(renderRow)
+          ) : (
+            <div key={g.label} className="contacts-group">
+              <div className="contacts-group-head">
+                {groupBy === 'class' ? <ClassBadge k={g.label || undefined} /> : null}
+                <b>{groupBy === 'class' ? (g.label ? CLASS_HINT[g.label] ?? `Class ${g.label}` : 'No class') : g.label}</b>
+                <span>
+                  {g.rows.length} {g.rows.length === 1 ? 'client' : 'clients'}
+                </span>
+              </div>
+              {g.rows.map(renderRow)}
+            </div>
+          ),
+        )}
         {!visible.length && <div className="empty">No clients match.</div>}
       </div>
     </Shell>
@@ -203,6 +253,12 @@ export function ClientCard() {
                 </Link>
               </>
             ) : null}
+            {c.live?.responsible && <> · Manager {c.live.responsible}</>}
+            {(c.live?.paymentDelay || c.live?.paymentType) && (
+              <> · Terms {[c.live.paymentDelay && `${c.live.paymentDelay} days`, c.live.paymentType].filter(Boolean).join(' · ')}</>
+            )}
+            {c.live?.group && <> · Group {c.live.group}</>}
+            {c.live?.bitrixId != null && c.live.bitrixId !== '' && <> · Bitrix24 #{String(c.live.bitrixId).replace(/\.0$/, '')}</>}
           </p>
         </div>
         <div className="card-actions">
@@ -260,6 +316,63 @@ export function ClientCard() {
         </div>
       </section>
       </div>
+
+      <NotesCard key={`n-${c.id}`} clientId={c.id} />
+
+      {specialFor(c.id).length > 0 && (
+        <>
+          <div className="section-head">
+            <h2 className="section-h">Special requirements</h2>
+            <p className="section-note">Agreed requirements from the Product Matrix (Special req.).</p>
+          </div>
+          <div className="table journal mini-table">
+            <div className="tr th">
+              <span className="m-sku">SKU</span>
+              <span className="m-wide">Requirement</span>
+            </div>
+            {specialFor(c.id).map((x, i) => (
+              <div key={i} className="tr row">
+                <span className="m-sku two">
+                  <span>{x.sku}</span>
+                  <small>{LIVE?.products[x.sku]?.name ?? ''}</small>
+                </span>
+                <span className="m-wide">{x.req}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {(LIVE?.shortages?.[c.id]?.length ?? 0) > 0 && (
+        <>
+          <div className="section-head">
+            <h2 className="section-h">Shortages (last 180 days)</h2>
+            <p className="section-note">
+              {LIVE!.shortages![c.id].reduce((n, r) => n + (r[5] || 0), 0)} units removed from {new Set(LIVE!.shortages![c.id].map((r) => r[1])).size} orders · from Out of stock items
+            </p>
+          </div>
+          <div className="table journal mini-table">
+            <div className="tr th">
+              <span className="m-date">Date</span>
+              <span className="m-order">Order</span>
+              <span className="m-wide">Item</span>
+              <span className="m-num">Ordered</span>
+              <span className="m-num">Removed</span>
+              <span className="m-reason">Reason</span>
+            </div>
+            {LIVE!.shortages![c.id].slice(0, 30).map((r, i) => (
+              <div key={i} className="tr row">
+                <span className="m-date">{shortDate(r[0])}</span>
+                <span className="m-order">#{r[1]}</span>
+                <span className="m-wide ellipsis">{r[2]}</span>
+                <span className="m-num">{r[4]}</span>
+                <span className="m-num strong text-danger">{r[5]}</span>
+                <span className="m-reason muted">{r[6] || '—'}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <div className="section-head">
         <h2 className="section-h">Delivery addresses</h2>

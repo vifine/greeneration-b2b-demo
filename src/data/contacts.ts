@@ -59,3 +59,22 @@ export const INITIAL_CONTACTS: Contact[] = CLIENTS.filter((c) => !c.live).flatMa
     };
   });
 });
+
+// Real clients: one main contact from the Bitrix24 company export (AR TRACKER → Companies).
+for (const c of CLIENTS) {
+  const l = c.live;
+  if (!l || (!l.phone && !l.email)) continue;
+  INITIAL_CONTACTS.push({
+    id: `${c.id}-b24`,
+    clientId: c.id,
+    name: 'Main contact (Bitrix24)',
+    role: 'Purchasing',
+    phone: l.phone ?? '',
+    email: l.email ?? '',
+    orders: true,
+    invoices: true,
+    inGroup: false,
+    portal: false,
+    primary: true,
+  });
+}

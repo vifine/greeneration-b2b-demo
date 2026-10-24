@@ -155,10 +155,14 @@ interface Store {
   /** Effective class: portal change first, then the AR TRACKER value. */
   clientClass: (clientId: string) => string | undefined;
   setClientClass: (clientId: string, cls: string | null) => void;
+  /** Free-text notes per client with the time of the last edit (this browser only). */
+  clientNotes: Record<string, { text: string; at: string }>;
+  setClientNote: (clientId: string, text: string) => void;
 }
 
 export type InvoiceMode = 'approve' | 'auto';
 const CLASS_KEY = 'gr-class-overrides';
+const NOTES_KEY = 'gr-client-notes';
 const AUTO_AT_START = ['kintsugi', 'saffron', 'cedar'];
 
 const Ctx = createContext<Store | null>(null);
@@ -172,6 +176,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [claims, setClaims] = useState<Claim[]>(INITIAL_CLAIMS);
   const [contacts, setContacts] = useState<Contact[]>(INITIAL_CONTACTS);
   const [minOverrides, setMinState] = useState<Record<string, number>>({ littlefig: 100 });
+  const [clientNotes, setNotesState] = useState<Record<string, { text: string; at: string }>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(NOTES_KEY) ?? '{}');
+    } catch {
+      return {};
+    }
+  });
   const [classOverrides, setClassState] = useState<Record<string, string>>(() => {
     try {
       return JSON.parse(localStorage.getItem(CLASS_KEY) ?? '{}');
@@ -223,6 +234,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           else next[id] = v;
           return next;
         }),
+      clientNotes,
+      setClientNote: (id, text) =>
+        setNotesState((m) => {
+          const next = { ...m };
+          if (!text.trim()) delete next[id];
+          else next[id] = { text, at: new Date().toISOString() };
+          try {
+            localStorage.setItem(NOTES_KEY, JSON.stringify(next));
+          } catch {
+            /* storage unavailable: keep in memory */
+          }
+          return next;
+        }),
       classOverrides,
       clientClass: (id) => {
         const c = clientById(id);
@@ -268,7 +292,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       removeContact: (id) => setContacts((list) => list.filter((x) => x.id !== id)),
     };
-  }, [requests, orders, addresses, modes, minOverrides, claims, contacts, classOverrides]);
+  }, [requests, orders, addresses, modes, minOverrides, claims, contacts, classOverrides, clientNotes]);
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }

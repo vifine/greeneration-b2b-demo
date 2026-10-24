@@ -1,4 +1,5 @@
 import { CATALOG, availability } from './catalog';
+import { LIVE } from './live';
 import { INITIAL_ORDERS } from './orders';
 import type { Order, OrderLine, Pack } from './types';
 
@@ -37,6 +38,13 @@ export const AVAILABLE: Map<string, number> = (() => {
 /** Harvest available for a pack: the sheet figure for ordered SKUs, otherwise derived from the catalog status. */
 export function harvestFor(p: Pack): number | null {
   if (p.kind === 'custom') return null;
+  if (LIVE) {
+    // Real available stock from the mastertable ("For sales"), in sales packs.
+    const a = LIVE.availability[p.sku];
+    if (!a) return null;
+    if (a.kind === 'out') return 0;
+    return a.left;
+  }
   const a = AVAILABLE.get(p.sku);
   if (a != null) return a;
   const av = availability(p);

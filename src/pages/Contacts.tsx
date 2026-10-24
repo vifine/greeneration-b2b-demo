@@ -6,18 +6,20 @@ import { FilterSelect, SearchBox, useToast } from '../components/ui';
 import { CLIENTS } from '../data/clients';
 import { ROLES, type Contact, type ContactRole } from '../data/contacts';
 import { useStore } from '../store';
+import { ClassBadge, classFilterOptions, matchesClass } from '../components/ClassBadge';
 
 type Use = 'all' | 'orders' | 'invoices' | 'portal';
 
 export function ContactsJournal() {
-  const { contacts, saveContact, removeContact } = useStore();
+  const { contacts, saveContact, removeContact, clientClass } = useStore();
+  const [cls, setCls] = useState('all');
   const toast = useToast();
   const [q, setQ] = useState('');
   const [role, setRole] = useState<'all' | ContactRole>('all');
   const [use, setUse] = useState<Use>('all');
   const [edit, setEdit] = useState<Contact | null>(null);
   const n = q.trim().toLowerCase();
-  const groups = CLIENTS.map((c) => ({
+  const groups = CLIENTS.filter((c) => matchesClass(cls, clientClass(c.id))).map((c) => ({
     c,
     people: contacts
       .filter((p) => p.clientId === c.id)
@@ -37,6 +39,7 @@ export function ContactsJournal() {
         <div className="grow" />
         <div className="journal-filters">
           <SearchBox value={q} onChange={setQ} placeholder="Search client, name, phone, email" className="journal-search" />
+          <FilterSelect value={cls} onChange={setCls} options={classFilterOptions((k) => CLIENTS.filter((c) => clientClass(c.id) === k).length)} />
           <FilterSelect value={role} onChange={setRole} options={[{ value: 'all', label: 'Role: all' }, ...ROLES.map((r) => ({ value: r, label: `Role: ${r}` }))]} />
           <FilterSelect
             value={use}
@@ -61,6 +64,7 @@ export function ContactsJournal() {
         {groups.map(({ c, people }) => (
           <div key={c.id} className="contacts-group">
             <div className="contacts-group-head">
+              <ClassBadge k={clientClass(c.id)} />
               <Link to={`/customers/clients/${c.id}`}>{c.name}</Link>
               <span>
                 {people.length} {people.length === 1 ? 'person' : 'people'}

@@ -7,6 +7,7 @@ import { CATEGORIES, lineImage, packChip } from '../data/catalog';
 import { ALL_PACKS, DAY, demandBySku, harvestFor } from '../data/stock';
 import type { Category, Tone } from '../data/types';
 import { useStore } from '../store';
+import { LIVE } from '../data/live';
 
 type CatKey = 'all' | Category;
 
@@ -53,7 +54,9 @@ export function Availability() {
 
       <div className="journal-toolbar">
         <span className="stock-note">
-          Harvest for {DAY} from the farm’s Google Sheet · updated 15:00 · ordered = all orders for {DAY} so far ·{' '}
+          {LIVE
+            ? `Stock mastertable · inventory ${LIVE.sources.inventoryAt ?? '—'} · ordered = demo orders for ${DAY} · `
+            : `Harvest for ${DAY} from the farm’s Google Sheet · updated 15:00 · ordered = all orders for ${DAY} so far · `}
           <Link to="/stock/check" className="link-sort">
             Stock check 22:30
           </Link>
@@ -88,7 +91,10 @@ export function Availability() {
                 {r.pack.sku} · {packChip(r.pack.kind)}
               </small>
             </span>
-            <span className="a-num">{r.harvest ?? '—'}</span>
+            <span className="a-num two">
+              <span>{r.harvest ?? '—'}</span>
+              {LIVE?.availability[r.pack.sku]?.total != null && <small>total {LIVE.availability[r.pack.sku].total}</small>}
+            </span>
             <span className="a-num">{r.ordered || '—'}</span>
             <span className={`a-num strong ${r.free != null && r.free < 0 ? 'text-danger' : ''}`}>{r.free ?? '—'}</span>
             <span className={`a-status ${r.st.key === 'over' ? 'text-danger' : ''}`}>
