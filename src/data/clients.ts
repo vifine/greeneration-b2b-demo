@@ -1,6 +1,7 @@
 import type { Client } from './types';
+import { LIVE } from './live';
 
-// All clients, people and messages in this demo are fictional.
+// Demo clients: fictional, as are their people and messages. Real clients are appended below from the live sheets.
 export const CLIENTS: Client[] = [
   { id: 'verdant', name: 'Verdant Social', area: 'Business Bay', minOrder: 50 },
   { id: 'olive', name: 'Olive & Ember Bistro', area: 'Dubai Marina', minOrder: 30 },
@@ -29,4 +30,20 @@ export const CLIENTS: Client[] = [
   { id: 'ember', name: 'Ember Street Tacos', area: 'Al Quoz', minOrder: 50 },
 ];
 
-export const clientById = (id: string) => CLIENTS.find((c) => c.id === id)!;
+// Real clients from the live sheets: price list (Prices For Odoo) and receivables (AR TRACKER).
+// Class D (legal case) is blocked; class H needs the Head's approval. Minimum order is 150 AED for all (SOP).
+if (LIVE) {
+  for (const c of LIVE.clients) {
+    CLIENTS.push({
+      id: c.id,
+      name: c.name,
+      area: [c.segment, c.class && `Class ${c.class}`].filter(Boolean).join(' · ') || '—',
+      minOrder: LIVE.rules.minOrder,
+      creditHold: !!c.rule,
+      live: c,
+    });
+  }
+}
+
+const BY_ID = new Map(CLIENTS.map((c) => [c.id, c]));
+export const clientById = (id: string) => BY_ID.get(id)!;

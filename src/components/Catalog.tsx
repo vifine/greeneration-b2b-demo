@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Money } from './Money';
-import { availability, CATALOG, CATEGORIES, findPack, packChip, lineImage } from '../data/catalog';
+import { availability, CATALOG, CATEGORIES, findPack, packChip, lineImage, replacementsFor, stockNote } from '../data/catalog';
 import { fmt, line } from '../data/lines';
 import { customerPrice } from '../data/customerPrices';
 import type { Availability, Category, Line, Pack, ProductGroup } from '../data/types';
@@ -211,7 +211,7 @@ function PackRow({ pack, value, onChange, clientId }: { pack: Pack; value: numbe
         <small>{pack.sku}</small>
       </span>
       <span className="c-base">
-        <span className={cp.discount ? 'struck' : ''}><Money>{custom ? `${fmt(pack.price)} / 10 g` : fmt(pack.price)}</Money></span>
+        <span className={cp.discount > 0 ? 'struck' : ''}><Money>{custom ? `${fmt(pack.price)} / 10 g` : fmt(pack.price)}</Money></span>
         <small>excl. VAT</small>
       </span>
       <span className="c-price">
@@ -223,9 +223,14 @@ function PackRow({ pack, value, onChange, clientId }: { pack: Pack; value: numbe
           <Dot tone={PT[cp.type].tone} /> {PT[cp.type].label}
         </small>
       </span>
-      <span className="c-avail">
-        <Dot tone={a.tone} />
-        {a.text}
+      <span className="c-avail" title={stockNote(pack.sku) || undefined}>
+        <span>
+          <Dot tone={a.tone} />
+          {a.text}
+        </span>
+        {availability(pack).kind === 'out' && replacementsFor(pack.sku).length > 0 && (
+          <small className="muted">Offer: {replacementsFor(pack.sku).map((r) => r.name).join(' or ')}</small>
+        )}
       </span>
       <span className="c-qty">
         {custom ? (

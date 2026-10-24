@@ -1,5 +1,6 @@
 import type { Availability, Category, Pack, ProductGroup } from './types';
 import { CATALOG, PRODUCT_IMAGES } from './catalog.generated';
+import { LIVE } from './live';
 import peaPunnet from '../assets/photos/p0.png';
 import arugulaPunnet from '../assets/photos/p1.png';
 import peaCut from '../assets/photos/p2.png';
@@ -16,6 +17,19 @@ const LOCAL_PHOTOS: Record<string, string> = {
   MC101: peaCut,
   MC105: radishCut,
 };
+
+// Live base prices from the Product Matrix (AED excl. VAT). Custom weight is priced per 10 g.
+if (LIVE) {
+  for (const group of CATALOG) {
+    for (const pack of group.packs) {
+      const p = LIVE.products[pack.sku.replace(/-C$/, '')];
+      if (!p || !p.price) continue;
+      if (pack.kind === 'custom') {
+        if (p.um === 'gr' && p.volume) pack.price = Math.round((p.price / p.volume) * 10 * 100) / 100;
+      } else pack.price = p.price;
+    }
+  }
+}
 
 const BY_SKU = new Map<string, { group: ProductGroup; pack: Pack }>();
 for (const group of CATALOG) for (const pack of group.packs) BY_SKU.set(pack.sku, { group, pack });
@@ -49,6 +63,13 @@ const FIXED: Record<string, Availability> = {
 
 export function availability(pack: Pack): Availability {
   if (pack.kind === 'custom') return { kind: 'tbc' };
+  if (LIVE) {
+    // Real status from the stock mastertable ("For sales").
+    const a = LIVE.availability[pack.sku];
+    if (!a) return { kind: 'tbc' };
+    if (a.kind === 'low') return { kind: 'low', left: a.left ?? 0 };
+    return { kind: a.kind };
+  }
   if (FIXED[pack.sku]) return FIXED[pack.sku];
   const h = hash(pack.sku) % 100;
   if (h < 7) return { kind: 'out' };
@@ -61,4 +82,14 @@ export function packChip(kind: Pack['kind']): 'Punnet' | 'Cut' | 'Flowers' | 'Le
   if (kind === 'cut' || kind === 'custom') return 'Cut';
   if (kind === 'flowers') return 'Flowers';
   return 'Leaves';
+}
+
+/** What to offer instead when a pack is out (Crop replacement sheet). */
+export function replacementsFor(sku: string) {
+  return LIVE?.replacements[sku.replace(/-C$/, '')] ?? [];
+}
+
+/** Stock note from the mastertable (low volume, unavailability dates, comment). */
+export function stockNote(sku: string) {
+  return LIVE?.availability[sku.replace(/-C$/, '')]?.note ?? '';
 }

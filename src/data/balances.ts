@@ -1,4 +1,5 @@
 import type { Tone } from './types';
+import { LIVE, shortDate } from './live';
 
 // Fictional receivables, as they would be synced from the accounting system. Today is Mon 19 Oct.
 
@@ -293,6 +294,39 @@ export const BALANCES: ClientBalance[] = [
     }),
   ),
 ];
+
+// Real receivables from the AR TRACKER (QuickBooks aging) for live clients with an open balance.
+if (LIVE) {
+  for (const c of LIVE.clients) {
+    const ar = c.ar;
+    if (!ar || (ar.total <= 0 && !c.rule)) continue;
+    const overdue = Math.round((ar.d30 + ar.d60 + ar.d61) * 100) / 100;
+    const oldestDays = ar.d61 > 0 ? 61 : ar.d60 > 0 ? 31 : ar.d30 > 0 ? 1 : undefined;
+    const status: ClientBalance['status'] =
+      c.rule === 'block'
+        ? { kind: 'hold', text: 'Class D · legal case, do not deliver' }
+        : c.rule === 'approval'
+          ? { kind: 'hold', text: 'Class H · deliver after Head approval' }
+          : overdue > 0
+            ? { kind: 'overdue', text: `Overdue ${oldestDays! > 60 ? '60+' : oldestDays! > 30 ? '31–60' : '1–30'} days` }
+            : { kind: 'ok', text: 'OK' };
+    BALANCES.push({
+      clientId: c.id,
+      terms: `Class ${c.class ?? '—'} · ${LIVE.sources.arTab}`,
+      kind: 'account',
+      balance: Math.round(ar.total * 100) / 100,
+      overdue,
+      oldestDays,
+      status,
+      lastPayment: c.lastPayment
+        ? { date: shortDate(c.lastPayment.date), amount: c.lastPayment.amount, method: 'QuickBooks' }
+        : { date: '—', amount: 0, method: 'no payment this month' },
+      creditLimit: 0,
+      holdFrom: c.rule ? LIVE.sources.arTab.replace('AR ', '') : undefined,
+      invoices: [],
+    });
+  }
+}
 
 export const balanceOf = (clientId: string) => BALANCES.find((b) => b.clientId === clientId);
 

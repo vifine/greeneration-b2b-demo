@@ -73,6 +73,8 @@ export interface Client {
   area: string;
   minOrder: number;
   creditHold?: boolean;
+  /** Real client synced from the sheets (class, AR, segment, manager). */
+  live?: import('./live').LiveClient;
 }
 
 export interface Request {

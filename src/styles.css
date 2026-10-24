@@ -1979,8 +1979,23 @@ button.tr:hover,
 }
 .pack-row .c-avail {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+}
+.pack-row .c-avail > span {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+.pack-row .c-avail small {
+  font-size: 12px;
+  line-height: 16px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .pack-row .c-sum {
   color: var(--text-2);
@@ -3057,3 +3072,13 @@ a.pt-tile:hover { border-color: var(--forest); }
 .pt-crumbs > span:last-child > span:last-child { color: var(--text-2); font-weight: 400; }
 .pt-sum-date { font-size: 13px; color: var(--text-2); margin-top: -4px; }
 .po-more { flex: none; }
+
+.live-badge {
+  font-size: 12px;
+  line-height: 16px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--success-bg, #e8f5ec);
+  color: var(--success, #1f7a3d);
+  white-space: nowrap;
+}

@@ -1,4 +1,5 @@
 import { intakeChip, useDubaiNow } from '../time';
+import { liveUpdatedText } from '../data/live';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { logout } from '../auth';
@@ -266,6 +267,11 @@ export function TopBar({ crumbs, chip = true, crmLink }: { crumbs: Crumb[]; chip
         )}
       </div>
       <div className="topbar-right">
+        {liveUpdatedText() && (
+          <span className="live-badge" title="Catalog prices, availability, real clients' prices and receivables come from Greeneration's Google Sheets. Requests and orders are still demo data.">
+            {liveUpdatedText()}
+          </span>
+        )}
         {chip && <IntakeChip />}
         <span className="avatar" title="Karina P. · coordinator">
           KP
