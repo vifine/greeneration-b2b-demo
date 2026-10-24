@@ -3395,3 +3395,7 @@ a.pt-tile:hover { border-color: var(--forest); }
   text-align: center;
   color: var(--text-2);
 }
+
+/* Orders list/kanban switch: same height as the filter selects, equal button widths */
+.view-seg { height: 36px; box-sizing: border-box; }
+.view-seg button { width: 96px; height: 100%; padding: 0; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; }

@@ -19,6 +19,7 @@ function Toolbar<T extends string>({
   setTab,
   q,
   setQ,
+  lead,
   children,
 }: {
   tabs: { key: T; label: string; count: number }[];
@@ -26,6 +27,7 @@ function Toolbar<T extends string>({
   setTab: (t: T) => void;
   q: string;
   setQ: (q: string) => void;
+  lead?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   return (
@@ -33,6 +35,7 @@ function Toolbar<T extends string>({
       <Tabs tabs={tabs} value={tab} onChange={setTab} />
       <div className="grow" />
       <div className="journal-filters">
+        {lead}
         <SearchBox value={q} onChange={setQ} placeholder="Search client, deal #, product" className="journal-search" />
         {children}
       </div>
@@ -288,6 +291,17 @@ export function OrdersJournal() {
   return (
     <Shell crumbs={[{ label: 'Orders' }]}>
       <Toolbar<OrdTab>
+        lead={
+          tab !== 'bitrix' && (
+            <div className="seg view-seg" role="radiogroup" aria-label="Orders view">
+              {(['list', 'kanban'] as const).map((v) => (
+                <button key={v} type="button" role="radio" aria-checked={view === v} className={view === v ? 'on' : ''} onClick={() => setView(v)}>
+                  {v === 'list' ? 'List' : 'Kanban'}
+                </button>
+              ))}
+            </div>
+          )
+        }
         tabs={[
           { key: 'all', label: 'All', count: count('all') },
           { key: 'new', label: 'New request', count: count('new') },
@@ -300,15 +314,6 @@ export function OrdersJournal() {
         q={q}
         setQ={setQ}
       >
-        {tab !== 'bitrix' && (
-          <div className="seg seg-sm" role="radiogroup" aria-label="Orders view">
-            {(['list', 'kanban'] as const).map((v) => (
-              <button key={v} type="button" role="radio" aria-checked={view === v} className={view === v ? 'on' : ''} onClick={() => setView(v)}>
-                {v === 'list' ? 'List' : 'Kanban'}
-              </button>
-            ))}
-          </div>
-        )}
         {tab !== 'bitrix' && <FilterSelect value={dday} onChange={setDday} options={DELIVERY_FILTERS('upcoming')} />}
         {tab !== 'bitrix' && <FilterSelect value={payF} onChange={setPayF} options={PAYMENT_FILTERS} />}
       </Toolbar>
