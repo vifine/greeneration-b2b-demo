@@ -82,7 +82,7 @@ export function ClassBadge({ k }: { k?: string }) {
   if (!k) return <span className="muted">—</span>;
   const c = CLASS_COLOR[k] ?? NO_COLOR;
   return (
-    <span className="cls-badge" style={{ color: c, background: tint(c, 0.14) }} title={CLASS_HINT[k] ?? ''}>
+    <span className="cls-badge" style={{ color: '#fff', background: c }} title={CLASS_HINT[k] ?? ''}>
       {k}
     </span>
   );

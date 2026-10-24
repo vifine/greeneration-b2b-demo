@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { CLASS_COLOR, CLASS_HINT, CLASS_ORDER, NO_COLOR, tint, zoneColor } from '../components/ClassBadge';
+import { CLASS_COLOR, CLASS_HINT, CLASS_ORDER, NO_COLOR, zoneColor } from '../components/ClassBadge';
 import { ClientsMap, type MapPoint } from '../components/MapLazy';
 import type { Address } from '../data/addresses';
 import type { Client } from '../data/types';
@@ -47,7 +47,7 @@ export function ClientsMapView({
         const line = (label: string, v?: string | null) => (v ? `<dt>${label}</dt><dd>${esc(v)}</dd>` : '');
         const popup =
           `<div class="cp-h">` +
-          (k ? `<span class="cls-badge" style="color:${col};background:${tint(col, 0.14)}" title="${esc(CLASS_HINT[k] ?? '')}">${k}</span>` : '') +
+          (k ? `<span class="cls-badge" style="color:#fff;background:${col}" title="${esc(CLASS_HINT[k] ?? '')}">${k}</span>` : '') +
           `<b>${esc(r.c.name)}</b></div><dl>` +
           line('Zone', r.zoneLabel !== '—' ? `${r.zoneLabel}${bx?.zoneTier ? ` · tier ${bx.zoneTier}` : ''}` : null) +
           line('Delivery', bx?.deliveryTime ?? (r.main?.hours || null)) +
