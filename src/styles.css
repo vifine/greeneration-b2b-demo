@@ -3592,3 +3592,9 @@ textarea.input { height: auto; padding: 10px 12px; }
 .class-picker { width: 340px; max-width: 100%; }
 /* "No class": a light grey square with a dash, same size as the class badges */
 .cls-badge.cls-none { background: #e6e6e1 !important; color: #8a8f88 !important; cursor: default; }
+
+.person-chip { display: inline-flex; align-items: center; gap: 8px; }
+.person-ava { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex: none; background: var(--soft-primary); color: var(--forest); font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.client-facts dd:has(.person-chip) { align-items: center; }
+/* Credit class list: all classes at once, no scrolling */
+.class-picker .dd-pop { max-height: none; overflow: visible; }

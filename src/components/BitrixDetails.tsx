@@ -48,7 +48,7 @@ function EditCell({ clientId, d, value, onSaved }: { clientId: string; d: Def; v
 }
 
 /** Order of the fields in Details (others follow in sync order). */
-const ORDER = ['status', 'segment', 'priority', 'manager', 'payType', 'delay', 'channel', 'groupList', 'supplyList', 'industry', 'type', 'employees', 'need', 'outlets', 'revenue'];
+const ORDER = ['status', 'segment', 'priority', 'payType', 'delay', 'channel', 'groupList', 'supplyList', 'industry', 'type', 'employees', 'outlets', 'revenue'];
 /** Shorter labels than the Bitrix24 ones. */
 const LABEL: Record<string, string> = { status: 'Status', segment: 'Segment', priority: 'Priority', payType: 'Payment type', delay: 'Payment delay', groupList: 'Group', supplyList: 'Supply system' };
 
@@ -58,11 +58,9 @@ export function BitrixDetails({ clientId, bx }: { clientId: string; bx?: LiveBit
   const defs = (LIVE?.bxFields ?? []).filter((d) => d.t !== 'f');
   const editable = (k: string) => SERVER_AUTH && !!LIVE?.bxEdit?.[k];
   const x = bx?.x ?? {};
-  // Fields marked "(Archived)" in Bitrix24 are not shown, unless they are edited here (Need products).
-  const rows: Def[] = defs.filter((d) => editable(d.k) || (x[d.k] != null && !d.a)).map((d) => ({ ...d, l: LABEL[d.k] ?? d.l }));
-  // Responsible person of the company card (ASSIGNED_BY_ID), read-only here.
-  if (bx?.manager) rows.push({ k: 'manager', l: 'Responsible', t: 't' });
-  const valueOf = (k: string) => (k === 'manager' ? bx?.manager : x[k]);
+  // Fields marked "(Archived)" in Bitrix24 are not shown.
+  const rows: Def[] = defs.filter((d) => !d.a && (editable(d.k) || x[d.k] != null)).map((d) => ({ ...d, l: LABEL[d.k] ?? d.l }));
+  const valueOf = (k: string) => x[k];
   if (!rows.length) return null;
   const cell = (d: Def) => {
     const v = valueOf(d.k);

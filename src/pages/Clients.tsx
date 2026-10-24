@@ -55,11 +55,38 @@ function ClassRow({ sheet, value, onChange, demo }: { sheet?: string; value?: st
 
 type CardClient = (typeof CLIENTS)[number];
 
+/** Small round photo (or initials) and the full name. */
+function PersonChip({ name, photo }: { name: string; photo?: string }) {
+  const [ok, setOk] = useState(true);
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+  return (
+    <span className="person-chip">
+      {photo && ok ? (
+        <img className="person-ava" src={`${import.meta.env.BASE_URL}${photo}`} alt="" onError={() => setOk(false)} />
+      ) : (
+        <span className="person-ava">{initials}</span>
+      )}
+      {name}
+    </span>
+  );
+}
+
 /** Client card header: only what is not in Details (the balance; area and addresses for test clients). */
 function ClientFacts({ c, ownCount }: { c: CardClient; ownCount: number }) {
   const bal = balanceOf(c.id);
   // Status, segment, priority, responsible and payment terms are in Details; order figures go to a dashboard later.
   const facts: { k: string; v: React.ReactNode; sub?: React.ReactNode }[] = [];
+  const mgr = c.live?.bx?.manager;
+  if (mgr) {
+    const st = c.live?.bx?.managerId ? LIVE?.staff?.[c.live.bx.managerId] : undefined;
+    facts.push({ k: 'Manager', v: <PersonChip name={st?.name ?? mgr} photo={st?.photo} /> });
+  }
   if (bal)
     facts.push({
       k: 'Balance',

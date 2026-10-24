@@ -70,6 +70,8 @@ export interface LiveBitrix {
   contacts?: LiveBitrixContact[];
   /** Extra company fields by key (see LiveData.bxFields): text, or a file / linked-item count, or true. */
   x?: Record<string, string | number | true>;
+  /** Bitrix24 user id of the responsible person (see LiveData.staff for the photo). */
+  managerId?: string;
   /** Raw ids of the editable list fields (see LiveData.bxEdit): one id, or several for multiple fields. */
   xr?: Record<string, string | string[]>;
   /** Company comment from Bitrix24, markup stripped. */
@@ -120,6 +122,8 @@ export interface LiveData {
   products: Record<string, LiveProduct>;
   /** Definitions of the extra Bitrix24 company fields that have a value for at least one company. t: t text, f files, c linked items, b yes/no; a archived; id identity document. */
   bxFields?: { k: string; l: string; t: 't' | 'f' | 'c' | 'b'; a?: 1; id?: 1 }[];
+  /** Responsible persons of the companies: Bitrix24 user id -> full name and photo (relative to BASE_URL). */
+  staff?: Record<string, { name: string; photo?: string }>;
   /** Editable list fields on the client card: key -> Bitrix24 field, multiple or not, options [id, label]. */
   bxEdit?: Record<string, { f: string; m: boolean; one?: boolean; o: [string, string][] }>;
   availability: Record<string, LiveAvailability>;

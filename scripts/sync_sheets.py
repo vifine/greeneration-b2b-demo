@@ -504,7 +504,7 @@ def bitrix_sync():
         ("payType", "UF_CRM_PREFERRED_PAYMENT_TYPE", "e"), ("groupList", "UF_CRM_GROUP", "e"),
     ]
     BX_IDENTITY = {"passport", "eid"}  # identity documents: shown as present / absent only, never linked
-    BX_EDITABLE = {"delay", "channel", "industry", "type", "employees", "need", "status", "segment", "priority", "payType",
+    BX_EDITABLE = {"delay", "channel", "industry", "type", "employees", "status", "segment", "priority", "payType",
                    "groupList", "supplyList"}  # list fields editable on the client card
     BX_ONE = {"priority"}  # multiple in Bitrix24, but one value is chosen on the card
     try:
@@ -567,6 +567,7 @@ def bitrix_sync():
     for i in range(0, len(user_ids), 50):
         for u in call("user.get", {"FILTER": {"ID": user_ids[i:i + 50]}}).get("result", []):
             users[str(u["ID"])] = " ".join(x for x in (u.get("NAME"), u.get("LAST_NAME")) if x).strip()
+            staff_photo_src[str(u["ID"])] = u.get("PERSONAL_PHOTO")
 
     def enum(field, v):
         if isinstance(v, list):
@@ -648,6 +649,7 @@ def bitrix_sync():
             "paymentDelay": (str(co.get("UF_CRM_AGREED_PAYMENT_DALAY_DAYS") or "").strip() or None),
             "group": enum("UF_CRM_GROUP", co.get("UF_CRM_GROUP")),
             "manager": users.get(str(co.get("ASSIGNED_BY_ID") or "")),
+            "managerId": str(co.get("ASSIGNED_BY_ID") or "") or None,
             "driver": users.get(str(co.get("UF_CRM_ASSIGNED_DRIVER") or "")),
             "mapLink": co.get("UF_CRM_GOOGLE_MAP_LINK") or None,
             "phone": first(co.get("PHONE")),
@@ -782,11 +784,21 @@ def portal_users_sync(call, hook):
         if photo:
             p["photo"] = photo
     print(f"Bitrix24: deal owners {len(bx_people)}, photos {sum('photo' in v for v in bx_people.values())}")
+    # Responsible persons of the companies (client card header): name and photo.
+    for c in clients.values():
+        mid = (c.get("bx") or {}).get("managerId")
+        if mid and mid not in staff and (c.get("bx") or {}).get("manager"):
+            staff[mid] = {"name": c["bx"]["manager"]}
+            photo = save_avatar(mid, staff_photo_src.get(mid))
+            if photo:
+                staff[mid]["photo"] = photo
+    print(f"Bitrix24: company managers {len(staff)}, photos {sum('photo' in v for v in staff.values())}")
 
 
 deals_out, deal_stages, deals_stats = {}, {}, "skipped"
 # Responsible users of order deals (read-only user.get): {bitrix id: {name, position, deals}}, deal id -> owner id.
 bx_people, deal_owner = {}, {}
+staff, staff_photo_src = {}, {}  # company responsible persons: bitrix id -> {name, photo}; raw photo paths from user.get
 
 
 def deals_sync(call, all_pages, by_bitrix):
@@ -957,6 +969,7 @@ out = {
     "dealFields": ["id", "created", "delivery", "stage", "amount", "payment", "deliveryStatus", "lpo", "rows"],
     "users": portal_users,
     "bxUsers": bx_users_out,
+    "staff": staff,
     "dealOwners": {str(k): v for k, v in deal_owner.items() if v},
     "mapKey": map_key(),
 }
