@@ -3,12 +3,15 @@
 # Usage: sudo bash deploy/make-users.sh                 — all three users
 #        sudo bash deploy/make-users.sh levkova@greeneration.ae   — one user (reset password)
 set -euo pipefail
-HTPASSWD=/etc/greeneration-portal/htpasswd
+AUTH_DIR=/etc/greeneration-portal/web-auth
+HTPASSWD=$AUTH_DIR/htpasswd
+NGINX_GID=101   # nginx user inside nginx:alpine
 USERS=("vifine767@gmail.com" "levkova@greeneration.ae" "nikolaychik@greeneration.ae")   # Victoria Fine, Aleksandra Levkova, Ivan Nikolaychik
 
 [ "$(id -u)" -eq 0 ] || { echo "Run with sudo"; exit 1; }
 command -v htpasswd >/dev/null || apt-get install -y -qq apache2-utils >/dev/null
-touch "$HTPASSWD"; chown root:portal "$HTPASSWD"; chmod 640 "$HTPASSWD"
+install -d -o root -g "$NGINX_GID" -m 750 "$AUTH_DIR"
+touch "$HTPASSWD"
 
 [ $# -gt 0 ] && USERS=("$@")
 read -rsp "Password for ${#USERS[@]} user(s) (agreed with Victoria): " PW; echo
@@ -19,5 +22,6 @@ for u in "${USERS[@]}"; do
   echo "ok: $u"
 done
 unset PW PW2
+chown root:"$NGINX_GID" "$HTPASSWD"; chmod 640 "$HTPASSWD"
 docker exec greeneration-portal-web nginx -s reload >/dev/null 2>&1 || true
 echo "Users in $HTPASSWD: $(cut -d: -f1 "$HTPASSWD" | paste -sd, -)"

@@ -10,6 +10,7 @@ services:
     volumes:
       - /var/www/greeneration-portal:/srv/portal:ro
       - /etc/greeneration-portal/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - /etc/greeneration-portal/htpasswd:/etc/nginx/htpasswd:ro
+      # Folder, not a single file: htpasswd rewrites the file, a single-file mount would keep the old copy.
+      - /etc/greeneration-portal/web-auth:/etc/nginx/auth:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"

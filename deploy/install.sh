@@ -63,13 +63,16 @@ fi
 chown portal:portal "$ETC_DIR/env"; chmod 600 "$ETC_DIR/env"
 [ -f "$ETC_DIR/google-sa.json" ] && { chown portal:portal "$ETC_DIR/google-sa.json"; chmod 600 "$ETC_DIR/google-sa.json"; } \
   || warn "Copy the Google key to $ETC_DIR/google-sa.json (chmod 600, owner portal)"
-[ -f "$ETC_DIR/htpasswd" ] || warn "No users yet: run  sudo bash $APP_DIR/deploy/make-users.sh"
+[ -s "$ETC_DIR/web-auth/htpasswd" ] || warn "No users yet: run  sudo bash $APP_DIR/deploy/make-users.sh"
 
 log "Web container portal-web on 127.0.0.1:$PORT"
 install -d -m 755 "$ETC_DIR/nginx"
 install -m 644 "$APP_DIR/deploy/portal-web/default.conf" "$ETC_DIR/nginx/default.conf"
-touch "$ETC_DIR/htpasswd"; chown root:portal "$ETC_DIR/htpasswd"; chmod 640 "$ETC_DIR/htpasswd"
-PORTAL_PORT="$PORT" docker compose -f "$APP_DIR/deploy/portal-web/docker-compose.yml" -p greeneration-portal up -d
+install -d -o root -g 101 -m 750 "$ETC_DIR/web-auth"   # 101 = nginx user in nginx:alpine
+[ -f "$ETC_DIR/htpasswd" ] && [ ! -s "$ETC_DIR/web-auth/htpasswd" ] && mv "$ETC_DIR/htpasswd" "$ETC_DIR/web-auth/htpasswd"
+touch "$ETC_DIR/web-auth/htpasswd"; chown root:101 "$ETC_DIR/web-auth/htpasswd"; chmod 640 "$ETC_DIR/web-auth/htpasswd"
+rm -f "$ETC_DIR/htpasswd"
+PORTAL_PORT="$PORT" docker compose -f "$APP_DIR/deploy/portal-web/docker-compose.yml" -p greeneration-portal up -d --force-recreate
 
 log "systemd timer (hourly 07:00–23:00 Dubai)"
 install -m 644 "$APP_DIR/deploy/systemd/greeneration-portal-update.service" /etc/systemd/system/
