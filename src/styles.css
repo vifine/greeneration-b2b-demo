@@ -3605,3 +3605,6 @@ textarea.input { height: auto; padding: 10px 12px; }
 
 .input.input-sm { height: 32px; font-size: 14px; padding: 0 10px; border-radius: 6px; }
 .bx-num { display: inline-flex; }
+
+/* Contacts: "+ Add contact" at the end of each client group (as "Add line" in orders) */
+.contacts-add { margin: 2px 0 6px 4px; padding: 8px 12px; font-size: 14px; font-weight: 600; color: var(--forest); }

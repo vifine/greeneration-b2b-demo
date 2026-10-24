@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ContactDialog, contactTags } from '../components/Contacts';
+import { ContactDialog, contactTags, emptyContact } from '../components/Contacts';
+import * as I from '../components/icons';
 import { Shell } from '../components/Shell';
 import { FilterSelect, SearchBox, useToast } from '../components/ui';
 import { CLIENTS } from '../data/clients';
@@ -17,7 +18,7 @@ export function ContactsJournal() {
   const [q, setQ] = useState('');
   const [role, setRole] = useState<'all' | ContactRole>('all');
   const [use, setUse] = useState<Use>('all');
-  const [edit, setEdit] = useState<Contact | null>(null);
+  const [edit, setEdit] = useState<(Omit<Contact, 'id'> & { id?: string }) | null>(null);
   const n = q.trim().toLowerCase();
   const groups = CLIENTS.filter((c) => matchesClass(cls, clientClass(c.id))).map((c) => ({
     c,
@@ -88,23 +89,31 @@ export function ContactsJournal() {
                 </span>
               </button>
             ))}
+            <button type="button" className="add-line contacts-add" onClick={() => setEdit(emptyContact(c.id))}>
+              <img src={I.icPlus} width={18} height={18} alt="" />
+              Add contact
+            </button>
           </div>
         ))}
         {!groups.length && <div className="empty">No contacts match.</div>}
       </div>
       {edit && (
         <ContactDialog
-          title={`Edit contact · ${CLIENTS.find((c) => c.id === edit.clientId)?.name ?? ''}`}
+          title={`${edit.id ? 'Edit contact' : 'New contact'} · ${CLIENTS.find((c) => c.id === edit.clientId)?.name ?? ''}`}
           initial={edit}
           onClose={() => setEdit(null)}
-          onRemove={() => {
-            removeContact(edit.id);
-            toast(`${edit.name} removed`);
-            setEdit(null);
-          }}
+          onRemove={
+            edit.id
+              ? () => {
+                  removeContact(edit.id!);
+                  toast(`${edit.name} removed`);
+                  setEdit(null);
+                }
+              : undefined
+          }
           onSave={(p) => {
             saveContact(p);
-            toast('Contact saved');
+            toast(edit.id ? 'Contact saved' : `${p.name} added`);
             setEdit(null);
           }}
         />
