@@ -1,3 +1,4 @@
+import { bitrixCompanyUrl, odooPartnerUrl } from '../data/live';
 import { useState } from 'react';
 import { Money } from '../components/Money';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
@@ -262,7 +263,7 @@ export function ClientCard() {
   const own = addresses.filter((a) => a.clientId === c.id).sort((a, b) => Number(!!b.main) - Number(!!a.main));
   const bal = balanceOf(c.id);
   return (
-    <Shell crumbs={[{ label: 'Clients', to: '/customers/clients' }, { label: clientById(c.id).name }]} crmLink={`Open ${c.name} in Bitrix24`} contentClass="card-page">
+    <Shell crumbs={[{ label: 'Clients', to: '/customers/clients' }, { label: clientById(c.id).name }]} crmLink={`Open ${c.name} in Bitrix24`} crmHref={bitrixCompanyUrl(c.live?.bitrixId)} odooHref={odooPartnerUrl(c.id)} contentClass="card-page">
       <div className="card-header">
         <div className="card-title">
           <div className="card-name gap16">

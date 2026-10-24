@@ -1,3 +1,4 @@
+import { bitrixCompanyUrl, odooPartnerUrl } from '../data/live';
 import { useState } from 'react';
 import { Money } from '../components/Money';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
@@ -243,6 +244,7 @@ export function BalanceDetail() {
     <Shell
       crumbs={[{ label: 'Balances', to: '/customers/balances' }, { label: c.name }]}
       crmLink={`Open ${c.name} in Bitrix24`}
+      crmHref={bitrixCompanyUrl(c.live?.bitrixId)} odooHref={odooPartnerUrl(c.id)}
       contentClass="card-page"
     >
       <div className="card-header">

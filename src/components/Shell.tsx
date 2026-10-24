@@ -236,7 +236,7 @@ export interface Crumb {
   to?: string;
 }
 
-export function TopBar({ crumbs, chip = true, crmLink }: { crumbs: Crumb[]; chip?: boolean; crmLink?: string }) {
+export function TopBar({ crumbs, chip = true, crmLink, crmHref, odooHref }: { crumbs: Crumb[]; chip?: boolean; crmLink?: string; crmHref?: string; odooHref?: string }) {
   const toast = useToast();
   return (
     <header className="topbar">
@@ -257,12 +257,17 @@ export function TopBar({ crumbs, chip = true, crmLink }: { crumbs: Crumb[]; chip
           );
         })}
         {crmLink && (
-          <a className="crm-link" href="#" target="_blank" rel="noopener noreferrer" title={crmLink} aria-label={crmLink} onClick={(e) => {
-              // Placeholder: the real link opens the Bitrix24 card in a new tab.
+          <a className="crm-link" href={crmHref ?? '#'} target="_blank" rel="noopener noreferrer" title={crmLink} aria-label={crmLink} onClick={(e) => {
+              if (crmHref) return; // real Bitrix24 card opens in a new tab
               e.preventDefault();
-              toast(`${crmLink} — placeholder link in this prototype`);
+              toast(`${crmLink} — no Bitrix24 card linked yet`);
             }}>
             <img src={I.icBitrix24} width={22} height={22} alt="" />
+          </a>
+        )}
+        {odooHref && (
+          <a className="crm-link" href={odooHref} target="_blank" rel="noopener noreferrer" title="Open in Odoo" aria-label="Open in Odoo">
+            <img src={I.icOdoo} width={22} height={22} alt="" />
           </a>
         )}
       </div>
@@ -287,6 +292,8 @@ export function Shell({
   pinned = false,
   chip = true,
   crmLink,
+  crmHref,
+  odooHref,
   contentClass = '',
 }: {
   crumbs: Crumb[];
@@ -295,13 +302,17 @@ export function Shell({
   chip?: boolean;
   /** Tooltip for the Bitrix24 link icon after the breadcrumb (placeholder href). */
   crmLink?: string;
+  /** Real Bitrix24 URL for the link icon; without it the icon shows a notice. */
+  crmHref?: string;
+  /** Odoo record URL; adds an Odoo icon next to the Bitrix24 one. */
+  odooHref?: string;
   contentClass?: string;
 }) {
   return (
     <div className="app">
       <Sidebar pinned={pinned} />
       <main className="main">
-        <TopBar crumbs={crumbs} chip={chip} crmLink={crmLink} />
+        <TopBar crumbs={crumbs} chip={chip} crmLink={crmLink} crmHref={crmHref} odooHref={odooHref} />
         <div className={`content ${contentClass}`}>{children}</div>
       </main>
     </div>

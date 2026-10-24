@@ -116,3 +116,18 @@ export function liveUpdatedText() {
   const d = new Date(LIVE.generatedAt);
   return `Live data · sheets synced ${d.toLocaleString('en-GB', { timeZone: 'Asia/Dubai', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`;
 }
+
+export const BITRIX_URL = 'https://bitrix24.greeneration.ae';
+/** Bitrix24 company card for a real client, when its Bitrix ID is known. */
+export const bitrixCompanyUrl = (id?: string | number | null) => (id ? `${BITRIX_URL}/crm/company/details/${String(id).replace(/\.0$/, '')}/` : undefined);
+/** Bitrix24 deal card (deal number = order / invoice number). */
+export const bitrixDealUrl = (id?: string | number | null) => (id && /^\d+$/.test(String(id)) ? `${BITRIX_URL}/crm/deal/details/${id}/` : undefined);
+
+import ODOO_PARTNERS from './odooPartners.json';
+export const ODOO_URL = 'https://odoo.greeneration.ae';
+/** Odoo contact card for a real client: matched by company name (hash of the normalized name, the client id suffix). */
+export function odooPartnerUrl(clientId?: string) {
+  if (!clientId?.startsWith('c-')) return undefined;
+  const id = (ODOO_PARTNERS as Record<string, number>)[clientId.slice(clientId.lastIndexOf('-') + 1)];
+  return id ? `${ODOO_URL}/odoo/contacts/${id}` : undefined;
+}

@@ -1,3 +1,4 @@
+import { bitrixDealUrl } from '../data/live';
 import { useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { FileChip } from '../components/FileChip';
@@ -93,7 +94,17 @@ export function ClaimsJournal() {
               <div key={i} className="tr row">
                 <span className="n-date">{/^\d{4}-/.test(x.date) ? shortDate(x.date) : x.date || '—'}</span>
                 <span className="n-client ellipsis">{x.clientId ? <Link to={`/customers/clients/${x.clientId}`}>{x.client}</Link> : x.client || '—'}</span>
-                <span className="n-deal">{x.deal ? `#${x.deal}` : '—'}</span>
+                <span className="n-deal">
+                  {bitrixDealUrl(x.deal) ? (
+                    <a href={bitrixDealUrl(x.deal)} target="_blank" rel="noopener noreferrer" className="link-sort" onClick={(e) => e.stopPropagation()}>
+                      #{x.deal}
+                    </a>
+                  ) : x.deal ? (
+                    `#${x.deal}`
+                  ) : (
+                    '—'
+                  )}
+                </span>
                 <span className="n-text ellipsis" title={x.text}>
                   {x.text || '—'}
                 </span>
