@@ -1,12 +1,13 @@
-name: Deploy to GitHub Pages
+name: Close the public GitHub Pages copy
 
+# The portal moved to its own server with login (b2b.greeneration.ae).
+# This workflow only publishes a "moved" page with no data, so the old public URL shows nothing.
+# No data sync and no schedule here any more. To remove the site completely: Settings → Pages → Unpublish.
 on:
+  workflow_dispatch:
   push:
     branches: [main]
-  workflow_dispatch:
-  # Refresh live data from Greeneration's Google Sheets every hour (07:00–23:00 Dubai).
-  schedule:
-    - cron: '7 3-19 * * *'
+    paths: ['.github/workflows/pages.yml', 'deploy/pages-closed/**']
 
 permissions:
   contents: read
@@ -22,34 +23,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      # Keyless Google auth: GitHub OIDC → Workload Identity Federation → service account claude-sheets (read-only use).
-      - id: gauth
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: projects/231319851044/locations/global/workloadIdentityPools/github/providers/github
-          service_account: claude-sheets@vifine-personal.iam.gserviceaccount.com
-      # Geocoding cache (client locations) between runs. Never committed: the repo is public.
-      - uses: actions/cache@v4
-        with:
-          path: scripts/.geo-cache.json
-          key: geo-cache-${{ github.run_id }}
-          restore-keys: geo-cache-
-      - name: Sync live data from Google Sheets
-        run: |
-          pip install --quiet google-auth requests
-          python scripts/sync_sheets.py
-      - run: npm ci && npm run build
+      - run: mkdir site && cp deploy/pages-closed/index.html site/ && cp public/CNAME site/ && printf 'User-agent: *\nDisallow: /\n' > site/robots.txt
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: site
 
   deploy:
     needs: build
