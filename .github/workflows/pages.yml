@@ -29,12 +29,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      # Read-only sync of the sheets into public/live/live.json. Without the secret the site builds on demo data.
+      # Keyless Google auth: GitHub OIDC → Workload Identity Federation → service account claude-sheets (read-only use).
+      - id: gauth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/231319851044/locations/global/workloadIdentityPools/github/providers/github
+          service_account: claude-sheets@vifine-personal.iam.gserviceaccount.com
       - name: Sync live data from Google Sheets
-        env:
-          GOOGLE_SA_JSON: ${{ secrets.GOOGLE_SA_JSON }}
         run: |
-          if [ -z "$GOOGLE_SA_JSON" ]; then echo "GOOGLE_SA_JSON not set: building with demo data"; exit 0; fi
           pip install --quiet google-auth requests
           python scripts/sync_sheets.py
       - run: npm ci && npm run build
