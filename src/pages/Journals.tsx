@@ -1,4 +1,4 @@
-import { allDeals, BitrixOrdersTable } from '../components/BitrixDeals';
+import { allDeals, BitrixOrdersKanban, BitrixOrdersTable } from '../components/BitrixDeals';
 import { ClientFilterChip } from '../components/ClientActivity';
 import { LIVE } from '../data/live';
 import type React from 'react';
@@ -292,7 +292,7 @@ export function OrdersJournal() {
     <Shell crumbs={[{ label: 'Orders' }]}>
       <Toolbar<OrdTab>
         lead={
-          tab !== 'bitrix' && (
+          (
             <div className="seg view-seg" role="radiogroup" aria-label="Orders view">
               {(['list', 'kanban'] as const).map((v) => (
                 <button key={v} type="button" role="radio" aria-checked={view === v} className={view === v ? 'on' : ''} onClick={() => setView(v)}>
@@ -324,7 +324,7 @@ export function OrdersJournal() {
               <ClientFilterChip name={clientById(client)?.name ?? client} onClear={clearClient} />
             </div>
           )}
-          <BitrixOrdersTable q={q} clientId={client} />
+          {view === 'kanban' ? <BitrixOrdersKanban q={q} clientId={client} /> : <BitrixOrdersTable q={q} clientId={client} />}
         </>
       ) : (
       <>

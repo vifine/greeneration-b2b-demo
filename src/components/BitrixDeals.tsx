@@ -89,13 +89,94 @@ export function allDeals() {
 }
 
 /** Orders journal tab: real Bitrix24 orders (read-only). With `clientId`, all of that client's deals. */
+/** Bitrix24 orders matching the search and the client filter (shared by the list and the kanban). */
+function bitrixRows(q: string, clientId?: string | null) {
+  const n = q.trim().toLowerCase().replace(/^#/, '');
+  return allDeals()
+    .filter((x) => !clientId || x.clientId === clientId)
+    .filter(({ clientId: cid, d }) => !n || `${clientById(cid)?.name ?? ''} ${d[0]} ${d[7] ?? ''}`.toLowerCase().includes(n));
+}
+
+/** Bitrix24 stage order for the kanban columns; stages not listed here go last. */
+const BX_STAGE_ORDER = ['FINAL_INVOICE', 'UC_SO2AUI', 'NEW', 'UC_E182GD', 'UC_1MU1K8', 'WON', 'UC_UZKA34'];
+
+/** Bitrix24 orders as columns by Bitrix stage. Canceled and lost deals are left out. */
+export function BitrixOrdersKanban({ q, clientId }: { q: string; clientId?: string | null }) {
+  const { clientClass } = useStore();
+  const [open, setOpen] = useState<number | null>(null);
+  const rows = bitrixRows(q, clientId).filter((x) => isActiveDeal(x.d));
+  const rank = (c: string) => {
+    const i = BX_STAGE_ORDER.indexOf(c);
+    return i < 0 ? BX_STAGE_ORDER.length : i;
+  };
+  const stages = [...new Set(rows.map((x) => x.d[3]))].sort((a, b) => rank(a) - rank(b));
+  const toggle = (id: number) => setOpen(open === id ? null : id);
+  return (
+    <div className="kanban">
+      {stages.map((stage) => {
+        const col = rows.filter((x) => x.d[3] === stage);
+        const sum = col.reduce((s, x) => s + x.d[4], 0);
+        return (
+          <section key={stage} className="kanban-col" aria-label={stageName(stage)}>
+            <header className="kanban-head">
+              <Dot tone={stageTone(stage)} />
+              <b>{stageName(stage)}</b>
+              <span className="kanban-count">{col.length}</span>
+              <span className="kanban-sum">
+                <Money v={sum} />
+              </span>
+            </header>
+            {col.map(({ clientId: cid, d }) => (
+              <div
+                key={d[0]}
+                role="button"
+                tabIndex={0}
+                aria-expanded={open === d[0]}
+                className={`kcard bx-kcard ${open === d[0] ? 'is-open' : ''}`}
+                onClick={() => toggle(d[0])}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggle(d[0]);
+                  }
+                }}
+              >
+                <span className="kcard-top">
+                  <span className="kcard-name ellipsis">{clientById(cid)?.name ?? cid}</span>
+                  <ClassBadge k={clientClass(cid)} />
+                </span>
+                <span className="kcard-meta">
+                  <DealLink id={d[0]} /> · created {day(d[1])}
+                  {d[7] ? ` · LPO ${d[7]}` : ''}
+                </span>
+                <span className="kcard-meta">
+                  Delivery {day(d[2])}
+                  {d[6] ? ` · ${d[6]}` : ''}
+                </span>
+                <span className="kcard-foot">
+                  <span>
+                    <PayCell d={d} />
+                  </span>
+                  <span>
+                    <Money v={d[4]} bold />
+                  </span>
+                </span>
+                {open === d[0] && <DealProducts d={d} />}
+              </div>
+            ))}
+            {!col.length && <div className="kcard-empty">No orders</div>}
+          </section>
+        );
+      })}
+      {!stages.length && <div className="empty">No Bitrix24 orders match.</div>}
+    </div>
+  );
+}
+
 export function BitrixOrdersTable({ q, clientId }: { q: string; clientId?: string | null }) {
   const { clientClass } = useStore();
   const [open, setOpen] = useState<number | null>(null);
-  const n = q.trim().toLowerCase().replace(/^#/, '');
-  const rows = allDeals()
-    .filter((x) => !clientId || x.clientId === clientId)
-    .filter(({ clientId: cid, d }) => !n || `${clientById(cid)?.name ?? ''} ${d[0]} ${d[7] ?? ''}`.toLowerCase().includes(n));
+  const rows = bitrixRows(q, clientId);
   const shown = clientId ? rows : rows.slice(0, 300);
   const canceled = rows.filter((x) => !isActiveDeal(x.d)).length;
   return (
