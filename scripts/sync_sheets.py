@@ -424,13 +424,16 @@ def bitrix_sync():
     hook = (os.environ.get("BITRIX_WEBHOOK") or "").strip()
     if not hook:
         try:
-            v = values(KEYS_SHEET, "A1:A1")
-            hook = str(v[0][0]).strip() if v and v[0] else ""
+            # The first cell in A1:E10 that looks like a Bitrix24 REST webhook (A1 preferred, but not required).
+            v = values(KEYS_SHEET, "A1:E10")
+            cells = [str(c).strip() for row in v for c in row]
+            hook = next((c for c in cells if "/rest/" in c and c.startswith("https://")), "")
+            hook = re.sub(r"/[a-z_.]+\.json$", "/", hook)
         except Exception as e:  # sheet missing or not shared
             print("Bitrix24: keys sheet not readable, skipped:", type(e).__name__)
             return
     if not re.match(r"^https://[^/]+/rest/\d+/[A-Za-z0-9]+/?$", hook):
-        print("Bitrix24: no webhook in the keys sheet (A1), skipped")
+        print("Bitrix24: no webhook in the keys sheet (A1:E10), skipped")
         return
     hook = hook.rstrip("/") + "/"
     import time
