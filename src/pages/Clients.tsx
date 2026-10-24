@@ -3,7 +3,7 @@ import testBitrix from '../data/testBitrix.json';
 import { bitrixCompanyUrl, odooPartnerUrl } from '../data/live';
 import { useState } from 'react';
 import { Money } from '../components/Money';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AddressCard, AddressDialog, emptyAddress } from '../components/Addresses';
 import { ContactCard, ContactDialog, emptyContact } from '../components/Contacts';
 import type { Contact } from '../data/contacts';
@@ -21,6 +21,7 @@ import { LIVE } from '../data/live';
 import { MiniMap } from '../components/MapLazy';
 import { BitrixDetails } from '../components/BitrixDetails';
 import { clientPoint } from '../data/geo';
+import { ClientsMapView } from './MapPage';
 import { ClassBadge, CLASS_COLOR, CLASS_HINT, CLASS_ORDER, classFilterOptions, isBlockedClass, matchesClass, NO_COLOR, tint, ZoneDot, zoneColor } from '../components/ClassBadge';
 
 function ClassRow({ sheet, value, onChange, demo }: { sheet?: string; value?: string; onChange: (v: string | null) => void; demo?: boolean }) {
@@ -107,6 +108,30 @@ export function ClientsJournal() {
   const [zone, setZone] = useState('all');
   const [minF, setMinF] = useState('all');
   const [groupBy, setGroupBy] = useState<'none' | 'class' | 'zone'>('none');
+  // List | Map view: kept in the URL (?view=map), the last choice is remembered per viewer.
+  const [params, setParams] = useSearchParams();
+  const stored = (() => {
+    try {
+      return localStorage.getItem('gr-clients-view');
+    } catch {
+      return null;
+    }
+  })();
+  const view: 'list' | 'map' = (params.get('view') ?? stored) === 'map' ? 'map' : 'list';
+  const noCoords = params.get('nocoords') === '1';
+  const setView = (v: 'list' | 'map', extra?: { nocoords?: boolean }) => {
+    try {
+      localStorage.setItem('gr-clients-view', v);
+    } catch {
+      /* private mode */
+    }
+    const next = new URLSearchParams(params);
+    next.set('view', v);
+    if (extra?.nocoords) next.set('nocoords', '1');
+    else next.delete('nocoords');
+    setParams(next, { replace: true });
+  };
+  const [colorBy, setColorBy] = useState<'zone' | 'class'>('zone');
   // Groups start collapsed; `expanded` holds the ones the user opened.
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const toggleGroup = (k: string) => setExpanded((x) => ({ ...x, [k]: !x[k] }));
@@ -124,13 +149,23 @@ export function ClientsJournal() {
     a === '—' ? 1 : b === '—' ? -1 : (zoneTier[a] ?? 99) - (zoneTier[b] ?? 99) || a.localeCompare(b); // demo zones after real ones
   const zoneOptions = [...new Set(rows.map((r) => zoneLabel(r)))].sort(zoneSort);
   const minOptions = [...new Set(rows.map(({ c, main }) => minOf(c.id, main?.emirate)))].sort((a, b) => a - b);
-  const visible = rows.filter(({ c, own, main }) => {
+  const matching = rows.filter(({ c, own, main }) => {
     if (zone !== 'all' && zoneLabel({ c, main }) !== zone) return false;
     if (minF !== 'all' && String(minOf(c.id, main?.emirate)) !== minF) return false;
     if (!matchesClass(cls, clientClass(c.id))) return false;
     const n = q.trim().toLowerCase();
-    return !n || c.name.toLowerCase().includes(n) || own.some((a) => `${a.name} ${a.area} ${a.line}`.toLowerCase().includes(n));
+    return (
+      !n ||
+      c.name.toLowerCase().includes(n) ||
+      own.some((a) => `${a.name} ${a.area} ${a.line}`.toLowerCase().includes(n)) ||
+      `${c.live?.bx?.address ?? ''} ${c.live?.bx?.driver ?? ''}`.toLowerCase().includes(n)
+    );
   });
+  // Delivery point for the map; clients without one are reachable from the map via "N without coordinates".
+  const withPoint = matching.map((r) => ({ r, point: clientPoint(r.c, r.main) }));
+  const missingCount = withPoint.filter((x) => !x.point).length;
+  const onMapCount = matching.length - missingCount;
+  const visible = noCoords ? withPoint.filter((x) => !x.point).map((x) => x.r) : matching;
   type Row = (typeof visible)[number];
   const renderRow = ({ c, own, main }: Row) => (
           <button type="button" key={c.id} className={`tr row ${(c.live ? isBlockedClass(clientClass(c.id)) : c.creditHold) ? 'stripe-danger' : ''}`} onClick={() => navigate(`/customers/clients/${c.id}`)}>
@@ -185,8 +220,35 @@ export function ClientsJournal() {
     return keys.map((k) => ({ label: k, rows: m.get(k)! }));
   })();
   return (
-    <Shell crumbs={[{ label: 'Clients' }]} contentClass="sticky-journal">
-      <div className="journal-toolbar">
+    <Shell crumbs={[{ label: 'Clients' }]} contentClass={`sticky-journal ${view === 'map' ? 'map-page' : ''}`}>
+      <div className="journal-toolbar clients-toolbar">
+        <p className="map-count">
+          {view === 'map' ? (
+            <>
+              <b>{onMapCount}</b> of {matching.length} clients on the map
+              {missingCount > 0 && (
+                <>
+                  {' · '}
+                  <button type="button" className="link-sort" onClick={() => setView('list', { nocoords: true })}>
+                    {missingCount} without coordinates
+                  </button>
+                </>
+              )}
+            </>
+          ) : noCoords ? (
+            <>
+              <b>{visible.length}</b> of {matching.length} clients without coordinates
+              {' · '}
+              <button type="button" className="link-sort" onClick={() => setView('list')}>
+                Show all
+              </button>
+            </>
+          ) : (
+            <>
+              <b>{visible.length}</b> of {rows.length} clients
+            </>
+          )}
+        </p>
         <div className="grow" />
         <div className="journal-filters">
           {LIVE && (
@@ -206,7 +268,23 @@ export function ClientsJournal() {
             onChange={setMinF}
             options={[{ value: 'all', label: 'Any min order' }, ...minOptions.map((m) => ({ value: String(m), label: `Min AED ${fmt(m)}` }))]}
           />
-          <SelectBox
+          <div className="seg seg-sm" role="radiogroup" aria-label="View">
+            {(['list', 'map'] as const).map((v) => (
+              <button key={v} type="button" role="radio" aria-checked={view === v} className={view === v ? 'on' : ''} onClick={() => setView(v)}>
+                {v === 'list' ? 'List' : 'Map'}
+              </button>
+            ))}
+          </div>
+          {view === 'map' && (
+            <div className="seg seg-sm" role="radiogroup" aria-label="Colour markers by">
+              {(['zone', 'class'] as const).map((v) => (
+                <button key={v} type="button" role="radio" aria-checked={colorBy === v} className={colorBy === v ? 'on' : ''} onClick={() => setColorBy(v)}>
+                  {v === 'zone' ? 'Colour by zone' : 'Colour by class'}
+                </button>
+              ))}
+            </div>
+          )}
+          {view === 'list' && <SelectBox
             value={groupBy}
             onChange={(v) => {
               setGroupBy(v as 'none' | 'class' | 'zone');
@@ -217,8 +295,8 @@ export function ClientsJournal() {
               { value: 'class', label: 'Group by class' },
               { value: 'zone', label: 'Group by zone' },
             ]}
-          />
-          {groupBy !== 'none' && (
+          />}
+          {view === 'list' && groupBy !== 'none' && (
             <button
               type="button"
               className="link-sort"
@@ -233,6 +311,17 @@ export function ClientsJournal() {
           <SearchBox value={q} onChange={setQ} placeholder="Search client, area, address" className="journal-search" />
         </div>
       </div>
+      {view === 'map' ? (
+        <ClientsMapView
+          rows={withPoint.map(({ r, point }) => ({ c: r.c, main: r.main, zoneLabel: zoneLabel(r), point }))}
+          colorBy={colorBy}
+          cls={cls}
+          zone={zone}
+          setCls={setCls}
+          setZone={setZone}
+          zoneSort={zoneSort}
+        />
+      ) : (
       <div className="table journal clients-table">
         <div className="tr th">
           <span className="c-client">Client</span>
@@ -272,6 +361,7 @@ export function ClientsJournal() {
         )}
         {!visible.length && <div className="empty">No clients match.</div>}
       </div>
+      )}
     </Shell>
   );
 }

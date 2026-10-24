@@ -43,7 +43,6 @@ function useSections(): NavSection[] {
       to: '/customers/balances',
       subs: [
         { label: 'Clients', to: '/customers/clients' },
-        { label: 'Map', to: '/customers/map' },
         { label: 'Contacts', to: '/customers/contacts' },
         { label: 'Balances', to: '/customers/balances' },
       ],

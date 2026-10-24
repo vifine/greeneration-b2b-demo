@@ -3257,3 +3257,7 @@ a.pt-tile:hover { border-color: var(--forest); }
 .bx-comment p { margin: 2px 0 0; white-space: pre-wrap; font-size: 14px; }
 .bx-arch { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border, #e5e5e0); }
 @media (max-width: 720px) { .bx-details .bx-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Clients journal: List | Map toolbar wraps instead of overflowing */
+.clients-toolbar { flex-wrap: wrap; row-gap: 8px; }
+.clients-toolbar .journal-filters { flex-wrap: wrap; row-gap: 8px; justify-content: flex-end; }
