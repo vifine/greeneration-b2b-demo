@@ -12,14 +12,17 @@ import { useEffect } from 'react';
  * Card pages (`.card-page`), Home and the map are left as they are.
  */
 
-const KEY = 'gr-cols:';
+const KEY = 'gr-cols2:'; // v2: cell padding changed, old saved widths no longer fit
 const MIN = 60;
 let seq = 0;
 
 type Widths = Record<number, number>;
 
+/** Header cells without the handle layer. */
+const headCells = (head: HTMLElement) => (Array.from(head.children) as HTMLElement[]).filter((c) => !c.classList.contains('rz-layer'));
+
 function tableKey(table: HTMLElement, head: HTMLElement) {
-  const labels = Array.from(head.children)
+  const labels = headCells(head)
     .map((c) => (c.textContent ?? '').trim())
     .join('|');
   return `${location.hash.split('?')[0]}|${table.className}|${labels}`;
@@ -56,8 +59,30 @@ function apply(table: HTMLElement, w: Widths) {
         `.table[data-rz="${id}"] .tr > :nth-child(${Number(i) + 1}) { flex: 0 0 ${px}px !important; width: ${px}px !important; max-width: ${px}px !important; min-width: 0 !important; }`,
     )
     .join('\n');
-  table.classList.toggle('rz-sized', Object.keys(w).length > 0);
+  // If no column is left flexible, the last one takes the rest of the width (rows always reach the right edge).
+  // With a flexible column still there, nothing else grows: two growing columns would split the space by content
+  // and rows would stop lining up with the header.
+  const head = table.querySelector<HTMLElement>(':scope > .tr.th');
+  const cells = head ? headCells(head) : [];
+  const flexible = cells.some((c, i) => i < cells.length - 1 && !(i in w) && parseFloat(getComputedStyle(c).flexGrow) > 0);
+  if (Object.keys(w).length && !flexible) table.setAttribute('data-rz-fill', '');
+  else table.removeAttribute('data-rz-fill');
+  if (head) place(head);
 }
+
+/** Put each handle exactly on the boundary between header cells (the layer spans the whole header row). */
+function place(head: HTMLElement) {
+  const layer = head.querySelector<HTMLElement>(':scope > .rz-layer');
+  if (!layer) return;
+  const cells = headCells(head);
+  Array.from(layer.children).forEach((h, i) => {
+    const c = cells[i];
+    if (c) (h as HTMLElement).style.left = `${c.offsetLeft + c.offsetWidth - 6}px`;
+  });
+}
+
+const observed = new WeakSet<HTMLElement>();
+const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver((es) => es.forEach((e) => place(e.target as HTMLElement))) : null;
 
 function attach(table: HTMLElement, head: HTMLElement) {
   if (!table.dataset.rz) table.dataset.rz = String(++seq);
@@ -66,9 +91,17 @@ function attach(table: HTMLElement, head: HTMLElement) {
     table.dataset.rzKey = key;
     apply(table, load(key));
   }
-  const cells = Array.from(head.children) as HTMLElement[];
-  cells.forEach((cell, i) => {
-    if (i === cells.length - 1 || cell.querySelector(':scope > .col-resize')) return;
+  const cells = headCells(head);
+  let layer = head.querySelector<HTMLElement>(':scope > .rz-layer');
+  if (layer && layer.children.length === cells.length - 1) {
+    place(head);
+    return;
+  }
+  layer?.remove();
+  layer = document.createElement('span');
+  layer.className = 'rz-layer';
+  layer.setAttribute('aria-hidden', 'false');
+  cells.slice(0, -1).forEach((cell, i) => {
     const h = document.createElement('span');
     h.className = 'col-resize';
     h.setAttribute('role', 'separator');
@@ -106,8 +139,14 @@ function attach(table: HTMLElement, head: HTMLElement) {
       window.addEventListener('pointermove', move);
       window.addEventListener('pointerup', up);
     });
-    cell.appendChild(h);
+    layer!.appendChild(h);
   });
+  head.appendChild(layer);
+  if (ro && !observed.has(head)) {
+    observed.add(head);
+    ro.observe(head);
+  }
+  place(head);
 }
 
 const HAS_DATA = '.table, .kanban';
@@ -132,7 +171,7 @@ function scan() {
   pinLayout();
   document.querySelectorAll<HTMLElement>('.table:not(.users-table)').forEach((table) => {
     const head = table.querySelector<HTMLElement>(':scope > .tr.th');
-    if (head && head.children.length > 1) attach(table, head);
+    if (head && headCells(head).length > 1) attach(table, head);
   });
 }
 
@@ -147,7 +186,9 @@ export function TableResizer() {
     const obs = new MutationObserver(schedule);
     obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
     window.addEventListener('hashchange', schedule);
+    window.addEventListener('resize', schedule);
     return () => {
+      window.removeEventListener('resize', schedule);
       obs.disconnect();
       cancelAnimationFrame(frame);
       window.removeEventListener('hashchange', schedule);

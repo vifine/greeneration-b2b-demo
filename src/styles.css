@@ -3451,6 +3451,7 @@ a.pt-tile:hover { border-color: var(--forest); }
 .users-table .tr { display: grid; grid-template-columns: var(--cols); align-items: center; column-gap: 0; min-width: max-content; }
 .users-table .tr.th { user-select: none; }
 .users-table .tr > span { min-width: 0; padding-right: 16px; }
+.users-table .tr > span + span { padding-left: 10px; }
 .users-table .tr.row { min-height: 60px; padding-top: 0; }
 .users-table .th > span { position: relative; height: 100%; display: flex; align-items: center; }
 /* Drag handle at the right edge of each header cell: one visible bar, darker on hover. */
@@ -3479,9 +3480,16 @@ a.pt-tile:hover { border-color: var(--forest); }
 .msg-note { margin-top: 12px; font-size: 13px; color: var(--text-2); line-height: 18px; }
 
 /* Column resize handles on every table (components/TableResizer.tsx; the Users table has its own). */
-.table > .tr.th > * { position: relative; }
 .table > .tr.th { user-select: none; }
-.table > .tr.th > * > .col-resize { right: 0; z-index: 2; }
+.rz-layer { position: absolute; inset: 0; pointer-events: none; z-index: 3; padding: 0 !important; }
+.rz-layer > .col-resize { pointer-events: auto; top: 8px; bottom: 8px; right: auto; }
+/* Space on both sides of every column boundary, so text never touches a divider (header and rows alike). */
+.table[data-rz] .tr > * { box-sizing: border-box; }
+.table[data-rz] .tr > *:not(.rz-layer) { padding-right: 12px !important; }
+.table[data-rz] .tr:not(.th) > :last-child, .table[data-rz] .tr.th > :nth-last-child(2) { padding-right: 0 !important; }
+.table[data-rz] .tr > * + *:not(.rz-layer) { padding-left: 12px !important; }
+/* After a resize the last column takes the rest of the width, so rows always reach the right edge. */
+.table[data-rz-fill] .tr:not(.th) > :last-child, .table[data-rz-fill] .tr.th > :nth-last-child(2) { flex-grow: 1 !important; max-width: none !important; }
 body.rz-dragging, body.rz-dragging * { cursor: col-resize !important; user-select: none !important; }
 
 /* Merged orders kanban: test orders of the portal are tagged; long columns are paged. */
