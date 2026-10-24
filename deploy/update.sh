@@ -11,7 +11,8 @@ KEEP=5
 
 cd "$APP_DIR"
 echo "update: pulling"
-git pull --ff-only -q
+git fetch -q origin main
+git merge --ff-only -q origin/main
 
 echo "update: data sync (read-only)"
 set -a
