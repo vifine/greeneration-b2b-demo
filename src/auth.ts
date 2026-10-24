@@ -58,6 +58,12 @@ export function currentUser(): CurrentUser {
   };
 }
 
+/** Display name for a portal account email (note authors): Bitrix24 profile, else the fallback name. */
+export function personName(email: string): string {
+  const e = email.toLowerCase();
+  return LIVE?.users?.[e]?.name || PEOPLE[e] || e.split('@')[0];
+}
+
 /** Server build: ask the auth service who is signed in. Resolves true when there is a valid session. */
 export async function checkSession(): Promise<boolean> {
   if (!SERVER_AUTH) return isLoggedIn();

@@ -15,6 +15,8 @@ import { balanceOf } from '../data/balances';
 import { CLIENTS, clientById } from '../data/clients';
 import { fmt } from '../data/lines';
 import { useStore } from '../store';
+import { SERVER_AUTH } from '../auth';
+import { SharedNotesCard } from '../components/SharedNotes';
 import { LIVE } from '../data/live';
 import { MiniMap } from '../components/MapLazy';
 import { BitrixDetails } from '../components/BitrixDetails';
@@ -61,7 +63,12 @@ function specialFor(clientId: string) {
   return out;
 }
 
+/** Server build: notes shared by the team (notes service). Demo build: kept in this browser. */
 function NotesCard({ clientId }: { clientId: string }) {
+  return SERVER_AUTH ? <SharedNotesCard clientId={clientId} /> : <LocalNotesCard clientId={clientId} />;
+}
+
+function LocalNotesCard({ clientId }: { clientId: string }) {
   const { clientNotes, setClientNote } = useStore();
   const saved = clientNotes[clientId];
   const [draft, setDraft] = useState(saved?.text ?? '');
