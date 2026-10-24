@@ -753,11 +753,11 @@ button.tr:hover,
   font-weight: 800;
 }
 .input {
-  height: 44px;
+  height: 40px;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0 12px;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 24px;
   outline: 0;
   background: var(--white);
@@ -2525,27 +2525,6 @@ button.kpi {
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
-.fsel-menu button {
-  display: block;
-  width: 100%;
-  text-align: left;
-  font: inherit;
-  white-space: nowrap;
-  padding: 8px 12px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-}
-.fsel-menu button:hover {
-  background: var(--row-hover);
-}
-.fsel-menu button.selected {
-  font-weight: 700;
-  color: var(--forest);
-  background: var(--table-head);
-}
 .journal-toolbar .sync-note {
   margin-left: -16px;
 }
@@ -3562,3 +3541,43 @@ body.rz-dragging, body.rz-dragging * { cursor: col-resize !important; user-selec
 .fact-tag { display: inline-block; padding: 0 8px; border-radius: 10px; font-size: 13px; font-weight: 600; background: var(--soft-light); color: var(--text); }
 .fact-tag.is-good { background: var(--soft-primary); color: var(--forest); }
 .fact-tag.is-bad { background: #fbe9e7; color: var(--danger, #b42318); }
+
+/* ---------- form controls: one style for the whole site ----------
+   Text fields, search and dropdowns are 40px (md) or 32px (sm, inside tables and cards); same border, radius, focus. */
+.input:hover, .searchbox:hover, .dd-btn:hover:not(:disabled) { border-color: #c9c9bf; }
+.input:focus, .searchbox:focus-within, .dd.open .dd-btn, .dd-btn:focus-visible { border-color: var(--forest); box-shadow: 0 0 0 3px rgba(42, 77, 54, 0.12); outline: none; }
+textarea.input { height: auto; padding: 10px 12px; }
+.dd { position: relative; min-width: 0; width: 100%; }
+.field .dd, .pt-addr-sel { width: 100%; }
+.journal-filters .dd { width: auto; min-width: 150px; }
+.dd-btn { display: flex; align-items: center; gap: 8px; width: 100%; height: 40px; padding: 0 10px 0 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--white); font: inherit; font-size: 15px; color: var(--text); text-align: left; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
+.dd-btn:disabled { opacity: 0.6; cursor: default; }
+.dd-sm .dd-btn { height: 32px; font-size: 14px; padding: 0 8px 0 10px; border-radius: 6px; }
+.dd-val { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-val.is-empty { color: var(--text-2); }
+.dd-chev { flex: none; transition: transform 0.15s; opacity: 0.8; }
+.dd.open .dd-chev { transform: rotate(180deg); }
+.dd-btn .cls-badge { cursor: inherit; flex: none; width: 24px; min-width: 24px; height: 24px; font-size: 12px; }
+.dd-pop { position: absolute; z-index: 40; top: calc(100% + 4px); left: 0; min-width: 100%; max-height: 320px; overflow-y: auto; margin: 0; padding: 6px; list-style: none; background: var(--white); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14); box-sizing: border-box; }
+.dd-pop.is-up { top: auto; bottom: calc(100% + 4px); }
+.fsel-menu.dd-pop { left: auto; right: 0; }
+.dd-opt { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 6px; background: transparent; font: inherit; font-size: 14px; line-height: 20px; color: var(--text); text-align: left; white-space: nowrap; cursor: pointer; box-sizing: border-box; }
+.dd-opt:hover, .dd-opt:focus-visible { background: var(--soft-light); outline: none; }
+.dd-opt.on { font-weight: 600; color: var(--forest); }
+.dd-opt .cls-badge { cursor: inherit; flex: none; width: 24px; min-width: 24px; height: 24px; font-size: 12px; }
+.dd-opt-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.dd-opt-text small { font-size: 12px; font-weight: 400; color: var(--text-2); }
+.dd-tick { margin-left: auto; flex: none; }
+.dd-check input { width: 16px; height: 16px; margin: 0; accent-color: var(--forest); flex: none; }
+.dd-foot { display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px; padding: 6px 2px 2px; border-top: 1px solid var(--border); position: sticky; bottom: -6px; background: var(--white); }
+.class-picker { max-width: 420px; }
+.bx-edit { width: 100%; max-width: 280px; }
+/* Toolbar filters ("Delivery: upcoming") look like the other dropdowns: boxed, 40px */
+.fsel .filter-btn { height: 40px; padding: 0 10px 0 12px; border: 1px solid var(--border); background: var(--white); font: inherit; font-size: 15px; color: var(--text); transition: border-color 0.15s, box-shadow 0.15s; }
+.fsel .filter-btn:hover { background: var(--white); border-color: #c9c9bf; }
+.fsel.open .filter-btn { background: var(--white); border-color: var(--forest); box-shadow: 0 0 0 3px rgba(42, 77, 54, 0.12); }
+.fsel.changed .filter-btn { background: var(--soft-light); border-color: var(--forest); }
+.fsel .filter-btn img { transition: transform 0.15s; }
+.fsel.open .filter-btn img { transform: rotate(180deg); }
+.fsel-menu.dd-pop { left: 0; right: auto; }
+.journal-filters { gap: 8px; }

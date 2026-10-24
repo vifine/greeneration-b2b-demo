@@ -3,7 +3,7 @@ import { clientDealSummary } from '../components/BitrixDeals';
 import { shortDate } from '../data/live';
 import testBitrix from '../data/testBitrix.json';
 import { bitrixCompanyUrl, odooPartnerUrl } from '../data/live';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Money } from '../components/Money';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AddressCard, AddressDialog, emptyAddress } from '../components/Addresses';
@@ -11,7 +11,7 @@ import { ContactCard, ContactDialog, emptyContact } from '../components/Contacts
 import type { Contact } from '../data/contacts';
 import * as I from '../components/icons';
 import { Shell } from '../components/Shell';
-import { Btn, Dot, SearchBox, SelectBox, useToast } from '../components/ui';
+import { Btn, Dot, Dropdown, SearchBox, SelectBox, useToast } from '../components/ui';
 import { DELIVERY_DAYS_BY_EMIRATE, MIN_ORDER, ZONES, type Address } from '../data/addresses';
 import { balanceOf } from '../data/balances';
 import { CLIENTS, clientById } from '../data/clients';
@@ -132,56 +132,20 @@ function ClientFacts({ c, ownCount }: { c: CardClient; ownCount: number }) {
   );
 }
 
-/** Credit class picker with a legend: the colour badge and what the class means. */
+/** Credit class picker with a legend: the colour badge and what the class means (the shared dropdown). */
 function ClassPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: MouseEvent | KeyboardEvent) => {
-      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', close);
-    document.addEventListener('keydown', close);
-    return () => {
-      document.removeEventListener('mousedown', close);
-      document.removeEventListener('keydown', close);
-    };
-  }, [open]);
-  const keys = ['', ...CLASS_ORDER, 'T'];
-  const row = (k: string) => (
-    <>
-      {k ? <ClassBadge k={k} /> : <span className="cls-badge cls-none">—</span>}
-      <span className="cp-text">{k ? CLASS_HINT[k] : 'No class'}</span>
-    </>
-  );
   return (
-    <div className="class-picker" ref={ref}>
-      <button type="button" className="selectbox cp-btn" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        {row(value)}
-        <img src={I.icChevronDown} width={16} height={16} alt="" />
-      </button>
-      {open && (
-        <ul className="cp-pop" role="listbox" aria-label="Credit class">
-          {keys.map((k) => (
-            <li key={k || 'none'}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={k === value}
-                className={k === value ? 'on' : ''}
-                onClick={() => {
-                  setOpen(false);
-                  if (k !== value) onChange(k);
-                }}
-              >
-                {row(k)}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <Dropdown
+      className="class-picker"
+      value={value}
+      ariaLabel="Credit class"
+      onChange={onChange}
+      options={['', ...CLASS_ORDER, 'T'].map((k) => ({
+        value: k,
+        label: k ? CLASS_HINT[k] : 'No class',
+        icon: k ? <ClassBadge k={k} /> : <span className="cls-badge cls-none">—</span>,
+      }))}
+    />
   );
 }
 

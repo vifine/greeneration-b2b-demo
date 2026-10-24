@@ -6,7 +6,7 @@ import { FileChip } from '../components/FileChip';
 import { Money } from '../components/Money';
 import { ReplyDialog, type ReplyTemplate } from '../components/ReplyDialog';
 import { Shell } from '../components/Shell';
-import { Btn, Dot, SearchBox, Stepper, Tabs, useToast } from '../components/ui';
+import { Btn, Dot, Dropdown, SearchBox, Stepper, Tabs, useToast } from '../components/ui';
 import { lineImage } from '../data/catalog';
 import { CLAIM_KIND, CLAIM_SLA_MIN, claimValue, type Claim, type ClaimDecision } from '../data/claims';
 import { clientById } from '../data/clients';
@@ -362,11 +362,17 @@ export function ClaimCard() {
           {c.kind === 'quality' && (
             <label className="field decision-field">
               <span className="kv-k">Returned goods (production head)</span>
-              <select className="input" disabled={closed} value={c.returned ?? ''} onChange={(e) => set((x) => ({ ...x, returned: (e.target.value || undefined) as Claim['returned'] }))}>
-                <option value="">Not returned yet</option>
-                <option value="write_off">Write off · quality</option>
-                <option value="stock">Back to stock</option>
-              </select>
+              <Dropdown
+                disabled={closed}
+                value={c.returned ?? ''}
+                ariaLabel="Returned goods"
+                onChange={(v) => set((x) => ({ ...x, returned: (v || undefined) as Claim['returned'] }))}
+                options={[
+                  { value: '', label: 'Not returned yet' },
+                  { value: 'write_off', label: 'Write off · quality' },
+                  { value: 'stock', label: 'Back to stock' },
+                ]}
+              />
             </label>
           )}
           {closed && c.closedNote && <p className="decision-done">{c.closedNote}</p>}

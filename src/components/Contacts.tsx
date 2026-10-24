@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ROLES, type Contact, type ContactRole } from '../data/contacts';
 import * as I from './icons';
-import { Btn } from './ui';
+import { Btn, Dropdown } from './ui';
 
 type Draft = Omit<Contact, 'id'> & { id?: string };
 
@@ -106,11 +106,7 @@ export function ContactDialog({
           </label>
           <label className="field">
             <span className="field-k">Role</span>
-            <select className="input" value={c.role} onChange={(e) => set('role', e.target.value as ContactRole)}>
-              {ROLES.map((r) => (
-                <option key={r}>{r}</option>
-              ))}
-            </select>
+            <Dropdown value={c.role} onChange={(v) => set('role', v as ContactRole)} options={ROLES.map((r) => ({ value: r, label: r }))} ariaLabel="Role" />
           </label>
           <label className="field">
             <span className="field-k">Phone · WhatsApp</span>

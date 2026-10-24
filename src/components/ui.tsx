@@ -110,27 +110,208 @@ export function Stepper({ value, onChange, disabled }: { value: number; onChange
   );
 }
 
+/* ---------- dropdowns: one style for every list on the site ---------- */
+
+export interface DropdownOption {
+  value: string;
+  label: string;
+  /** Shown before the label (e.g. a class badge). */
+  icon?: ReactNode;
+  /** Second line under the label. */
+  hint?: string;
+}
+
+/** Closes on outside click / Escape; opens upwards when there is no room below. */
+function usePopover() {
+  const [open, setOpen] = useState(false);
+  const [up, setUp] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+  const toggle = () => {
+    if (!open && ref.current) {
+      const r = ref.current.getBoundingClientRect();
+      setUp(window.innerHeight - r.bottom < 300 && r.top > window.innerHeight - r.bottom);
+    }
+    setOpen((v) => !v);
+  };
+  return { open, setOpen, up, ref, toggle };
+}
+
+/** Single-choice dropdown (custom list, same look everywhere). size: "md" for forms and toolbars, "sm" inside tables and cards. */
+export function Dropdown({
+  value,
+  onChange,
+  options,
+  placeholder = '—',
+  size = 'md',
+  disabled,
+  className = '',
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: DropdownOption[];
+  placeholder?: string;
+  size?: 'md' | 'sm';
+  disabled?: boolean;
+  className?: string;
+  ariaLabel?: string;
+}) {
+  const { open, setOpen, up, ref, toggle } = usePopover();
+  const cur = options.find((o) => o.value === value);
+  const listRef = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    if (open) (listRef.current?.querySelector('[aria-selected="true"]') as HTMLElement | null)?.focus();
+  }, [open]);
+  const move = (e: React.KeyboardEvent) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    const items = Array.from(listRef.current?.querySelectorAll<HTMLButtonElement>('button') ?? []);
+    const i = items.indexOf(document.activeElement as HTMLButtonElement);
+    items[Math.max(0, Math.min(items.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]?.focus();
+  };
+  return (
+    <div className={`dd dd-${size} ${open ? 'open' : ''} ${className}`} ref={ref}>
+      <button
+        type="button"
+        className="dd-btn"
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel}
+        onClick={toggle}
+        onKeyDown={(e) => {
+          if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !open) {
+            e.preventDefault();
+            toggle();
+          }
+        }}
+      >
+        {cur?.icon}
+        <span className={`dd-val ${cur ? '' : 'is-empty'}`}>{cur ? cur.label : placeholder}</span>
+        <img src={I.icChevronDown} width={16} height={16} alt="" className="dd-chev" />
+      </button>
+      {open && (
+        <ul className={`dd-pop ${up ? 'is-up' : ''}`} role="listbox" aria-label={ariaLabel} ref={listRef} onKeyDown={move}>
+          {options.map((o) => (
+            <li key={o.value}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={o.value === value}
+                className={`dd-opt ${o.value === value ? 'on' : ''}`}
+                onClick={() => {
+                  setOpen(false);
+                  if (o.value !== value) onChange(o.value);
+                }}
+              >
+                {o.icon}
+                <span className="dd-opt-text">
+                  {o.label}
+                  {o.hint && <small>{o.hint}</small>}
+                </span>
+                {o.value === value && <img src={I.icTick} width={16} height={16} alt="" className="dd-tick" />}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Several choices with checkboxes, applied with Save. */
+export function MultiDropdown({
+  value,
+  onChange,
+  options,
+  size = 'md',
+  disabled,
+  ariaLabel,
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+  options: DropdownOption[];
+  size?: 'md' | 'sm';
+  disabled?: boolean;
+  ariaLabel?: string;
+}) {
+  const { open, setOpen, up, ref, toggle } = usePopover();
+  const [draft, setDraft] = useState<string[]>(value);
+  const label = (v: string) => options.find((o) => o.value === v)?.label ?? v;
+  return (
+    <div className={`dd dd-${size} ${open ? 'open' : ''}`} ref={ref}>
+      <button
+        type="button"
+        className="dd-btn"
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel}
+        onClick={() => {
+          setDraft(value);
+          toggle();
+        }}
+      >
+        <span className={`dd-val ${value.length ? '' : 'is-empty'}`}>{value.length ? value.map(label).join(', ') : '—'}</span>
+        <img src={I.icChevronDown} width={16} height={16} alt="" className="dd-chev" />
+      </button>
+      {open && (
+        <div className={`dd-pop ${up ? 'is-up' : ''}`} role="listbox" aria-multiselectable="true" aria-label={ariaLabel}>
+          {options.map((o) => (
+            <label key={o.value} className="dd-opt dd-check">
+              <input
+                type="checkbox"
+                checked={draft.includes(o.value)}
+                onChange={(e) => setDraft((x) => (e.target.checked ? [...x, o.value] : x.filter((v) => v !== o.value)))}
+              />
+              <span className="dd-opt-text">{o.label}</span>
+            </label>
+          ))}
+          <div className="dd-foot">
+            <button type="button" className="btn btn-sm btn-ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-primary"
+              onClick={() => {
+                setOpen(false);
+                onChange(draft);
+              }}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Form / toolbar list (kept for existing callers): the shared Dropdown. */
 export function SelectBox({
   value,
   onChange,
   options,
+  ariaLabel,
 }: {
   value: string;
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
+  ariaLabel?: string;
 }) {
-  return (
-    <div className="selectbox">
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-      <img src={I.icChevronDown} width={16} height={16} alt="" />
-    </div>
-  );
+  return <Dropdown value={value} onChange={onChange} options={options} ariaLabel={ariaLabel} />;
 }
 
 /* ---------- toast ---------- */
@@ -157,7 +338,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
 export const useToast = () => useContext(ToastCtx);
 
-/** Toolbar filter that looks like "Label: value ⌄" and opens a native select. */
+/** Toolbar filter that looks like "Label: value ⌄" and opens the shared dropdown list. */
 export function FilterSelect<T extends string>({
   value,
   onChange,
@@ -189,14 +370,14 @@ export function FilterSelect<T extends string>({
         <img src={I.icChevronDown} width={14} height={14} alt="" />
       </button>
       {open && (
-        <ul className="fsel-menu" role="listbox" aria-label={prefix || 'Filter'}>
+        <ul className="fsel-menu dd-pop" role="listbox" aria-label={prefix || 'Filter'}>
           {options.map((o) => (
             <li key={o.value}>
               <button
                 type="button"
                 role="option"
                 aria-selected={o.value === value}
-                className={o.value === value ? 'selected' : ''}
+                className={`dd-opt ${o.value === value ? 'selected on' : ''}`}
                 onClick={() => {
                   onChange(o.value);
                   setOpen(false);

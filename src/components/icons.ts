@@ -46,3 +46,4 @@ export { default as icEyeOff } from '../assets/icons/eye-off.svg';
 export { default as icCopy } from '../assets/icons/copy.svg';
 export { default as icRefresh } from '../assets/icons/refresh.svg';
 export { default as icSend } from '../assets/icons/send.svg';
+export { default as icTick } from '../assets/icons/tick.svg';

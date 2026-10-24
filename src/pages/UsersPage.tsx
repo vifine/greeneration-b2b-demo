@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent } from 'react';
 import { Shell } from '../components/Shell';
 import * as I from '../components/icons';
-import { Btn, useToast } from '../components/ui';
+import { Btn, Dropdown, useToast } from '../components/ui';
 import { LIVE, shortDate, type LiveBxUser } from '../data/live';
 import { loadUsers, newPassword, previewMessage, sendInvite, setRole, type Account, type Role, type UsersState } from '../users';
 
@@ -293,16 +293,13 @@ export function UsersPage() {
               <span className="u-email ellipsis">{u.email ? <a href={`mailto:${u.email}`}>{u.email}</a> : <span className="muted">—</span>}</span>
               <span className="u-role">
                 {admin && a && !self && a.role !== 'owner' ? (
-                  <span className="selectbox selectbox-sm">
-                    <select value={a.role} aria-label={`Role of ${u.name}`} onChange={(e) => changeRole(id, e.target.value as Role)}>
-                      {PICKABLE.map((r) => (
-                        <option key={r} value={r}>
-                          {ROLE_LABEL[r]}
-                        </option>
-                      ))}
-                    </select>
-                    <img src={I.icChevronDown} width={16} height={16} alt="" />
-                  </span>
+                  <Dropdown
+                    size="sm"
+                    value={a.role}
+                    ariaLabel={`Role of ${u.name}`}
+                    onChange={(v) => changeRole(id, v as Role)}
+                    options={PICKABLE.map((r) => ({ value: r, label: ROLE_LABEL[r] }))}
+                  />
                 ) : (
                   <span className={a?.role === 'owner' ? 'u-owner' : undefined} title={a?.role === 'owner' ? 'Owner: admin rights, cannot be changed or locked out' : self ? 'You cannot change your own role' : undefined}>
                     {a ? ROLE_LABEL[a.role] : '—'}

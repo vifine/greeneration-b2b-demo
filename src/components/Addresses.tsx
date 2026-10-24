@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { DELIVERY_DAYS_BY_EMIRATE, ZONES, zoneFor, type Address, type Emirate, type ZoneId } from '../data/addresses';
 import * as I from './icons';
-import { Btn } from './ui';
+import { Btn, Dropdown } from './ui';
 
 const EMIRATES: Emirate[] = ['Dubai', 'Sharjah', 'Abu Dhabi'];
 type Draft = Omit<Address, 'id'> & { id?: string };
@@ -56,18 +56,15 @@ export function AddressDialog({
           </label>
           <label className="field">
             <span className="field-k">Emirate</span>
-            <select
-              className="input"
+            <Dropdown
               value={a.emirate}
-              onChange={(e) => {
-                const em = e.target.value as Emirate;
+              ariaLabel="Emirate"
+              onChange={(v) => {
+                const em = v as Emirate;
                 setA((x) => ({ ...x, emirate: em, zone: zoneFor(em, x.area) }));
               }}
-            >
-              {EMIRATES.map((x) => (
-                <option key={x}>{x}</option>
-              ))}
-            </select>
+              options={EMIRATES.map((x) => ({ value: x, label: x }))}
+            />
             <small className="field-hint">Delivery days: {DELIVERY_DAYS_BY_EMIRATE[a.emirate]}</small>
           </label>
           <label className="field">
@@ -86,13 +83,12 @@ export function AddressDialog({
           {!hideZone && (
           <label className="field span2">
             <span className="field-k">Delivery zone</span>
-            <select className="input" value={a.zone} onChange={(e) => set('zone', e.target.value as ZoneId)}>
-              {(Object.keys(ZONES) as ZoneId[]).map((z) => (
-                <option key={z} value={z}>
-                  {ZONES[z].name} · slot {ZONES[z].slot}
-                </option>
-              ))}
-            </select>
+            <Dropdown
+              value={a.zone}
+              ariaLabel="Zone"
+              onChange={(v) => set('zone', v as ZoneId)}
+              options={(Object.keys(ZONES) as ZoneId[]).map((z) => ({ value: z, label: `${ZONES[z].name} · slot ${ZONES[z].slot}` }))}
+            />
             <small className="field-hint">Suggested from the area · decides the route and the delivery slot</small>
           </label>
           )}

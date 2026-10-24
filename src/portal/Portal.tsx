@@ -4,7 +4,7 @@ import { AddressCard, AddressDialog, emptyAddress } from '../components/Addresse
 import { CatalogList, useCatalogSelection } from '../components/Catalog';
 import { FileChip } from '../components/FileChip';
 import { Money } from '../components/Money';
-import { Btn, Dot, Stepper, useToast } from '../components/ui';
+import { Btn, Dot, Dropdown, Stepper, useToast } from '../components/ui';
 import { deliveryDays, DELIVERY_DAYS_BY_EMIRATE, minOrderFor, pickAddress, ZONES, type Address } from '../data/addresses';
 import { balanceOf, STATUS_TONE } from '../data/balances';
 import { lineImage } from '../data/catalog';
@@ -244,26 +244,22 @@ export function PortalOrder() {
       <div className="pt-cart">
         <label className="field">
           <span className="pt-k">Deliver to</span>
-          <select className="input" value={addr?.id ?? ''} onChange={(e) => (e.target.value === '__new' ? setNewAddr(true) : setAddrId(e.target.value))}>
-            {own.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name} · {a.area}, {a.emirate}
-              </option>
-            ))}
-            <option value="__new">+ New address…</option>
-          </select>
+          <Dropdown
+            value={addr?.id ?? ''}
+            ariaLabel="Delivery address"
+            onChange={(v) => (v === '__new' ? setNewAddr(true) : setAddrId(v))}
+            options={[...own.map((a) => ({ value: a.id, label: `${a.name} · ${a.area}, ${a.emirate}` })), { value: '__new', label: '+ New address…' }]}
+          />
         </label>
         <label className="field">
           <span className="pt-k">Delivery day</span>
-          <select className="input" value={dayOk ? day : ''} onChange={(e) => setDay(e.target.value)}>
-            {!dayOk && <option value="">Choose a day</option>}
-            {days.map((d, i) => (
-              <option key={d} value={d}>
-                {d}
-                {i === 0 ? ' · nearest' : ''}
-              </option>
-            ))}
-          </select>
+          <Dropdown
+            value={dayOk ? day : ''}
+            placeholder="Choose a day"
+            ariaLabel="Delivery day"
+            onChange={setDay}
+            options={days.map((d, i) => ({ value: d, label: `${d}${i === 0 ? ' · nearest' : ''}` }))}
+          />
           <small className="pt-hint">
             {addr ? `${addr.emirate}: ${DELIVERY_DAYS_BY_EMIRATE[addr.emirate]} · slot ${ZONES[addr.zone].slot}` : ''}
             {day === days[0] && addr?.emirate === 'Dubai' ? ` · ${cutoffText(now).split(' · ')[1] ?? ''}` : ''}
@@ -434,26 +430,21 @@ export function PortalOrderDetail() {
             <div className="kv-cell">
               <span className="kv-k">Address</span>
             {canEdit ? (
-              <select
-                className="input pt-addr-sel"
-                aria-label="Delivery address"
+              <Dropdown
+                className="pt-addr-sel"
+                ariaLabel="Delivery address"
                 value={addr?.id ?? ''}
-                onChange={(e) => {
-                  if (e.target.value === '__new') return setNewAddr(true);
-                  const a = addresses.find((x) => x.id === e.target.value);
-                  updateOrder(o.id, (x) => ({ ...x, addressId: e.target.value, delivery: { ...x.delivery, window: a ? ZONES[a.zone].slot : x.delivery.window } }));
+                onChange={(v) => {
+                  if (v === '__new') return setNewAddr(true);
+                  const a = addresses.find((x) => x.id === v);
+                  updateOrder(o.id, (x) => ({ ...x, addressId: v, delivery: { ...x.delivery, window: a ? ZONES[a.zone].slot : x.delivery.window } }));
                   toast(`Delivery address changed to ${a?.name ?? ''}`);
                 }}
-              >
-                {addresses
-                  .filter((a) => a.clientId === c.id)
-                  .map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} · {a.area}
-                    </option>
-                  ))}
-                <option value="__new">+ New address…</option>
-              </select>
+                options={[
+                  ...addresses.filter((a) => a.clientId === c.id).map((a) => ({ value: a.id, label: `${a.name} · ${a.area}` })),
+                  { value: '__new', label: '+ New address…' },
+                ]}
+              />
             ) : (
               <span className="kv-v">{addr ? `${addr.name}, ${addr.area}` : ''}</span>
             )}
@@ -740,13 +731,7 @@ function ClaimForm({ clientId, orders, nextId, onCancel, onSubmit }: { clientId:
       <div className="pt-form-row">
         <label className="field">
           <span className="pt-k">Order</span>
-          <select className="input" value={orderId} onChange={(e) => setOrderId(e.target.value)}>
-            {orders.map((x) => (
-              <option key={x.id} value={x.id}>
-                #{x.id} · {x.delivery.day}
-              </option>
-            ))}
-          </select>
+          <Dropdown value={orderId} ariaLabel="Order" onChange={setOrderId} options={orders.map((x) => ({ value: x.id, label: `#${x.id} · ${x.delivery.day}` }))} />
         </label>
         <div className="field">
           <span className="pt-k">What happened</span>
