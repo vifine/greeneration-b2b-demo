@@ -100,6 +100,9 @@ export interface LiveReplacement {
 /** [last, lastDate, min, fixed, new, newFrom, takesNow]; trailing empty values are dropped. */
 export type LivePriceRow = [number?, string?, number?, number?, number?, string?, number?];
 
+/** [id, created, delivery, stage code, amount, payment status, delivery status, LPO, product rows [name, qty, price excl. VAT]?] */
+export type LiveDeal = [number, string | null, string | null, string, number, string | null, string | null, string | null, [string, number, number][]?];
+
 export interface LiveData {
   generatedAt: string;
   sources: { stockDates: string[]; arTab: string; paymentsTab?: string; inventoryAt?: string };
@@ -112,6 +115,10 @@ export interface LiveData {
   special?: Record<string, LiveSpecial[]>;
   shortages?: Record<string, LiveShortage[]>;
   creditNotes?: LiveCreditNote[];
+  /** Order deals (Bitrix24 "Orders" pipeline, last 90 days) per client id. */
+  deals?: Record<string, LiveDeal[]>;
+  /** Stage code (without the "C1:" prefix) → stage name. */
+  dealStages?: Record<string, string>;
 }
 
 export let LIVE: LiveData | null = null;

@@ -439,7 +439,9 @@ def bitrix_sync():
     import time
 
     def call(method, params=None):
-        assert method.endswith((".list", ".get", ".fields")), method  # read-only guard
+        assert method.endswith((".list", ".get", ".fields")) or method == "batch", method  # read-only guard
+        if method == "batch":  # every batched command must be a read method too
+            assert all(c.split("?")[0].endswith((".list", ".get")) for c in (params or {}).get("cmd", {}).values()), "batch"
         for attempt in range(3):
             try:
                 r = requests.post(hook + method + ".json", json=params or {}, timeout=60)
@@ -543,6 +545,77 @@ def bitrix_sync():
         c["bx"] = {k: v for k, v in bx.items() if v not in (None, "", [], False)}
     bitrix_stats = f"companies {len(companies)}, contacts {len(contacts)}, matched to portal clients {matched}, zones {len(zones)}"
 
+    # ---------- Orders: deals in the "Orders" pipeline, last 90 days ----------
+    try:
+        deals_sync(call, all_pages, {str(c["bitrixId"]).replace(".0", ""): c for c in clients.values() if c.get("bitrixId")})
+    except Exception as e:  # deals are optional; keep the companies data
+        print("Bitrix24: deals skipped:", type(e).__name__, str(e)[:120].replace(hook, "<webhook>"))
+
+
+deals_out, deal_stages, deals_stats = {}, {}, "skipped"
+
+
+def deals_sync(call, all_pages, by_bitrix):
+    """Read-only: order deals of the last 90 days for portal clients, product rows for the latest ones."""
+    global deals_stats
+    from urllib.parse import urlencode
+
+    cats = call("crm.dealcategory.list", {}).get("result", [])
+    order_cat = next((c["ID"] for c in cats if str(c.get("NAME", "")).strip().lower() == "orders"), None)
+    if order_cat is None:
+        print("Bitrix24: no 'Orders' pipeline found, deals skipped")
+        return
+    for s in call("crm.dealcategory.stage.list", {"id": order_cat}).get("result", []):
+        deal_stages[s["STATUS_ID"].split(":")[-1]] = s["NAME"]
+    enums = {}
+    for f in call("crm.deal.userfield.list", {}).get("result", []):
+        if f.get("LIST"):
+            enums[f["FIELD_NAME"]] = {str(i["ID"]): i["VALUE"] for i in f["LIST"]}
+    since = (datetime.date.today() - datetime.timedelta(days=90)).isoformat()
+    sel = ["ID", "STAGE_ID", "COMPANY_ID", "DATE_CREATE", "OPPORTUNITY", "CURRENCY_ID", "UF_CRM_1698261656",
+           "UF_CRM_PAYMENT_STATUS", "UF_CRM_DELIVERY_STATUS", "UF_CRM_LPO"]
+    deals = all_pages("crm.deal.list", {"filter": {"CATEGORY_ID": order_cat, ">=DATE_CREATE": since}, "select": sel, "order": {"ID": "DESC"}})
+
+    def d10(v):
+        return str(v)[:10] if v else None
+
+    def num0(v):
+        try:
+            return round(float(v), 2)
+        except (TypeError, ValueError):
+            return 0
+
+    def lab(field, v):
+        return enums.get(field, {}).get(str(v)) if v else None
+
+    per_client = {}
+    for d in deals:
+        c = by_bitrix.get(str(d.get("COMPANY_ID") or ""))
+        if not c:
+            continue
+        per_client.setdefault(c["id"], []).append([
+            int(d["ID"]), d10(d.get("DATE_CREATE")), d10(d.get("UF_CRM_1698261656")),
+            str(d.get("STAGE_ID") or "").split(":")[-1], num0(d.get("OPPORTUNITY")),
+            lab("UF_CRM_PAYMENT_STATUS", d.get("UF_CRM_PAYMENT_STATUS")), lab("UF_CRM_DELIVERY_STATUS", d.get("UF_CRM_DELIVERY_STATUS")),
+            (d.get("UF_CRM_LPO") or "").strip() or None,
+        ])
+
+    # Product rows for the latest 8 deals per client, 50 per batch request (read-only commands only).
+    want = [row for rows in per_client.values() for row in rows[:8]]
+    rows_by_deal = {}
+    for i in range(0, len(want), 50):
+        cmd = {f"d{r[0]}": "crm.deal.productrows.get?" + urlencode({"id": r[0]}) for r in want[i:i + 50]}
+        res = call("batch", {"halt": 0, "cmd": cmd}).get("result", {}).get("result", {}) or {}
+        for k, items in res.items():
+            rows_by_deal[int(k[1:])] = [[(it.get("PRODUCT_NAME") or "").strip(), num0(it.get("QUANTITY")), num0(it.get("PRICE_EXCLUSIVE") or it.get("PRICE"))]
+                                        for it in (items or [])]
+    for rows in per_client.values():
+        for r in rows[:8]:
+            if rows_by_deal.get(r[0]):
+                r.append(rows_by_deal[r[0]])
+    deals_out.update(per_client)
+    deals_stats = f"deals {sum(len(v) for v in per_client.values())} of {len(deals)} for {len(per_client)} clients, product rows for {len(rows_by_deal)}"
+
 
 try:
     bitrix_sync()
@@ -583,6 +656,9 @@ out = {
     "shortages": shortages,
     "shortageFields": ["date", "order", "item", "sku", "ordered", "removed", "reason"],
     "creditNotes": credit_notes,
+    "deals": deals_out,
+    "dealStages": deal_stages,
+    "dealFields": ["id", "created", "delivery", "stage", "amount", "payment", "deliveryStatus", "lpo", "rows"],
 }
 dest = os.path.join(os.path.dirname(__file__), "..", "public", "live", "live.json")
 os.makedirs(os.path.dirname(dest), exist_ok=True)
@@ -590,6 +666,7 @@ with open(dest, "w") as f:
     json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
 print("rules", rules)
 print("Bitrix24:", bitrix_stats)
+print("Bitrix24 orders:", deals_stats)
 print(f"contacts matched {co_matched}, special req SKUs {len(special)} (with client {sum(1 for v in special.values() for e in v if e['clients'])}), "
       f"shortage rows {oos_matched} for {len(shortages)} clients, credit notes {len(credit_notes)} "
       f"({sum(1 for x in credit_notes if x['clientId'])} matched), inventory {inventory_at}")

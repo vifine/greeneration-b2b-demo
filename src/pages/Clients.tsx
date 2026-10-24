@@ -1,3 +1,4 @@
+import { ClientDeals } from '../components/BitrixDeals';
 import { bitrixCompanyUrl, odooPartnerUrl } from '../data/live';
 import { useState } from 'react';
 import { Money } from '../components/Money';
@@ -392,6 +393,8 @@ export function ClientCard() {
           </div>
         </>
       )}
+
+      {c.live && <ClientDeals clientId={c.id} />}
 
       {(LIVE?.shortages?.[c.id]?.length ?? 0) > 0 && (
         <>

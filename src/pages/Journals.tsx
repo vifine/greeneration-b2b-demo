@@ -1,3 +1,5 @@
+import { allDeals, BitrixOrdersTable } from '../components/BitrixDeals';
+import { LIVE } from '../data/live';
 import type React from 'react';
 import { Money } from '../components/Money';
 import { useState } from 'react';
@@ -186,9 +188,9 @@ export function RequestsJournal() {
 
 /* ---------------- Orders ---------------- */
 
-const ORD_TABS = ['all', 'new', 'preorder', 'confirmed'] as const;
+const ORD_TABS = ['all', 'new', 'preorder', 'confirmed', 'bitrix'] as const;
 type OrdTab = (typeof ORD_TABS)[number];
-const STAGE_OF: Record<Exclude<OrdTab, 'all'>, OrderStage> = { new: 'New request', preorder: 'Preorder', confirmed: 'Confirmed' };
+const STAGE_OF: Record<Exclude<OrdTab, 'all' | 'bitrix'>, OrderStage> = { new: 'New request', preorder: 'Preorder', confirmed: 'Confirmed' };
 const STAGE_TONE: Record<OrderStage, Tone> = { 'New request': 'info', Preorder: 'warning', Confirmed: 'success' };
 
 export function OrdersJournal() {
@@ -198,9 +200,9 @@ export function OrdersJournal() {
   const [dday, setDday] = useState<DeliveryFilter>('upcoming');
   const [payF, setPayF] = useState<PaymentFilter>('all');
   const rows = orders.map((o) => ({ o, client: clientById(o.clientId), pay: paymentView(o, orderCurrentTotal(o), orderOriginalTotal(o)) }));
-  const count = (t: OrdTab) => (t === 'all' ? rows.length : rows.filter((x) => x.o.stage === STAGE_OF[t]).length);
+  const count = (t: Exclude<OrdTab, 'bitrix'>) => (t === 'all' ? rows.length : rows.filter((x) => x.o.stage === STAGE_OF[t]).length);
   const visible = rows
-    .filter((x) => (ids ? ids.includes(x.o.id) : tab === 'all' || x.o.stage === STAGE_OF[tab]))
+    .filter((x) => (ids ? ids.includes(x.o.id) : tab === 'all' || (tab !== 'bitrix' && x.o.stage === STAGE_OF[tab])))
     .filter((x) => ids || (matchesDelivery(x.o.delivery.day, dday) && matchesPaymentFilter(x.pay, payF)))
     .filter((x) => matches(q, x.client.name, x.o.id, ...x.o.lines.map((l) => l.product)));
 
@@ -212,15 +214,20 @@ export function OrdersJournal() {
           { key: 'new', label: 'New request', count: count('new') },
           { key: 'preorder', label: 'Preorder', count: count('preorder') },
           { key: 'confirmed', label: 'Confirmed', count: count('confirmed') },
+          ...(LIVE?.deals ? [{ key: 'bitrix' as const, label: 'Bitrix24 orders', count: allDeals().length }] : []),
         ]}
         tab={tab}
         setTab={setTab}
         q={q}
         setQ={setQ}
       >
-        <FilterSelect value={dday} onChange={setDday} options={DELIVERY_FILTERS('upcoming')} />
-        <FilterSelect value={payF} onChange={setPayF} options={PAYMENT_FILTERS} />
+        {tab !== 'bitrix' && <FilterSelect value={dday} onChange={setDday} options={DELIVERY_FILTERS('upcoming')} />}
+        {tab !== 'bitrix' && <FilterSelect value={payF} onChange={setPayF} options={PAYMENT_FILTERS} />}
       </Toolbar>
+      {tab === 'bitrix' && !ids ? (
+        <BitrixOrdersTable q={q} />
+      ) : (
+      <>
       {ids && <FromHome n={visible.length} from={from} onClear={clearIds} />}
       <div className="table journal ord-table">
         <div className="tr th">
@@ -280,6 +287,8 @@ export function OrdersJournal() {
         })}
         {!visible.length && <div className="empty">No orders match.</div>}
       </div>
+      </>
+      )}
     </Shell>
   );
 }
