@@ -3233,6 +3233,9 @@ a.pt-tile:hover { border-color: var(--forest); }
 .up-id strong { color: var(--heading); font-weight: 800; }
 .up-id span { color: var(--text-2); font-size: 13px; overflow-wrap: anywhere; }
 .up-id .up-email { font-size: 12px; }
+.up-id .up-role { align-self: flex-start; margin-top: 6px; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 700; line-height: 18px; }
+.up-id .up-role-admin { background: var(--forest); color: #fff; }
+.up-id .up-role-user { background: var(--soft-primary); color: var(--forest); }
 .up-item {
   display: flex;
   align-items: center;
@@ -3441,23 +3444,32 @@ a.pt-tile:hover { border-color: var(--forest); }
 .bx-facts dd { margin: 4px 0 0; font-size: 14px; color: var(--text); }
 
 /* ---------- Users page ---------- */
-.users-table .tr.row { min-height: 60px; align-items: center; padding-top: 0; }
-.users-table .u-name { flex: 2 1 0; display: flex; align-items: center; gap: 12px; min-width: 0; }
+/* Columns are a grid; widths come from the page (--cols) and can be dragged in the header. */
+.users-table { overflow-x: auto; }
+.users-table .tr { display: grid; grid-template-columns: var(--cols); align-items: center; column-gap: 0; min-width: max-content; }
+.users-table .tr.th { user-select: none; }
+.users-table .tr > span { min-width: 0; padding-right: 16px; }
+.users-table .tr.row { min-height: 60px; padding-top: 0; }
+.users-table .th > span { position: relative; height: 100%; display: flex; align-items: center; }
+.col-resize { position: absolute; top: 8px; bottom: 8px; right: 6px; width: 9px; cursor: col-resize; touch-action: none; display: flex; justify-content: center; }
+.col-resize::after { content: ''; width: 2px; border-radius: 1px; background: var(--border); transition: background 0.15s; }
+.col-resize:hover::after, .col-resize.dragging::after { background: var(--forest); }
+.users-table.resizing, .users-table.resizing * { cursor: col-resize !important; user-select: none; }
+.users-table .u-name { display: flex; align-items: center; gap: 12px; }
 .users-table .u-name .two { min-width: 0; }
-.users-table .u-email { flex: 2 1 0; padding-right: 12px; }
-.users-table .u-role { flex: 0 0 136px; }
-.users-table .u-orders { flex: 0 0 72px; text-align: right; padding-right: 20px; }
-.users-table .u-access { flex: 0 0 136px; white-space: nowrap; }
-.users-table .u-pwc { flex: 0 0 232px; }
-.users-table .u-act { flex: 0 0 150px; display: flex; justify-content: flex-end; }
+.users-table .u-act { display: flex; justify-content: flex-end; padding-right: 0 !important; }
 .u-ava { width: 36px; height: 36px; border-radius: 18px; flex: none; font-size: 13px; }
-.selectbox-sm { height: 32px; width: 128px; }
+.selectbox-sm { height: 32px; width: 128px; max-width: 100%; }
 .selectbox-sm select { font-size: 14px; padding: 0 30px 0 10px; }
 .selectbox-sm img { right: 8px; }
-.u-pw { display: inline-flex; align-items: center; gap: 2px; }
-.u-pw-text { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; letter-spacing: 0.02em; min-width: 132px; margin-right: 4px; }
+.u-pw { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; }
+.u-pw-text { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; letter-spacing: 0.02em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 4px; }
+.u-pw-note { font-size: 13px; font-family: inherit; letter-spacing: 0; }
 .u-pw .icon-btn { width: 28px; height: 28px; flex: 0 0 28px; }
 .u-pw .icon-btn:hover:not(:disabled) { background: var(--soft-light); }
 .u-pw .icon-btn:disabled { opacity: 0.4; cursor: default; }
-.u-invite { gap: 6px; white-space: nowrap; }
-.u-invite.btn-primary img { filter: brightness(0) invert(1); }
+.u-send { gap: 6px; white-space: nowrap; }
+.modal.modal-msg { width: 560px; height: auto; max-height: calc(100vh - 80px); }
+.msg-preview { white-space: pre-wrap; font-size: 15px; line-height: 22px; background: var(--soft-light); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; overflow-wrap: anywhere; }
+.msg-preview .bx-chat-from { display: block; font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
+.msg-note { margin-top: 12px; font-size: 13px; color: var(--text-2); line-height: 18px; }

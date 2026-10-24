@@ -10,9 +10,11 @@ Caddy sends /auth/* here and asks /auth/check (forward_auth) before serving /liv
   GET  /auth/check   -> 200 | 401     (for Caddy forward_auth)
 
 Users and bcrypt hashes come from two htpasswd files, re-read when they change:
-  PORTAL_HTPASSWD          (root-owned, make-users.sh): the admins, cannot be changed from the portal
-  PORTAL_ACCOUNTS_HTPASSWD (written by the notes service from the Users page: invited Bitrix24 users)
+  PORTAL_HTPASSWD          (root-owned, make-users.sh): the first admins
+  PORTAL_ACCOUNTS_HTPASSWD (written by the notes service from the Users page); wins over the first file
+Roles live in the notes DB (table accounts, see deploy/notes/portal_users.py): role "none" = no sign-in at all.
 A successful sign-in is recorded in the notes DB (table logins) so the Users page can show it.
+  GET /auth/me -> {"email", "role"}   (role: admin | user)
 Session cookie = base64(email|expiry) + HMAC-SHA256 with PORTAL_SESSION_SECRET (from the env file).
 """
 import base64
@@ -76,7 +78,7 @@ def mtime(path):
 
 
 def users():
-    """email (lower case) -> bcrypt hash bytes from both files; the admin file wins on a clash."""
+    """email (lower case) -> bcrypt hash; the portal-managed file wins; e-mails with role "none" are left out."""
     global _users, _users_mtime
     key = (mtime(HTPASSWD), mtime(ACCOUNTS_HTPASSWD))
     if key[0] is None and key[1] is None:
@@ -84,14 +86,44 @@ def users():
     with _lock:
         if key != _users_mtime:
             fresh = {}
-            for path, m in ((ACCOUNTS_HTPASSWD, key[1]), (HTPASSWD, key[0])):
+            for path, m in ((HTPASSWD, key[0]), (ACCOUNTS_HTPASSWD, key[1])):
                 if m is not None:
                     try:
                         fresh.update(read_htpasswd(path))
                     except OSError:
                         pass
             _users, _users_mtime = fresh, key
-        return _users
+        merged = _users
+    blocked = blocked_emails()
+    return {e: h for e, h in merged.items() if e not in blocked} if blocked else merged
+
+
+def _db_rows(sql, args=()):
+    """Read-only query on the notes DB; [] when it or the table does not exist yet."""
+    try:
+        con = sqlite3.connect(f"file:{NOTES_DB}?mode=ro", uri=True, timeout=5)
+        try:
+            return con.execute(sql, args).fetchall()
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return []
+
+
+def blocked_emails():
+    none = {r[0] for r in _db_rows("SELECT email FROM accounts WHERE role='none' AND email IS NOT NULL")}
+    if not none:
+        return none
+    ok = {r[0] for r in _db_rows("SELECT email FROM accounts WHERE role!='none' AND email IS NOT NULL")}
+    return none - ok
+
+
+def role_of(email):
+    """admin | user | none. Without a row in the notes DB: the first admins are admins, everyone else a user."""
+    r = _db_rows("SELECT role FROM accounts WHERE email=? ORDER BY active DESC LIMIT 1", (email,))
+    if r:
+        return r[0][0]
+    return "admin" if email in admin_emails() else "user"
 
 
 def admin_emails():
@@ -202,7 +234,7 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/auth/me", "/auth/check"):
             email = self.session_email()
             if email:
-                return self.send(200, {"email": email} if path == "/auth/me" else {"ok": True})
+                return self.send(200, {"email": email, "role": role_of(email)} if path == "/auth/me" else {"ok": True})
             return self.send(401, {"error": "not signed in"})
         if path == "/auth/healthz":
             return self.send(200, {"ok": True})

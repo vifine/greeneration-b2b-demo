@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { isLoggedIn } from './auth';
+import { isAdmin, isLoggedIn } from './auth';
 import { ToastProvider } from './components/ui';
 import { BalanceDetail, Balances } from './pages/Balances';
 import { ClientCard, ClientsJournal } from './pages/Clients';
@@ -25,6 +25,12 @@ function Private({ children }: { children: ReactNode }) {
   return isLoggedIn() ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
+/** Users and Audit log: admins only (others go to the home page). */
+function AdminOnly({ children }: { children: ReactNode }) {
+  if (!isLoggedIn()) return <Navigate to="/login" replace />;
+  return isAdmin() ? <>{children}</> : <Navigate to="/" replace />;
+}
+
 const SOON: [string, string, string?][] = [
   ['/crm/leads', 'Leads'],
   ['/references/prices', 'References', 'Prices'],
@@ -45,13 +51,13 @@ export default function App() {
             <Route path="/crm/orders" element={<Private><OrdersJournal /></Private>} />
             <Route path="/crm/orders/:id" element={<Private><OrderCard /></Private>} />
             <Route path="/crm/orders/bx/:id" element={<Private><BitrixOrderCard /></Private>} />
-            <Route path="/users" element={<Private><UsersPage /></Private>} />
+            <Route path="/users" element={<AdminOnly><UsersPage /></AdminOnly>} />
             <Route path="/crm/issues" element={<Navigate to="/crm/requests" replace />} />
             <Route path="/crm/claims" element={<Private><ClaimsJournal /></Private>} />
             <Route path="/crm/claims/:id" element={<Private><ClaimCard /></Private>} />
             <Route path="/customers" element={<Navigate to="/customers/balances" replace />} />
             <Route path="/stock/check" element={<Private><StockCheck /></Private>} />
-            <Route path="/audit" element={<Private><AuditLog /></Private>} />
+            <Route path="/audit" element={<AdminOnly><AuditLog /></AdminOnly>} />
             <Route path="/customers/clients" element={<Private><ClientsJournal /></Private>} />
             <Route path="/customers/clients/:id" element={<Private><ClientCard /></Private>} />
             <Route path="/customers/map" element={<Navigate to="/customers/clients?view=map" replace />} />

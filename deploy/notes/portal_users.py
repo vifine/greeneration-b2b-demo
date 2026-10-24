@@ -3,25 +3,27 @@
 Who is listed: live.json "bxUsers" (built by scripts/sync_sheets.py from Bitrix24). E-mails come from there, never
 from the browser.
 
-Roles
-  admin  - may see passwords, change roles and send invitations. The people in the root-owned htpasswd file
-           (deploy/make-users.sh) are fixed admins: they cannot be changed or locked out from the portal.
-  user   - may sign in once invited.
-  none   - no access (the login is removed at once; open sessions stop working).
+Roles (any user's role can be changed by an admin)
+  admin  - sees Users and Audit log, passwords, changes roles, sends access.
+  user   - may sign in.
+  none   - no access: the login service refuses the e-mail at once (open sessions stop working too).
+The people in the root-owned htpasswd file (deploy/make-users.sh) start as admins with their server password.
+Guards: nobody can change their own role, and the last admin cannot lose the role.
 
 Passwords
-  Generated here (secrets), unique, 14 characters. The plain text is kept only until the person first signs in
-  (then wiped, an admin can generate a new one), so admins can hand it over. Only admins ever receive it.
-  The login becomes active when the invitation is sent: its bcrypt hash goes to PORTAL_ACCOUNTS_HTPASSWD.
+  Generated here (secrets), unique, 14 characters, and kept as a *pending* password: the current login (if any) keeps
+  working until an admin presses Send. Send applies the password (bcrypt hash -> PORTAL_ACCOUNTS_HTPASSWD, which the
+  login service prefers over the admin file) and posts it in a Bitrix24 chat message. The plain text is wiped when the
+  person first signs in after that; an admin can generate a new one. Only admins ever receive passwords.
 
-Invitation
-  A Bitrix24 chat message to that user (im.message.add, from the webhook's Bitrix24 account). Sent only when an
-  admin presses the button; nothing is sent automatically.
+Message: a Bitrix24 chat message to that user (im.message.add, from the webhook's Bitrix24 account). Sent only when
+an admin presses Send in the preview; nothing is sent automatically.
 
-  GET  /api/users                     -> {admin, me, accounts: {bitrixId: {...}}} (password only for admins)
+  GET  /api/users                     -> {admin, role, me, accounts: {bitrixId: {...}}} (password only for admins)
+  GET  /api/users/<id>/message        -> admin only: {text, to, password} - exactly what Send will post
   POST /api/users/<id>/role {role}    -> admin only
-  POST /api/users/<id>/password       -> admin only: new password (the active login, if any, is updated too)
-  POST /api/users/<id>/invite         -> admin only: activate the login and send the Bitrix24 message
+  POST /api/users/<id>/password       -> admin only: new pending password
+  POST /api/users/<id>/invite         -> admin only: apply the pending password and send the Bitrix24 message
 """
 import json
 import os
@@ -66,6 +68,10 @@ def init(con):
              updated_by TEXT
            )"""
     )
+    cols = {r[1] for r in con.execute("PRAGMA table_info(accounts)").fetchall()}
+    for name, ddl in (("pw_pending", "INTEGER NOT NULL DEFAULT 1"), ("seeded", "INTEGER NOT NULL DEFAULT 0")):
+        if name not in cols:
+            con.execute(f"ALTER TABLE accounts ADD COLUMN {name} {ddl}")
     con.execute("CREATE TABLE IF NOT EXISTS logins (email TEXT PRIMARY KEY, ts TEXT NOT NULL)")
 
 
@@ -81,6 +87,10 @@ def new_password(taken):
             return pw
 
 
+def taken_passwords(con):
+    return {r["password"] for r in con.execute("SELECT password FROM accounts WHERE password IS NOT NULL")}
+
+
 def bx_users(live_json):
     try:
         with open(live_json, encoding="utf-8") as f:
@@ -89,8 +99,12 @@ def bx_users(live_json):
         return {}
 
 
+def email_of(p):
+    return str((p or {}).get("email") or "").strip().lower() or None
+
+
 def write_htpasswd(con):
-    """Rebuild the accounts file from active logins (atomic replace; the login service re-reads it on change)."""
+    """Rebuild the accounts file from applied passwords (atomic replace; the login service re-reads it on change)."""
     con.commit()
     rows = con.execute(
         "SELECT email, hash FROM accounts WHERE active=1 AND role!='none' AND hash IS NOT NULL AND email IS NOT NULL"
@@ -105,53 +119,70 @@ def write_htpasswd(con):
     os.replace(tmp, ACCOUNTS_HTPASSWD)
 
 
-def sync_rows(con, people, fixed_admins):
-    """Every listed Bitrix24 user without a fixed login gets a row with a generated password (not active yet)."""
+def sync_rows(con, people, root_admins):
+    """One row per listed Bitrix24 user. New users get a pending password; server admins start as admins."""
     have = {r["bitrix_id"]: r for r in con.execute("SELECT * FROM accounts").fetchall()}
-    taken = {r["password"] for r in have.values() if r["password"]}
+    taken = taken_passwords(con)
     logins = {r["email"]: r["ts"] for r in con.execute("SELECT email, ts FROM logins").fetchall()}
     for uid, p in people.items():
-        email = str(p.get("email") or "").strip().lower() or None
-        if email in fixed_admins:
-            continue
+        email = email_of(p)
         row = have.get(uid)
+        if email and email in root_admins and (row is None or not row["seeded"]):
+            # Server admin: signs in with the server password until an admin sends a new one.
+            if row is None:
+                con.execute(
+                    "INSERT INTO accounts (bitrix_id, email, role, active, pw_pending, seeded, updated_at) VALUES (?,?,?,?,?,?,?)",
+                    (uid, email, "admin", 1, 1, 1, now_iso()),
+                )
+            else:
+                con.execute(
+                    "UPDATE accounts SET email=?, role='admin', active=1, password=NULL, hash=NULL, pw_pending=1, seeded=1,"
+                    " updated_at=? WHERE bitrix_id=?",
+                    (email, now_iso(), uid),
+                )
+            continue
         if row is None:
             pw = new_password(taken)
             taken.add(pw)
             con.execute(
-                "INSERT INTO accounts (bitrix_id, email, role, password, pw_set_at, updated_at) VALUES (?,?,?,?,?,?)",
-                (uid, email, "user", pw, now_iso(), now_iso()),
+                "INSERT INTO accounts (bitrix_id, email, role, password, pw_set_at, pw_pending, seeded, updated_at)"
+                " VALUES (?,?,?,?,?,?,?,?)",
+                (uid, email, "user", pw, now_iso(), 1, 1, now_iso()),
             )
             continue
+        if not row["seeded"]:
+            con.execute("UPDATE accounts SET seeded=1 WHERE bitrix_id=?", (uid,))
         if email and row["email"] != email and not row["active"]:
             con.execute("UPDATE accounts SET email=? WHERE bitrix_id=?", (email, uid))
-        # Signed in with this password: the plain text is no longer needed.
-        if row["password"] and row["active"] and logins.get(row["email"] or "", "") > (row["pw_set_at"] or ""):
+        # Signed in with the applied password: the plain text is no longer needed.
+        if (row["password"] and not row["pw_pending"] and row["active"]
+                and logins.get(row["email"] or "", "") > (row["pw_set_at"] or "")):
             con.execute("UPDATE accounts SET password=NULL WHERE bitrix_id=?", (uid,))
     con.commit()  # inside the caller's lock, so two requests never insert the same row
 
 
-def is_admin(con, email, fixed_admins):
+def role_of(con, email, root_admins):
     if not email:
-        return False
-    if email in fixed_admins:
-        return True
-    r = con.execute("SELECT 1 FROM accounts WHERE email=? AND role='admin' AND active=1", (email,)).fetchone()
-    return r is not None
+        return "none"
+    r = con.execute("SELECT role FROM accounts WHERE email=? ORDER BY active DESC LIMIT 1", (email,)).fetchone()
+    if r is not None:
+        return r["role"]
+    return "admin" if email in root_admins else "user"
 
 
-def listing(con, me, people, fixed_admins):
+def is_admin(con, email, root_admins):
+    return role_of(con, email, root_admins) == "admin"
+
+
+def listing(con, me, people, root_admins):
     with _lock:
-        sync_rows(con, people, fixed_admins)
-    admin = is_admin(con, me, fixed_admins)
+        sync_rows(con, people, root_admins)
+    role = role_of(con, me, root_admins)
+    admin = role == "admin"
     logins = {r["email"]: r["ts"] for r in con.execute("SELECT email, ts FROM logins").fetchall()}
     rows = {r["bitrix_id"]: r for r in con.execute("SELECT * FROM accounts").fetchall()}
     out = {}
-    for uid, p in people.items():
-        email = str(p.get("email") or "").strip().lower() or None
-        if email in fixed_admins:
-            out[uid] = {"role": "admin", "fixed": True, "active": True, "lastLogin": logins.get(email)}
-            continue
+    for uid in people:
         r = rows.get(uid)
         if r is None:
             continue
@@ -162,109 +193,132 @@ def listing(con, me, people, fixed_admins):
             "invitedBy": r["invited_by"],
             "lastLogin": logins.get(r["email"] or ""),
             "hasPassword": bool(r["password"]),
+            "pending": bool(r["password"]) and bool(r["pw_pending"]),
         }
         if admin:
             a["password"] = r["password"]
         out[uid] = a
-    return {"admin": admin, "me": me, "accounts": out}
+    return {"admin": admin, "role": role, "me": me, "accounts": out}
 
 
-def set_role(con, uid, role, me, people, fixed_admins):
+def admins_left(con, except_uid):
+    return con.execute(
+        "SELECT COUNT(*) FROM accounts WHERE role='admin' AND active=1 AND bitrix_id!=?", (except_uid,)
+    ).fetchone()[0]
+
+
+def set_role(con, uid, role, me, people, root_admins):
     if role not in ROLES:
         return 400, {"error": "unknown role"}
-    p = people.get(uid)
-    if not p:
+    if uid not in people:
         return 404, {"error": "no such user"}
-    if str(p.get("email") or "").lower() in fixed_admins:
-        return 409, {"error": "this admin is fixed on the server and cannot be changed here"}
     with _lock:
-        sync_rows(con, people, fixed_admins)
+        sync_rows(con, people, root_admins)
         r = con.execute("SELECT * FROM accounts WHERE bitrix_id=?", (uid,)).fetchone()
         if r is None:
             return 404, {"error": "no such user"}
-        if r["email"] == me and role != "admin":
-            return 409, {"error": "you cannot take admin rights from yourself"}
-        active = r["active"] if role != "none" else 0
-        con.execute(
-            "UPDATE accounts SET role=?, active=?, updated_at=?, updated_by=? WHERE bitrix_id=?",
-            (role, active, now_iso(), me, uid),
-        )
-        if role == "none" and not r["password"]:  # a fresh password for a later invitation
-            taken = {x["password"] for x in con.execute("SELECT password FROM accounts WHERE password IS NOT NULL")}
-            con.execute("UPDATE accounts SET password=?, pw_set_at=?, hash=NULL WHERE bitrix_id=?", (new_password(taken), now_iso(), uid))
+        if r["email"] and r["email"] == me:
+            return 409, {"error": "you cannot change your own role"}
+        if r["role"] == "admin" and role != "admin" and admins_left(con, uid) == 0:
+            return 409, {"error": "the portal needs at least one admin"}
+        con.execute("UPDATE accounts SET role=?, updated_at=?, updated_by=? WHERE bitrix_id=?", (role, now_iso(), me, uid))
+        if role == "none":
+            con.execute("UPDATE accounts SET active=0 WHERE bitrix_id=?", (uid,))
+            if not r["password"]:  # a fresh pending password for a later message
+                con.execute(
+                    "UPDATE accounts SET password=?, pw_set_at=?, pw_pending=1 WHERE bitrix_id=?",
+                    (new_password(taken_passwords(con)), now_iso(), uid),
+                )
+        elif r["role"] == "none" and (r["hash"] or email_of(people[uid]) in root_admins):
+            con.execute("UPDATE accounts SET active=1 WHERE bitrix_id=?", (uid,))  # the last sent (or server) password works again
         write_htpasswd(con)
     sys.stderr.write(f"users: {me} set role of bitrix user {uid} to {role}\n")
     return 200, {"ok": True}
 
 
-def regenerate(con, uid, me, people, fixed_admins):
-    p = people.get(uid)
-    if not p:
+def regenerate(con, uid, me, people, root_admins):
+    if uid not in people:
         return 404, {"error": "no such user"}
-    if str(p.get("email") or "").lower() in fixed_admins:
-        return 409, {"error": "this admin's password is set on the server"}
     with _lock:
-        sync_rows(con, people, fixed_admins)
-        r = con.execute("SELECT * FROM accounts WHERE bitrix_id=?", (uid,)).fetchone()
-        if r is None:
+        sync_rows(con, people, root_admins)
+        if con.execute("SELECT 1 FROM accounts WHERE bitrix_id=?", (uid,)).fetchone() is None:
             return 404, {"error": "no such user"}
-        taken = {x["password"] for x in con.execute("SELECT password FROM accounts WHERE password IS NOT NULL")}
-        pw = new_password(taken)
-        h = bcrypt.hashpw(pw.encode(), bcrypt.gensalt(rounds=10)).decode() if r["active"] else None
+        pw = new_password(taken_passwords(con))
         con.execute(
-            "UPDATE accounts SET password=?, pw_set_at=?, hash=COALESCE(?, hash), updated_at=?, updated_by=? WHERE bitrix_id=?",
-            (pw, now_iso(), h, now_iso(), me, uid),
+            "UPDATE accounts SET password=?, pw_set_at=?, pw_pending=1, updated_at=?, updated_by=? WHERE bitrix_id=?",
+            (pw, now_iso(), now_iso(), me, uid),
         )
-        if r["active"]:
-            write_htpasswd(con)
+        con.commit()
     sys.stderr.write(f"users: {me} generated a new password for bitrix user {uid}\n")
     return 200, {"password": pw}
 
 
-def invite(con, uid, me, people, fixed_admins, bitrix_call, sender_name):
-    """Activate the login and send the Bitrix24 chat message. The login stays active even if the message fails."""
+def message_text(p, email, pw, sender_name):
+    first = (p.get("name") or "").split(" ")[0] or "there"
+    return (
+        f"Hello {first}!\n"
+        f"{sender_name} has given you access to the Greeneration order desk: {PORTAL_URL}\n\n"
+        f"Login: {email}\n"
+        f"Password: {pw}\n\n"
+        "Please keep the password to yourself. If you lose it, ask an admin for a new one."
+    )
+
+
+def ensure_password(con, uid):
+    """The pending password to send; a new one if there is none (wiped after sign-in, or a server admin)."""
+    r = con.execute("SELECT * FROM accounts WHERE bitrix_id=?", (uid,)).fetchone()
+    if r["password"] and r["pw_pending"]:
+        return r["password"]
+    pw = new_password(taken_passwords(con))
+    con.execute("UPDATE accounts SET password=?, pw_set_at=?, pw_pending=1 WHERE bitrix_id=?", (pw, now_iso(), uid))
+    con.commit()
+    return pw
+
+
+def preview(con, uid, people, root_admins, sender_name):
     p = people.get(uid)
     if not p:
         return 404, {"error": "no such user"}
-    email = str(p.get("email") or "").strip().lower()
+    email = email_of(p)
     if not email:
         return 409, {"error": "this user has no e-mail in Bitrix24"}
-    if email in fixed_admins:
-        return 409, {"error": "this admin already has a login"}
+    with _lock:
+        sync_rows(con, people, root_admins)
+        pw = ensure_password(con, uid)
+    return 200, {"text": message_text(p, email, pw, sender_name), "to": p.get("name"), "password": pw}
+
+
+def invite(con, uid, me, people, root_admins, bitrix_call, sender_name):
+    """Apply the pending password and send the Bitrix24 chat message. The password stays applied if the message fails."""
+    p = people.get(uid)
+    if not p:
+        return 404, {"error": "no such user"}
+    email = email_of(p)
+    if not email:
+        return 409, {"error": "this user has no e-mail in Bitrix24"}
     if bitrix_call is None:
         return 503, {"error": "Bitrix24 is not connected on the server"}
     with _lock:
-        sync_rows(con, people, fixed_admins)
+        sync_rows(con, people, root_admins)
         r = con.execute("SELECT * FROM accounts WHERE bitrix_id=?", (uid,)).fetchone()
         if r is None:
             return 404, {"error": "no such user"}
         if r["role"] == "none":
             return 409, {"error": "give the user a role first"}
-        pw, pw_at = r["password"], r["pw_set_at"]
-        if not pw:
-            taken = {x["password"] for x in con.execute("SELECT password FROM accounts WHERE password IS NOT NULL")}
-            pw, pw_at = new_password(taken), now_iso()
+        pw = ensure_password(con, uid)
         h = bcrypt.hashpw(pw.encode(), bcrypt.gensalt(rounds=10)).decode()
         con.execute(
-            "UPDATE accounts SET email=?, password=?, pw_set_at=?, hash=?, active=1, updated_at=?, updated_by=? WHERE bitrix_id=?",
-            (email, pw, pw_at or now_iso(), h, now_iso(), me, uid),
+            "UPDATE accounts SET email=?, hash=?, active=1, pw_pending=0, pw_set_at=?, updated_at=?, updated_by=? WHERE bitrix_id=?",
+            (email, h, now_iso(), now_iso(), me, uid),
         )
         write_htpasswd(con)
-    first = (p.get("name") or "").split(" ")[0] or "Hello"
-    text = (
-        f"Hello {first}!\n"
-        f"{sender_name} has invited you to the Greeneration order desk: {PORTAL_URL}\n\n"
-        f"Login: {email}\n"
-        f"Password: {pw}\n\n"
-        "Please keep the password to yourself. If you lose it, ask an admin for a new one."
-    )
     try:
-        bitrix_call("im.message.add", {"DIALOG_ID": uid, "MESSAGE": text, "SYSTEM": "N"})
+        bitrix_call("im.message.add", {"DIALOG_ID": uid, "MESSAGE": message_text(p, email, pw, sender_name), "SYSTEM": "N"})
     except Exception as e:
-        sys.stderr.write(f"users: invitation for bitrix user {uid} not sent ({type(e).__name__})\n")
-        return 502, {"error": "the login is active, but the Bitrix24 message was not sent; send the password yourself"}
+        sys.stderr.write(f"users: message for bitrix user {uid} not sent ({type(e).__name__})\n")
+        return 502, {"error": "the new password is active, but the Bitrix24 message was not sent; send it yourself"}
     ts = now_iso()
     con.execute("UPDATE accounts SET invited_at=?, invited_by=? WHERE bitrix_id=?", (ts, me, uid))
     con.commit()
-    sys.stderr.write(f"users: {me} invited bitrix user {uid}\n")
+    sys.stderr.write(f"users: {me} sent access to bitrix user {uid}\n")
     return 200, {"ok": True, "invitedAt": ts}

@@ -203,16 +203,25 @@ class Handler(BaseHTTPRequestHandler):
         code, body = self.users_call(path, me, people, fixed)
         return self.send(code, body)  # after the transaction is committed
 
-    def users_call(self, path, me, people, fixed):
+    def sender_name(self, me):
+        try:
+            with open(LIVE_JSON, encoding="utf-8") as f:
+                return (json.load(f).get("users") or {}).get(me, {}).get("name") or NAMES.get(me, me)
+        except Exception:
+            return NAMES.get(me, me)
+
+    def users_call(self, path, me, people, root):
         with db() as con:
             if self.command == "GET" and path == "/api/users":
-                return 200, portal_users.listing(con, me, people, fixed)
-            m = re.fullmatch(r"/api/users/(\d{1,10})/(role|password|invite)", path)
-            if self.command != "POST" or not m:
+                return 200, portal_users.listing(con, me, people, root)
+            m = re.fullmatch(r"/api/users/(\d{1,10})/(role|password|invite|message)", path)
+            if not m or (self.command == "GET") != (m.group(2) == "message"):
                 return 404, {"error": "not found"}
-            if not portal_users.is_admin(con, me, fixed):
+            if not portal_users.is_admin(con, me, root):
                 return 403, {"error": "only admins can change access"}
             uid, action = m.groups()
+            if action == "message":
+                return portal_users.preview(con, uid, people, root, self.sender_name(me))
             if action == "role":
                 try:
                     n = int(self.headers.get("Content-Length") or 0)
@@ -221,15 +230,10 @@ class Handler(BaseHTTPRequestHandler):
                     role = str(json.loads(self.rfile.read(n)).get("role", ""))
                 except Exception:
                     return 400, {"error": "bad request"}
-                return portal_users.set_role(con, uid, role, me, people, fixed)
+                return portal_users.set_role(con, uid, role, me, people, root)
             if action == "password":
-                return portal_users.regenerate(con, uid, me, people, fixed)
-            try:
-                with open(LIVE_JSON, encoding="utf-8") as f:
-                    sender = (json.load(f).get("users") or {}).get(me, {}).get("name") or NAMES.get(me, me)
-            except Exception:
-                sender = NAMES.get(me, me)
-            return portal_users.invite(con, uid, me, people, fixed, bitrix_call if WEBHOOK else None, sender)
+                return portal_users.regenerate(con, uid, me, people, root)
+            return portal_users.invite(con, uid, me, people, root, bitrix_call if WEBHOOK else None, self.sender_name(me))
 
     def do_GET(self):
         path, qs = self.route()

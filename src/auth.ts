@@ -20,6 +20,14 @@ const PEOPLE: Record<string, string> = {
 
 /** Signed-in user on the server build (null until checkSession() confirms a session). */
 let serverUser: string | null = null;
+/** Portal role of the signed-in user (from /auth/me). The demo build acts as an admin. */
+export type PortalRole = 'admin' | 'user';
+let serverRole: PortalRole = 'user';
+
+export const ROLE_LABEL: Record<PortalRole, string> = { admin: 'Admin', user: 'User' };
+
+/** Users and Audit log are for admins only. */
+export const isAdmin = () => !SERVER_AUTH || serverRole === 'admin';
 
 export interface CurrentUser {
   name: string;
@@ -32,6 +40,7 @@ export interface CurrentUser {
   photo?: string;
   /** Bitrix24 profile link. */
   profileUrl?: string;
+  role: PortalRole;
 }
 
 function initialsOf(name: string) {
@@ -39,7 +48,7 @@ function initialsOf(name: string) {
   return (parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : name.slice(0, 2)).toUpperCase();
 }
 
-const DEMO_USER: CurrentUser = { name: 'Karina P.', initials: 'KP', title: 'Karina P. · coordinator', position: 'Coordinator' };
+const DEMO_USER: CurrentUser = { name: 'Karina P.', initials: 'KP', title: 'Karina P. · coordinator', position: 'Coordinator', role: 'admin' };
 
 /** Who is signed in: Bitrix24 profile from live.json (users), else the fallback name. Demo build: demo persona. */
 export function currentUser(): CurrentUser {
@@ -55,6 +64,7 @@ export function currentUser(): CurrentUser {
     email: serverUser,
     photo: bx?.photo ? `${import.meta.env.BASE_URL}${bx.photo}` : undefined,
     profileUrl: bx?.bitrixId ? `${BITRIX_URL}/company/personal/user/${bx.bitrixId}/` : undefined,
+    role: serverRole,
   };
 }
 
@@ -70,8 +80,9 @@ export async function checkSession(): Promise<boolean> {
   try {
     const r = await fetch(`${AUTH_BASE}/me`, { credentials: 'same-origin', cache: 'no-store' });
     if (r.ok) {
-      const body = (await r.json()) as { email?: string };
+      const body = (await r.json()) as { email?: string; role?: string };
       serverUser = body.email ?? null;
+      serverRole = body.role === 'admin' ? 'admin' : 'user';
     } else serverUser = null;
   } catch {
     serverUser = null;

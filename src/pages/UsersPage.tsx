@@ -1,18 +1,74 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent } from 'react';
 import { Shell } from '../components/Shell';
 import * as I from '../components/icons';
-import { useToast } from '../components/ui';
+import { Btn, useToast } from '../components/ui';
 import { LIVE, shortDate, type LiveBxUser } from '../data/live';
-import { loadUsers, newPassword, sendInvite, setRole, type Account, type Role, type UsersState } from '../users';
+import { loadUsers, newPassword, previewMessage, sendInvite, setRole, type Account, type Role, type UsersState } from '../users';
 
 const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', user: 'User', none: 'No access' };
 const day = (iso?: string | null) => (iso ? shortDate(iso.slice(0, 10)) : '');
+
+/* ---------- column widths: dragged in the header, remembered in this browser ---------- */
+
+type Col = 'name' | 'email' | 'role' | 'access' | 'pw';
+const DEFAULT_W: Record<Col, number> = { name: 280, email: 260, role: 160, access: 160, pw: 250 };
+const MIN_W = 90;
+const W_KEY = 'gr-users-cols';
+
+function loadWidths(): Record<Col, number> {
+  try {
+    const saved = JSON.parse(localStorage.getItem(W_KEY) ?? '{}') as Partial<Record<Col, number>>;
+    return { ...DEFAULT_W, ...saved };
+  } catch {
+    return { ...DEFAULT_W };
+  }
+}
+
+function useColumnWidths() {
+  const [w, setW] = useState(loadWidths);
+  const [dragging, setDragging] = useState<Col | null>(null);
+  const start = (col: Col) => (e: RPointerEvent<HTMLSpanElement>) => {
+    e.preventDefault();
+    const x0 = e.clientX;
+    const w0 = w[col];
+    setDragging(col);
+    const move = (ev: PointerEvent) => setW((cur) => ({ ...cur, [col]: Math.max(MIN_W, Math.round(w0 + ev.clientX - x0)) }));
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      setDragging(null);
+      setW((cur) => {
+        try {
+          localStorage.setItem(W_KEY, JSON.stringify(cur));
+        } catch {
+          /* storage unavailable: widths last until reload */
+        }
+        return cur;
+      });
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  const reset = (col: Col) => () =>
+    setW((cur) => {
+      const next = { ...cur, [col]: DEFAULT_W[col] };
+      try {
+        localStorage.setItem(W_KEY, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  return { w, dragging, start, reset };
+}
+
+/* ---------- cells ---------- */
 
 function Avatar({ u }: { u: LiveBxUser }) {
   const [ok, setOk] = useState(true);
   const initials = u.name
     .split(/\s+/)
-    .map((w) => w[0])
+    .map((x) => x[0])
     .join('')
     .slice(0, 2)
     .toUpperCase();
@@ -26,24 +82,22 @@ function access(a?: Account) {
   if (!a) return { text: '—', tone: 'muted' };
   if (a.role === 'none') return { text: 'No access', tone: 'muted' };
   if (a.lastLogin) return { text: `Signed in ${day(a.lastLogin)}`, tone: 'text-success' };
-  if (a.fixed) return { text: 'Active', tone: 'text-success' };
-  if (a.invitedAt) return { text: `Invited ${day(a.invitedAt)}`, tone: '' };
-  if (a.active) return { text: 'Login active, not invited', tone: '' };
-  return { text: 'Not invited', tone: 'muted' };
+  if (a.invitedAt) return { text: `Sent ${day(a.invitedAt)}`, tone: '' };
+  if (a.active) return { text: 'Active', tone: '' };
+  return { text: 'Not sent', tone: 'muted' };
 }
 
 function PasswordCell({ id, a, onNew }: { id: string; a: Account; onNew: (pw: string) => void }) {
   const toast = useToast();
   const [shown, setShown] = useState(false);
   const [busy, setBusy] = useState(false);
-  if (a.fixed) return <span className="muted">Set on the server</span>;
   const regen = async () => {
     setBusy(true);
     try {
       const r = await newPassword(id);
       onNew(r.password);
       setShown(true);
-      toast(a.active ? 'New password is active now: send it to the user' : 'New password generated');
+      toast('New password generated: it starts working when you send it');
     } catch (e) {
       toast((e as Error).message);
     } finally {
@@ -54,7 +108,9 @@ function PasswordCell({ id, a, onNew }: { id: string; a: Account; onNew: (pw: st
     <span className="u-pw">
       {a.password ? (
         <>
-          <code className="u-pw-text">{shown ? a.password : '•'.repeat(a.password.length)}</code>
+          <code className="u-pw-text" title={a.pending ? 'Not sent yet: the current login still works' : undefined}>
+            {shown ? a.password : '•'.repeat(a.password.length)}
+          </code>
           <button type="button" className="icon-btn" title={shown ? 'Hide' : 'Show'} aria-label={shown ? 'Hide password' : 'Show password'} onClick={() => setShown((v) => !v)}>
             <img src={shown ? I.icEyeOff : I.icEye} alt="" />
           </button>
@@ -69,8 +125,8 @@ function PasswordCell({ id, a, onNew }: { id: string; a: Account; onNew: (pw: st
           </button>
         </>
       ) : (
-        <span className="muted u-pw-text" title="The user has signed in, so the password is no longer stored in plain text">
-          Hidden after sign-in
+        <span className="muted u-pw-text u-pw-note" title="Not stored in plain text: generate a new one to send it">
+          {a.lastLogin ? 'Hidden after sign-in' : 'Not stored'}
         </span>
       )}
       <button type="button" className="icon-btn" title="Generate a new password" aria-label="Generate a new password" disabled={busy} onClick={regen}>
@@ -80,56 +136,85 @@ function PasswordCell({ id, a, onNew }: { id: string; a: Account; onNew: (pw: st
   );
 }
 
-function InviteButton({ id, u, a, onSent }: { id: string; u: LiveBxUser; a: Account; onSent: (ts: string) => void }) {
+/** Preview of the Bitrix24 chat message, then Send. */
+function MessageDialog({ id, u, onClose, onSent }: { id: string; u: LiveBxUser; onClose: () => void; onSent: (ts: string, pw: string) => void }) {
   const toast = useToast();
-  const [confirm, setConfirm] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; password: string } | null>(null);
+  const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const timer = useRef<number>();
-  useEffect(() => () => window.clearTimeout(timer.current), []);
-  if (a.fixed) return null;
-  const why = !u.email ? 'No e-mail in Bitrix24' : a.role === 'none' ? 'Give the user a role first' : '';
-  const click = async () => {
-    if (!confirm) {
-      setConfirm(true);
-      timer.current = window.setTimeout(() => setConfirm(false), 4000);
-      return;
-    }
-    window.clearTimeout(timer.current);
-    setConfirm(false);
+  useEffect(() => {
+    previewMessage(id).then(setMsg, (e) => setError((e as Error).message));
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [id, onClose]);
+  const send = async () => {
     setBusy(true);
     try {
       const r = await sendInvite(id);
-      onSent(r.invitedAt);
-      toast(`Invitation sent to ${u.name} in Bitrix24`);
+      onSent(r.invitedAt, msg?.password ?? '');
+      toast(`Sent to ${u.name} in Bitrix24`);
+      onClose();
     } catch (e) {
       toast((e as Error).message);
-    } finally {
       setBusy(false);
     }
   };
   return (
-    <button
-      type="button"
-      className={`btn btn-sm ${confirm ? 'btn-primary' : 'btn-secondary'} u-invite`}
-      disabled={!!why || busy}
-      title={why || 'Activates the login and sends login and password to the user in Bitrix24 chat'}
-      onClick={click}
-    >
-      <img src={I.icSend} alt="" width={16} height={16} />
-      {busy ? 'Sending…' : confirm ? 'Click to confirm' : a.invitedAt ? 'Resend invite' : 'Send invite'}
-    </button>
+    <div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal modal-msg" role="dialog" aria-modal="true" aria-label={`Access message for ${u.name}`}>
+        <div className="modal-head">
+          <div className="modal-title">
+            <h2>Send access to {u.name}</h2>
+            <p>Bitrix24 chat · personal message</p>
+          </div>
+          <button type="button" className="modal-close" aria-label="Close" onClick={onClose}>
+            <img src={I.icClose} width={20} height={20} alt="" />
+          </button>
+        </div>
+        <div className="modal-body">
+          {error ? (
+            <p className="text-danger">{error}</p>
+          ) : msg ? (
+            <>
+              <div className="msg-preview">{msg.text}</div>
+              <p className="msg-note">
+                Sending makes this password active at once{u.email ? ` for ${u.email}` : ''}; the old password stops working. The message
+                goes from the Bitrix24 account the portal is connected with.
+              </p>
+            </>
+          ) : (
+            <p className="muted">Preparing the message…</p>
+          )}
+        </div>
+        <div className="modal-foot">
+          <Btn kind="ghost" onClick={onClose}>
+            Cancel
+          </Btn>
+          <Btn kind="primary" disabled={!msg || busy} onClick={send}>
+            {busy ? 'Sending…' : 'Send in Bitrix24'}
+          </Btn>
+        </div>
+      </div>
+    </div>
   );
 }
 
-/** People from Bitrix24 who own order deals (last 90 days) and the coordinators. Admins manage portal access here. */
+/* ---------- page ---------- */
+
+/** Coordinators and people responsible for order deals (from Bitrix24). Admins only: roles, passwords, access messages. */
 export function UsersPage() {
   const toast = useToast();
   const [state, setState] = useState<UsersState | null>(null);
   const [error, setError] = useState('');
+  const [dialog, setDialog] = useState<string | null>(null);
+  const cols = useColumnWidths();
   const reload = useCallback(() => {
     loadUsers().then(setState, (e) => setError((e as Error).message));
   }, []);
   useEffect(reload, [reload]);
+  const closeDialog = useCallback(() => setDialog(null), []);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   const patch = (id: string, p: Partial<Account>) =>
     setState((s) => (s ? { ...s, accounts: { ...s.accounts, [id]: { ...s.accounts[id], ...p } } } : s));
@@ -148,34 +233,52 @@ export function UsersPage() {
   };
 
   const admin = !!state?.admin;
-  const people = Object.entries(LIVE?.bxUsers ?? {}).sort((a, b) => {
-    const rank = (id: string, u: LiveBxUser) => (u.coordinator ? 2 : state?.accounts[id]?.role === 'admin' ? 1 : 0);
-    return rank(b[0], b[1]) - rank(a[0], a[1]) || b[1].deals - a[1].deals || a[1].name.localeCompare(b[1].name);
-  });
+  const rank = (id: string) => ({ admin: 2, user: 1, none: 0 })[state?.accounts[id]?.role ?? 'user'];
+  const people = Object.entries(LIVE?.bxUsers ?? {}).sort((a, b) => rank(b[0]) - rank(a[0]) || a[1].name.localeCompare(b[1].name));
+
+  const w = cols.w;
+  const template = [w.name, w.email, w.role, w.access, ...(admin ? [w.pw] : [])].map((x) => `${x}px`).join(' ') + (admin ? ' minmax(150px, 1fr)' : ' 1fr');
+  const head = (col: Col, label: string) => (
+    <span className={`u-${col === 'pw' ? 'pwc' : col}`}>
+      {label}
+      <span
+        className={`col-resize ${cols.dragging === col ? 'dragging' : ''}`}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={`Resize ${label} column`}
+        title="Drag to resize · double-click to reset"
+        onPointerDown={cols.start(col)}
+        onDoubleClick={cols.reset(col)}
+      />
+    </span>
+  );
+  const open = dialog ? LIVE?.bxUsers?.[dialog] : undefined;
 
   return (
     <Shell crumbs={[{ label: 'Users' }]}>
       <p className="section-note">
-        Coordinators and people responsible for order deals in the last 90 days, from Bitrix24.{' '}
-        {admin
-          ? 'Nothing is sent until you press Send invite: it activates the login and sends it to the user in Bitrix24 chat.'
-          : 'Only admins can give access.'}
+        Coordinators and people responsible for order deals in the last 90 days, from Bitrix24. Nothing is sent until you press Send and
+        confirm the message.
         {error ? ` · Access data not loaded: ${error}` : ''}
       </p>
-      <div className={`table journal users-table ${admin ? 'is-admin' : ''}`}>
+      <div
+        ref={tableRef}
+        className={`table journal users-table ${cols.dragging ? 'resizing' : ''}`}
+        style={{ '--cols': template } as CSSProperties}
+      >
         <div className="tr th">
-          <span className="u-name">User</span>
-          <span className="u-email">E-mail</span>
-          <span className="u-role">Role</span>
-          <span className="u-orders" title="Order deals in the last 90 days">Orders</span>
-          <span className="u-access">Access</span>
-          {admin && <span className="u-pwc">Password</span>}
-          {admin && <span className="u-act" />}
+          {head('name', 'User')}
+          {head('email', 'E-mail')}
+          {head('role', 'Role')}
+          {head('access', 'Access')}
+          {admin && head('pw', 'Password')}
+          <span className="u-act" />
         </div>
         {people.map(([id, u]) => {
           const a = state?.accounts[id];
           const st = access(a);
           const self = !!state && !!u.email && u.email === state.me;
+          const why = !u.email ? 'No e-mail in Bitrix24' : a?.role === 'none' ? 'Give the user a role first' : '';
           return (
             <div key={id} className="tr row">
               <span className="u-name">
@@ -187,7 +290,7 @@ export function UsersPage() {
               </span>
               <span className="u-email ellipsis">{u.email ? <a href={`mailto:${u.email}`}>{u.email}</a> : <span className="muted">—</span>}</span>
               <span className="u-role">
-                {admin && a && !a.fixed && !self ? (
+                {admin && a && !self ? (
                   <span className="selectbox selectbox-sm">
                     <select value={a.role} aria-label={`Role of ${u.name}`} onChange={(e) => changeRole(id, e.target.value as Role)}>
                       {(Object.keys(ROLE_LABEL) as Role[]).map((r) => (
@@ -199,22 +302,41 @@ export function UsersPage() {
                     <img src={I.icChevronDown} width={16} height={16} alt="" />
                   </span>
                 ) : (
-                  <span title={a?.fixed ? 'Fixed on the server' : undefined}>{a ? ROLE_LABEL[a.role] : u.coordinator ? 'Admin' : '—'}</span>
+                  <span title={self ? 'You cannot change your own role' : undefined}>{a ? ROLE_LABEL[a.role] : '—'}</span>
                 )}
               </span>
-              <span className="u-orders">{u.deals}</span>
-              <span className={`u-access ${st.tone}`}>{st.text}</span>
-              {admin && <span className="u-pwc">{a && <PasswordCell id={id} a={a} onNew={(pw) => patch(id, { password: pw, hasPassword: true })} />}</span>}
-              {admin && (
-                <span className="u-act">
-                  {a && <InviteButton id={id} u={u} a={a} onSent={(ts) => patch(id, { invitedAt: ts, active: true })} />}
-                </span>
-              )}
+              <span className={`u-access ellipsis ${st.tone}`}>{st.text}</span>
+              {admin && <span className="u-pwc">{a && <PasswordCell id={id} a={a} onNew={(pw) => patch(id, { password: pw, hasPassword: true, pending: true })} />}</span>}
+              <span className="u-act">
+                {admin && a && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-secondary u-send"
+                    disabled={!!why}
+                    title={why || 'Preview the Bitrix24 message with login and password, then send'}
+                    onClick={() => setDialog(id)}
+                  >
+                    <img src={I.icSend} alt="" width={16} height={16} />
+                    {a.invitedAt ? 'Send again' : 'Send access'}
+                  </button>
+                )}
+              </span>
             </div>
           );
         })}
         {!people.length && <div className="empty">No users yet: they appear after the next Bitrix24 sync.</div>}
       </div>
+      {dialog && open && (
+        <MessageDialog
+          id={dialog}
+          u={open}
+          onClose={closeDialog}
+          onSent={(ts, pw) => {
+            patch(dialog, { invitedAt: ts, active: true, pending: false, password: pw || state?.accounts[dialog]?.password });
+            reload();
+          }}
+        />
+      )}
     </Shell>
   );
 }

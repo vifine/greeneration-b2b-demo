@@ -2,7 +2,7 @@ import { intakeChip, useDubaiNow } from '../time';
 import { liveUpdatedText } from '../data/live';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { currentUser, logout, SERVER_AUTH } from '../auth';
+import { currentUser, isAdmin, logout, ROLE_LABEL, SERVER_AUTH } from '../auth';
 import { useStore } from '../store';
 import * as I from './icons';
 import { useToast } from './ui';
@@ -218,6 +218,8 @@ export function Sidebar({ pinned: pinnedByPage }: { pinned: boolean }) {
           </div>
         ))}
         <div className="sb-spacer" />
+{isAdmin() && (
+          <>
         <Link to="/users" className={`sb-item ${active === 'users' ? 'active' : ''}`} title={expanded ? undefined : 'Users'} aria-label="Users">
           <img src={I.icCustomers} width={20} height={20} alt="" />
           {expanded && <span>Users</span>}
@@ -226,6 +228,8 @@ export function Sidebar({ pinned: pinnedByPage }: { pinned: boolean }) {
           <img src={I.icAudit} width={20} height={20} alt="" />
           {expanded && <span>Audit log</span>}
         </Link>
+          </>
+        )}
         <button type="button" className="sb-item" onClick={doLogout} title={expanded ? undefined : 'Log out'} aria-label="Log out">
           <img src={I.icLogout} width={20} height={20} alt="" />
           {expanded && <span>Log out</span>}
@@ -277,6 +281,7 @@ function UserMenu() {
               <strong>{me.name}</strong>
               {me.position && <span>{me.position}</span>}
               {me.email && <span className="up-email">{me.email}</span>}
+              <span className={`up-role up-role-${me.role}`}>{ROLE_LABEL[me.role]}</span>
             </div>
           </div>
           {me.profileUrl && (

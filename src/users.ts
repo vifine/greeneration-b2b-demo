@@ -6,19 +6,20 @@ export type Role = 'admin' | 'user' | 'none';
 
 export interface Account {
   role: Role;
-  /** Admin from the server's htpasswd file: cannot be changed from the portal. */
-  fixed?: boolean;
   active: boolean;
   invitedAt?: string | null;
   invitedBy?: string | null;
   lastLogin?: string | null;
   hasPassword?: boolean;
-  /** Plain text until the person first signs in; only sent to admins. */
+  /** The password is generated but not sent yet (the current login, if any, still works). */
+  pending?: boolean;
+  /** Plain text until the person first signs in after it was sent; only sent to admins. */
   password?: string | null;
 }
 
 export interface UsersState {
   admin: boolean;
+  role: Role;
   me: string;
   accounts: Record<string, Account>;
 }
@@ -45,3 +46,7 @@ const post = <T>(id: string, action: string, body?: unknown) =>
 export const setRole = (id: string, role: Role) => post<{ ok: true }>(id, 'role', { role });
 export const newPassword = (id: string) => post<{ password: string }>(id, 'password');
 export const sendInvite = (id: string) => post<{ ok: true; invitedAt: string }>(id, 'invite');
+
+/** Exactly the Bitrix24 message Send will post (generates a password if there is none). */
+export const previewMessage = (id: string) =>
+  call<{ text: string; to: string; password: string }>(`${API}/${id}/message`);
