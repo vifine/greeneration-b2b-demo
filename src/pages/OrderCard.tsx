@@ -11,6 +11,8 @@ import { FileChip } from '../components/FileChip';
 import { LinesTable } from '../components/LinesTable';
 import { ProgressTrack, type Step } from '../components/Progress';
 import { Shell } from '../components/Shell';
+import { isTestDeal } from '../data/testDeals';
+import { bitrixDealUrl } from '../data/live';
 import { Btn, Dot, useToast } from '../components/ui';
 import { clientById } from '../data/clients';
 import { deliveryFor } from '../data/delivery';
@@ -104,6 +106,7 @@ export function OrderCard() {
     <Shell
       crumbs={[{ label: 'Orders', to: '/crm/orders' }, { label: `#${o.id}` }]}
       crmLink={`Open deal #${o.id} in Bitrix24`}
+      crmHref={isTestDeal(o.id) ? bitrixDealUrl(o.id) : undefined}
       contentClass="card-page"
     >
       <div className="card-header">

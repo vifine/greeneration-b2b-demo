@@ -1,6 +1,7 @@
 import { CLIENTS } from './clients';
 import { line, makeLines } from './lines';
 import type { Order, OrderStage, PaymentSpec } from './types';
+import { dealNo } from './testDeals';
 
 // Fictional orders for the demo. Clients, people, invoices and payments are invented.
 
@@ -139,4 +140,7 @@ for (const [stage, count] of plan) {
   }
 }
 
-export const INITIAL_ORDERS: Order[] = [...figmaOrders, ...extra];
+export const INITIAL_ORDERS: Order[] = [...figmaOrders, ...extra].map((o) => {
+  const id = dealNo(o.id);
+  return { ...o, id, invoice: `INV-${id}` };
+});

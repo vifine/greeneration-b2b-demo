@@ -1,4 +1,5 @@
 import { line } from './lines';
+import { dealNo } from './testDeals';
 import type { Line, Request } from './types';
 
 // Fictional requests. Names, people and messages are invented for the demo.
@@ -197,12 +198,12 @@ export const INITIAL_REQUESTS: Request[] = [
   // Closed today
   ...(
     [
-      ['46398', 'kintsugi', '18:21', 'Became order #46398'],
-      ['46396', 'harbour', '18:05', 'Became order #46396'],
-      ['46395', 'saffron', '17:52', 'Became order #46395'],
+      ['46398', 'kintsugi', '18:21', `Became order #${dealNo('46398')}`],
+      ['46396', 'harbour', '18:05', `Became order #${dealNo('46396')}`],
+      ['46395', 'saffron', '17:52', `Became order #${dealNo('46395')}`],
       ['46392', 'lumen', '17:30', 'Not an order · question about prices'],
-      ['46390', 'cedar', '16:58', 'Became order #46390'],
-      ['46389', 'copper', '16:41', 'Duplicate of #46386'],
+      ['46390', 'cedar', '16:58', `Became order #${dealNo('46390')}`],
+      ['46389', 'copper', '16:41', `Duplicate of #${dealNo('46386')}`],
     ] as const
   ).map(
     ([id, clientId, time, closedAs]): Request => ({
