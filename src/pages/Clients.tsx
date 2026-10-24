@@ -1,4 +1,6 @@
-import { ClientActivity } from '../components/ClientActivity';
+import { clientShortages } from '../components/ClientActivity';
+import { clientDealSummary } from '../components/BitrixDeals';
+import { shortDate } from '../data/live';
 import testBitrix from '../data/testBitrix.json';
 import { bitrixCompanyUrl, odooPartnerUrl } from '../data/live';
 import { useEffect, useRef, useState } from 'react';
@@ -51,6 +53,82 @@ function ClassRow({ sheet, value, onChange, demo }: { sheet?: string; value?: st
         )}
       </div>
     </section>
+  );
+}
+
+type CardClient = (typeof CLIENTS)[number];
+
+/** Client card header: the key facts as labelled cells (Bitrix24 profile, terms, balance, order activity). */
+function ClientFacts({ c, ownCount }: { c: CardClient; ownCount: number }) {
+  const bx = c.live?.bx;
+  const bal = balanceOf(c.id);
+  const deals = clientDealSummary(c.id);
+  const short = clientShortages(c.id).length;
+  const ordersHref = `/crm/orders?tab=bitrix&client=${encodeURIComponent(c.id)}`;
+  const delay = bx?.paymentDelay ?? c.live?.paymentDelay;
+  const payType = bx?.paymentType ?? c.live?.paymentType;
+  const status = bx?.status;
+  const statusTone = !status ? '' : /retain|active|new/i.test(status) ? 'is-good' : /churn|lost|inactive/i.test(status) ? 'is-bad' : '';
+  const facts: { k: string; v: React.ReactNode; sub?: React.ReactNode }[] = [];
+  if (status) facts.push({ k: 'Status', v: <span className={`fact-tag ${statusTone}`}>{status}</span> });
+  if (bx?.segment) facts.push({ k: 'Segment', v: bx.segment });
+  if (bx?.priority) facts.push({ k: 'Priority', v: bx.priority.replace(/\s*priority$/i, '') });
+  if (bx?.manager ?? c.live?.responsible) facts.push({ k: 'Manager', v: bx?.manager ?? c.live?.responsible });
+  if (delay || payType) facts.push({ k: 'Terms', v: [delay && `${delay} days`, payType].filter(Boolean).join(' · ') });
+  if (bx?.group ?? c.live?.group) facts.push({ k: 'Group', v: bx?.group ?? c.live?.group });
+  if (bal)
+    facts.push({
+      k: 'Balance',
+      v: (
+        <Link to={`/customers/balances/${c.id}`} className="link-sort">
+          <Money v={bal.balance} />
+        </Link>
+      ),
+    });
+  if (c.live?.bx || deals.count)
+    facts.push({
+      k: 'Orders · 90 d',
+      v: deals.count ? (
+        <Link to={ordersHref} className="link-sort">
+          <b>{deals.count}</b>
+          {deals.avg > 0 && (
+            <>
+              {' · avg '}
+              <Money v={Math.round(deals.avg)} />
+            </>
+          )}
+        </Link>
+      ) : (
+        <span className="muted">none</span>
+      ),
+      sub: deals.last ? `last ${shortDate(deals.last)}` : undefined,
+    });
+  if (short > 0)
+    facts.push({
+      k: 'Shortages · 180 d',
+      v: (
+        <Link to={`/crm/claims?tab=shortages&client=${encodeURIComponent(c.id)}`} className="link-sort">
+          <b>{short}</b>
+        </Link>
+      ),
+    });
+  if (!c.live) {
+    facts.push({ k: 'Area', v: c.area });
+    facts.push({ k: 'Delivery addresses', v: ownCount });
+  }
+  if (!facts.length) return null;
+  return (
+    <dl className="client-facts">
+      {facts.map((f) => (
+        <div key={f.k} className="fact">
+          <dt>{f.k}</dt>
+          <dd>
+            {f.v}
+            {f.sub && <small>{f.sub}</small>}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -445,9 +523,8 @@ export function ClientCard() {
   const c = id ? CLIENTS.find((x) => x.id === id) : undefined;
   if (!c) return <Navigate to="/customers/clients" replace />;
   const own = addresses.filter((a) => a.clientId === c.id).sort((a, b) => Number(!!b.main) - Number(!!a.main));
-  const bal = balanceOf(c.id);
   return (
-    <Shell crumbs={[{ label: 'Clients', to: '/customers/clients' }, { label: clientById(c.id).name }]} crmLink={`Open ${c.name} in Bitrix24`} crmHref={bitrixCompanyUrl(c.live?.bitrixId ?? (testBitrix as Record<string, number>)[c.id])} odooHref={odooPartnerUrl(c.id)} contentClass="card-page">
+    <Shell crumbs={[{ label: 'Clients', to: '/customers/clients' }, { label: clientById(c.id).name }]} crmLink={`Open ${c.name} in Bitrix24${c.live?.bitrixId ? ` (#${String(c.live.bitrixId).replace(/\.0$/, '')})` : ''}`} crmHref={bitrixCompanyUrl(c.live?.bitrixId ?? (testBitrix as Record<string, number>)[c.id])} odooHref={odooPartnerUrl(c.id)} contentClass="card-page">
       <div className="card-header">
         <div className="card-title">
           <div className="card-name gap16">
@@ -459,29 +536,7 @@ export function ClientCard() {
               </span>
             )}
           </div>
-          <p>
- {own.length} delivery address{own.length === 1 ? '' : 'es'}
-            {bal ? (
-              <>
-                {' · '}
-                <Link to={`/customers/balances/${c.id}`} className="link-sort">
-                  Balance <Money v={bal.balance} />
-                </Link>
-              </>
-            ) : null}
-            {(c.live?.bx?.manager ?? c.live?.responsible) && <> · Manager {c.live?.bx?.manager ?? c.live?.responsible}</>}
-            {(() => {
-              const d = c.live?.bx?.paymentDelay ?? c.live?.paymentDelay;
-              const t = c.live?.bx?.paymentType ?? c.live?.paymentType;
-              return d || t ? <> · Terms {[d && `${d} days`, t].filter(Boolean).join(' · ')}</> : null;
-            })()}
-            {(c.live?.bx?.group ?? c.live?.group) && <> · Group {c.live?.bx?.group ?? c.live?.group}</>}
-            {c.live?.bx?.segment && <> · {c.live.bx.segment}</>}
-            {c.live?.bx?.priority && <> · {c.live.bx.priority}</>}
-            {c.live?.bx?.status && <> · Status {c.live.bx.status}</>}
-            {c.live?.bitrixId != null && c.live.bitrixId !== '' && <> · Bitrix24 #{String(c.live.bitrixId).replace(/\.0$/, '')}</>}
-          </p>
-          <ClientActivity clientId={c.id} />
+          <ClientFacts c={c} ownCount={own.length} />
         </div>
         <div className="card-actions">
           <Btn kind="primary" onClick={() => navigate(`/portal/${c.id}`)}>

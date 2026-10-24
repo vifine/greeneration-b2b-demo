@@ -3552,3 +3552,13 @@ body.rz-dragging, body.rz-dragging * { cursor: col-resize !important; user-selec
 .cp-pop button.on { background: var(--soft-primary); font-weight: 700; }
 .cp-pop .cls-badge, .cp-btn .cls-badge { cursor: inherit; flex: none; }
 .cls-none { background: var(--soft-light); color: var(--text-2); }
+
+/* client card header: key facts as labelled cells */
+.client-facts { display: flex; flex-wrap: wrap; gap: 6px 28px; margin: 8px 0 0; }
+.client-facts .fact { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.client-facts dt { font-size: 12px; line-height: 16px; color: var(--text-2); white-space: nowrap; }
+.client-facts dd { margin: 0; font-size: 14px; line-height: 20px; color: var(--text); white-space: nowrap; display: flex; align-items: baseline; gap: 6px; }
+.client-facts dd small { font-size: 12px; color: var(--text-2); }
+.fact-tag { display: inline-block; padding: 0 8px; border-radius: 10px; font-size: 13px; font-weight: 600; background: var(--soft-light); color: var(--text); }
+.fact-tag.is-good { background: var(--soft-primary); color: var(--forest); }
+.fact-tag.is-bad { background: #fbe9e7; color: var(--danger, #b42318); }
