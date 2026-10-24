@@ -1,0 +1,27 @@
+# Traefik dynamic config (file provider). Copy into the folder Traefik watches (providers.file.directory).
+# Uses the certificate resolver already configured for Supabase/n8n — rename `letsencrypt` if yours differs.
+# Password is asked by portal-web (basic auth). If Traefik runs in Docker, the service URL must reach the host:
+# use http://host.docker.internal:8088 (add extra_hosts host-gateway to Traefik) or the host's docker0 IP (172.17.0.1).
+http:
+  routers:
+    greeneration-portal:
+      rule: "Host(`b2b.greeneration.ae`)"
+      entryPoints: [websecure]
+      service: greeneration-portal
+      middlewares: [greeneration-portal-headers]
+      tls:
+        certResolver: letsencrypt
+  middlewares:
+    greeneration-portal-headers:
+      headers:
+        stsSeconds: 31536000
+        frameDeny: true
+        contentTypeNosniff: true
+        customResponseHeaders:
+          X-Robots-Tag: "noindex, nofollow"
+          Server: ""
+  services:
+    greeneration-portal:
+      loadBalancer:
+        servers:
+          - url: "http://172.17.0.1:8088"

@@ -1,0 +1,17 @@
+[Unit]
+Description=Greeneration portal: data sync and rebuild
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=portal
+Group=portal
+WorkingDirectory=/opt/greeneration-portal
+Environment=HOME=/home/portal
+ExecStart=/bin/bash /opt/greeneration-portal/deploy/update.sh
+TimeoutStartSec=20min
+Nice=10
+NoNewPrivileges=true
+ProtectSystem=full
+ReadWritePaths=/opt/greeneration-portal /var/www/greeneration-portal /home/portal

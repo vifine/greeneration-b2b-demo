@@ -1,6 +1,10 @@
 const KEY = 'gr-orderdesk-session';
 
+/** Server build (b2b.greeneration.ae): access is protected by the web server, so no demo login. */
+export const SERVER_AUTH = import.meta.env.VITE_SERVER_AUTH === '1';
+
 export function isLoggedIn(): boolean {
+  if (SERVER_AUTH) return true;
   try {
     return localStorage.getItem(KEY) === 'test';
   } catch {

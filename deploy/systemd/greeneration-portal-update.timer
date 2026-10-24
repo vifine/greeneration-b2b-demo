@@ -1,0 +1,10 @@
+[Unit]
+Description=Greeneration portal rebuild, hourly 07:00–23:00 Dubai time
+
+[Timer]
+OnCalendar=*-*-* 07..23:07:00 Asia/Dubai
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target
