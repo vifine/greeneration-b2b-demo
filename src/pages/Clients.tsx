@@ -38,7 +38,7 @@ function ClassBadge({ k }: { k?: string }) {
   );
 }
 
-function ClassRow({ sheet, value, onChange }: { sheet?: string; value?: string; onChange: (v: string | null) => void }) {
+function ClassRow({ sheet, value, onChange, demo }: { sheet?: string; value?: string; onChange: (v: string | null) => void; demo?: boolean }) {
   const changed = value !== sheet;
   return (
     <section className="set-card">
@@ -46,18 +46,24 @@ function ClassRow({ sheet, value, onChange }: { sheet?: string; value?: string; 
         <h2 className="section-h">Credit class</h2>
         <p className="section-note">
           {value ? `${CLASS_HINT[value]}.` : 'No class in the AR TRACKER.'}
-          {changed ? ` Changed here; ${LIVE?.sources.arTab ?? 'AR TRACKER'} says ${sheet ?? 'no class'}. The sheet itself is not changed.` : ` From ${LIVE?.sources.arTab ?? 'AR TRACKER'}.`}
+          {demo
+            ? changed
+              ? ' Changed here; this is a test client (default T).'
+              : ' Test client with demo data.'
+            : changed
+              ? ` Changed here; ${LIVE?.sources.arTab ?? 'AR TRACKER'} says ${sheet ?? 'no class'}. The sheet itself is not changed.`
+              : ` From ${LIVE?.sources.arTab ?? 'AR TRACKER'}.`}
         </p>
       </div>
       <div className="min-edit">
         <SelectBox
           value={value ?? ''}
           onChange={(v) => onChange(v === (sheet ?? '') ? null : v)}
-          options={[{ value: '', label: '— no class' }, ...CLASS_ORDER.map((k) => ({ value: k, label: `${k} · ${CLASS_HINT[k]}` }))]}
+          options={[{ value: '', label: '— no class' }, ...[...CLASS_ORDER, 'T'].map((k) => ({ value: k, label: `${k} · ${CLASS_HINT[k]}` }))]}
         />
         {changed && (
           <button type="button" className="link-sort" onClick={() => onChange(null)}>
-            Back to sheet value
+            {demo ? 'Back to T' : 'Back to sheet value'}
           </button>
         )}
       </div>
@@ -89,7 +95,7 @@ export function ClientsJournal() {
     return !n || c.name.toLowerCase().includes(n) || own.some((a) => `${a.name} ${a.area} ${a.line}`.toLowerCase().includes(n));
   });
   return (
-    <Shell crumbs={[{ label: 'Clients' }]}>
+    <Shell crumbs={[{ label: 'Clients' }]} contentClass="sticky-journal">
       <div className="journal-toolbar">
         <div className="grow" />
         <div className="journal-filters">
@@ -206,14 +212,15 @@ export function ClientCard() {
         </div>
       </div>
 
-      <div className={`set-cards ${c.live ? 'set-cards-3' : ''}`}>
-      {c.live && (
+      <div className="set-cards set-cards-3">
+      {(
         <ClassRow
-          sheet={c.live.class}
+          demo={!c.live}
+          sheet={c.live ? c.live.class : 'T'}
           value={clientClass(c.id)}
           onChange={(v) => {
             setClientClass(c.id, v);
-            const k = v ?? c.live?.class;
+            const k = v ?? (c.live ? c.live.class : 'T');
             toast(`${c.name}: class ${k ?? '—'}${isBlockedClass(k) ? ' · new orders on hold' : ''}`);
           }}
         />

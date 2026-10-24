@@ -289,6 +289,117 @@ for r in rp_rows[hdr_i + 1:]:
     if opts:
         replacements[sku] = opts
 
+def find_client(label, fuzzy=False):
+    """Match a free-text client name to a known client: exact normalized name, then (fuzzy) prefix."""
+    k = norm(label)
+    if not k:
+        return None
+    if k in clients:
+        return clients[k]
+    if fuzzy and len(k) >= 4:
+        hits = [c for n, c in clients.items() if n.startswith(k) or k.startswith(n)]
+        if len(hits) == 1:
+            return hits[0]
+        words = [w for w in re.findall(r"[a-z0-9]+", k) if len(w) >= 4]
+        if words:
+            hits = [c for n, c in clients.items() if n.startswith(words[0])]
+            if len(hits) == 1:
+                return hits[0]
+    return None
+
+
+# ---------- Contacts and terms from the Bitrix24 company export in AR TRACKER ----------
+co = Table("Companies", values(AR, "Companies!A1:Z5000"), 0,
+           ["ID", "CompanyName", "Work Phone", "Work E-mail", "Responsible", "Group", "Agreed payment delay, days", "Preferred payment type"])
+co_matched = 0
+for r in co.rows:
+    c = find_client(co.get(r, "CompanyName"))
+    if not c:
+        continue
+    co_matched += 1
+    c["bitrixId"] = co.get(r, "ID")
+    for key, col in (("phone", "Work Phone"), ("email", "Work E-mail"), ("responsible", "Responsible"), ("group", "Group"),
+                     ("paymentDelay", "Agreed payment delay, days"), ("paymentType", "Preferred payment type")):
+        v = str(co.get(r, col)).strip()
+        if v and v.lower() not in ("no", "none"):
+            c[key] = v
+
+# ---------- Special requirements per SKU (Product Matrix) ----------
+sr_rows = values(PRODUCT_MATRIX, "'Special req.'!A1:L600")
+special = {}
+for r in sr_rows[1:]:
+    r = r + [""] * (12 - len(r))
+    sku = name_to_sku.get(norm(r[0]))
+    req = str(r[1]).strip()
+    if not sku or not req:
+        continue
+    label = str(r[10]).strip()
+    ids = []
+    for part in re.split(r"[,;/]", label):
+        c = find_client(part, fuzzy=True)
+        if c and c["id"] not in ids:
+            ids.append(c["id"])
+    special.setdefault(sku, []).append({"req": req, "for": label, "clients": ids})
+
+# ---------- Shortages: items removed from orders (Out of stock items → Data) ----------
+OOS = "15quu9eQmWTn1uNj58A0QaFRUA5ofLYhx9sCauiLua8U"
+oos = Table("Out of stock Data", values(OOS, "Data!A1:I20000"), 0, ["Date", "Order #", "Client", "Item", "Invoice q-ty", "Q-ty removed", "Q-ty shipped", "Reason"])
+since = (datetime.date.today() - datetime.timedelta(days=180)).isoformat()
+shortages, oos_matched = {}, 0
+for r in oos.rows:
+    d = serial_date(oos.get(r, "Date"))
+    removed = num(oos.get(r, "Q-ty removed"))
+    if not d or d < since or not removed:
+        continue
+    c = find_client(oos.get(r, "Client"), fuzzy=True)
+    if not c:
+        continue
+    oos_matched += 1
+    item = str(oos.get(r, "Item")).strip()
+    shortages.setdefault(c["id"], []).append([d, str(oos.get(r, "Order #")).replace(".0", ""), item, name_to_sku.get(norm(item), ""),
+                                             num(oos.get(r, "Invoice q-ty")) or 0, removed, str(oos.get(r, "Reason")).strip()])
+for v in shortages.values():
+    v.sort(key=lambda x: x[0], reverse=True)
+
+# ---------- Credit notes (Credit notes_TRACKER) ----------
+CN = "1sqI3W8251l3ykdyUxY1xKqziaZjairvY1bgZLTd456w"
+cnr = values(CN, "Sheet1!A1:N3000")
+cn_hdr_i = next(i for i, r in enumerate(cnr[:5]) if "Client" in [str(x).strip() for x in r])
+cnt = Table("Credit notes", cnr, cn_hdr_i, ["Date of Request", "Driver", "Request from", "Deal", "Client", "Description: what should be amended", "Credit note", "File", "Hard copy"])
+credit_notes = []
+for r in cnt.rows:
+    client_name = str(cnt.get(r, "Client")).strip()
+    deal = str(cnt.get(r, "Deal")).replace(".0", "").strip()
+    if not client_name and not deal:
+        continue
+    c = find_client(client_name, fuzzy=True)
+    credit_notes.append({
+        "date": serial_date(cnt.get(r, "Date of Request")) or str(cnt.get(r, "Date of Request")),
+        "client": client_name, "clientId": c["id"] if c else None, "deal": deal,
+        "driver": str(cnt.get(r, "Driver")).strip(), "by": str(cnt.get(r, "Request from")).strip(),
+        "text": str(cnt.get(r, "Description: what should be amended")).strip(),
+        "status": str(cnt.get(r, "Credit note")).strip(), "file": str(cnt.get(r, "File")).strip(),
+        "hardCopy": str(cnt.get(r, "Hard copy")).strip(),
+    })
+credit_notes.sort(key=lambda x: x["date"] or "", reverse=True)
+
+# ---------- Stock mastertable: totals and picklists per crop code ----------
+mt_rows = values(STOCK, "Mastertable!A1:O800")
+inventory_at = str(mt_rows[1][0]) if len(mt_rows) > 1 and mt_rows[1] else ""
+if inventory_at and num(inventory_at) is not None:
+    n_ = num(inventory_at)
+    inventory_at = (datetime.datetime(1899, 12, 30) + datetime.timedelta(days=n_)).strftime("%Y-%m-%d %H:%M")
+mt = Table("Mastertable", mt_rows, 2, ["Code", "Available stock", "Total stock", "Picklist for next day deliveries"])
+stock_by_code = {}
+for r in mt.rows:
+    code = str(mt.get(r, "Code")).strip()
+    if code:
+        stock_by_code[code] = [num(mt.get(r, "Available stock")), num(mt.get(r, "Total stock")), num(mt.get(r, "Picklist for next day deliveries"))]
+for sku, a in availability.items():
+    s = stock_by_code.get(products[sku]["code"])
+    if s:
+        a["total"], a["picklist"] = s[1], s[2]
+
 # Compact price rows: [last, lastDate, min, fixed, new, newFrom, takesNow] with trailing nulls dropped.
 PRICE_FIELDS = ["last", "lastDate", "min", "fixed", "new", "newFrom", "takes"]
 compact = {}
@@ -322,7 +433,7 @@ rules["classes"] = {"D": "Legal case: do not deliver", "H": "Deliver only after 
 
 out = {
     "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
-    "sources": {"stockDates": dates, "arTab": ar_tab, "paymentsTab": paid_tab},
+    "sources": {"stockDates": dates, "arTab": ar_tab, "paymentsTab": paid_tab, "inventoryAt": inventory_at},
     "rules": rules,
     "products": products,
     "availability": availability,
@@ -331,12 +442,19 @@ out = {
     "newPricesFrom": new_from,
     "prices": compact,
     "replacements": replacements,
+    "special": special,
+    "shortages": shortages,
+    "shortageFields": ["date", "order", "item", "sku", "ordered", "removed", "reason"],
+    "creditNotes": credit_notes,
 }
 dest = os.path.join(os.path.dirname(__file__), "..", "public", "live", "live.json")
 os.makedirs(os.path.dirname(dest), exist_ok=True)
 with open(dest, "w") as f:
     json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
 print("rules", rules)
+print(f"contacts matched {co_matched}, special req SKUs {len(special)} (with client {sum(1 for v in special.values() for e in v if e['clients'])}), "
+      f"shortage rows {oos_matched} for {len(shortages)} clients, credit notes {len(credit_notes)} "
+      f"({sum(1 for x in credit_notes if x['clientId'])} matched), inventory {inventory_at}")
 print(f"products {len(products)}, availability {len(availability)}, clients {len(clients)} "
       f"(AR {ar_tab}: {ar_matched} matched to price list), price rows {sum(len(v) for v in prices.values())}, "
       f"replacements {len(replacements)}, unmatched SKU names {len(unmatched)} → {os.path.getsize(dest)//1024} KB")

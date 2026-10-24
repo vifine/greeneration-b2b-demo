@@ -226,8 +226,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       classOverrides,
       clientClass: (id) => {
         const c = clientById(id);
-        if (!c?.live) return 'T'; // demo client
-        return classOverrides[id] ?? c.live.class;
+        return classOverrides[id] ?? (c?.live ? c.live.class : 'T'); // demo clients default to T (test)
       },
       setClientClass: (id, cls) =>
         setClassState((m) => {
