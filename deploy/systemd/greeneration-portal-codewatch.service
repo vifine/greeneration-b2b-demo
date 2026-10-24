@@ -1,0 +1,7 @@
+[Unit]
+Description=Greeneration portal: rebuild when new code is pushed
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/greeneration-portal/deploy/codewatch.sh
