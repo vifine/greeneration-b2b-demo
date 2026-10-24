@@ -23,7 +23,7 @@ import urllib.request
 
 WRITE_MODE = os.environ.get("PORTAL_BX_WRITE", "test").strip().lower()
 TEST_PREFIX = "[TEST] "
-IDENTITY_FIELDS = {"UF_CRM_1784704783108", "UF_CRM_1784704809229", "UF_CRM_1784704839121"}
+IDENTITY_FIELDS = {"UF_CRM_1784704809229", "UF_CRM_1784704839121"}  # Passport(s), Emirates ID(s); UF_CRM_1784704783108 = Contract(s) is a normal document
 MAX_FILE = 60 * 1024 * 1024
 CACHE_TTL = 600
 

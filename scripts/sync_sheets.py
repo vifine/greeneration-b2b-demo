@@ -498,7 +498,7 @@ def bitrix_sync():
         ("supply", "UF_CRM_1705566912084", "t"), ("weekly", "UF_CRM_1708955214763", "e"), ("firstOrder", "UF_CRM_1716199109655", "d"),
         ("form", "UF_CRM_67924460AD450", "t"), ("credit", "UF_CRM_1784619222556", "f"), ("eid", "UF_CRM_1784704839121", "f"),
         ("addContact", "UF_CRM_ADDITIONAL_CONTACT", "c"), ("passport", "UF_CRM_1784704809229", "f"), ("discount", "UF_CRM_NEGOTIATED_DISCOUNT", "n"),
-        ("junk", "UF_CRM_6792446093F07", "e"), ("otherEntity", "UF_CRM_1755600623", "c"), ("cheque", "UF_CRM_1784619203008", "f"),
+        ("junk", "UF_CRM_6792446093F07", "e"), ("otherEntity", "UF_CRM_1755600623", "c"), ("cheque", "UF_CRM_1784619203008", "f"), ("contracts", "UF_CRM_1784704783108", "f"),
         ("industry", "INDUSTRY", "s"), ("type", "COMPANY_TYPE", "s"), ("employees", "EMPLOYEES", "s"),
     ]
     BX_IDENTITY = {"passport", "eid"}  # identity documents: shown as present / absent only, never linked
