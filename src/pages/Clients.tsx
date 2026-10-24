@@ -1,7 +1,7 @@
 import { ClientActivity } from '../components/ClientActivity';
 import testBitrix from '../data/testBitrix.json';
 import { bitrixCompanyUrl, odooPartnerUrl } from '../data/live';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Money } from '../components/Money';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AddressCard, AddressDialog, emptyAddress } from '../components/Addresses';
@@ -19,7 +19,7 @@ import { SERVER_AUTH } from '../auth';
 import { SharedNotesCard } from '../components/SharedNotes';
 import { LIVE } from '../data/live';
 import { MiniMap } from '../components/MapLazy';
-import { BitrixDetails } from '../components/BitrixDetails';
+import { BitrixDetails, ClientDocuments } from '../components/BitrixDetails';
 import { clientPoint } from '../data/geo';
 import { ClientsMapView } from './MapPage';
 import { ClassBadge, CLASS_COLOR, CLASS_HINT, CLASS_ORDER, classFilterOptions, isBlockedClass, matchesClass, NO_COLOR, tint, ZoneDot, zoneColor } from '../components/ClassBadge';
@@ -43,11 +43,7 @@ function ClassRow({ sheet, value, onChange, demo }: { sheet?: string; value?: st
         </p>
       </div>
       <div className="min-edit">
-        <SelectBox
-          value={value ?? ''}
-          onChange={(v) => onChange(v === (sheet ?? '') ? null : v)}
-          options={[{ value: '', label: '— no class' }, ...[...CLASS_ORDER, 'T'].map((k) => ({ value: k, label: `${k} · ${CLASS_HINT[k]}` }))]}
-        />
+        <ClassPicker value={value ?? ''} onChange={(v) => onChange(v === (sheet ?? '') ? null : v)} />
         {changed && (
           <button type="button" className="link-sort" onClick={() => onChange(null)}>
             {demo ? 'Back to T' : 'Back to sheet value'}
@@ -55,6 +51,59 @@ function ClassRow({ sheet, value, onChange, demo }: { sheet?: string; value?: st
         )}
       </div>
     </section>
+  );
+}
+
+/** Credit class picker with a legend: the colour badge and what the class means. */
+function ClassPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, [open]);
+  const keys = ['', ...CLASS_ORDER, 'T'];
+  const row = (k: string) => (
+    <>
+      {k ? <ClassBadge k={k} /> : <span className="cls-badge cls-none">—</span>}
+      <span className="cp-text">{k ? CLASS_HINT[k] : 'No class'}</span>
+    </>
+  );
+  return (
+    <div className="class-picker" ref={ref}>
+      <button type="button" className="selectbox cp-btn" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        {row(value)}
+        <img src={I.icChevronDown} width={16} height={16} alt="" />
+      </button>
+      {open && (
+        <ul className="cp-pop" role="listbox" aria-label="Credit class">
+          {keys.map((k) => (
+            <li key={k || 'none'}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={k === value}
+                className={k === value ? 'on' : ''}
+                onClick={() => {
+                  setOpen(false);
+                  if (k !== value) onChange(k);
+                }}
+              >
+                {row(k)}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -66,8 +115,8 @@ function specialFor(clientId: string) {
 }
 
 /** Server build: notes shared by the team (notes service). Demo build: kept in this browser. */
-function NotesCard({ clientId }: { clientId: string }) {
-  return SERVER_AUTH ? <SharedNotesCard clientId={clientId} /> : <LocalNotesCard clientId={clientId} />;
+function NotesCard({ clientId, bxComment }: { clientId: string; bxComment?: string }) {
+  return SERVER_AUTH ? <SharedNotesCard clientId={clientId} bxComment={bxComment} /> : <LocalNotesCard clientId={clientId} />;
 }
 
 function LocalNotesCard({ clientId }: { clientId: string }) {
@@ -441,7 +490,7 @@ export function ClientCard() {
         </div>
       </div>
 
-      <div className="set-cards set-cards-3">
+      <div className="set-cards set-cards-3 cc-top">
       {(
         <ClassRow
           demo={!c.live}
@@ -490,33 +539,46 @@ export function ClientCard() {
       </section>
       </div>
 
-      <NotesCard key={`n-${c.id}`} clientId={c.id} />
-
+      {(() => {
+        const left = (
+          <>
+            {c.live?.bx && <BitrixDetails key={`bx-${c.id}`} clientId={c.id} bx={c.live.bx} bitrixId={c.live.bitrixId} />}
+            {c.live?.bx && <ClientDocuments key={`docs-${c.id}`} clientId={c.id} bx={c.live.bx} bitrixId={c.live.bitrixId} />}
       {specialFor(c.id).length > 0 && (
-        <>
-          <div className="section-head">
-            <h2 className="section-h">Special requirements</h2>
-            <p className="section-note">Agreed requirements from the Product Matrix (Special req.).</p>
-          </div>
-          <div className="table journal mini-table">
-            <div className="tr th">
-              <span className="m-sku">SKU</span>
-              <span className="m-wide">Requirement</span>
+              <>
+                <div className="section-head">
+                  <h2 className="section-h">Special requirements</h2>
+                  <p className="section-note">Agreed requirements from the Product Matrix (Special req.).</p>
+                </div>
+                <div className="table journal mini-table">
+                  <div className="tr th">
+                    <span className="m-sku">SKU</span>
+                    <span className="m-wide">Requirement</span>
+                  </div>
+                  {specialFor(c.id).map((x, i) => (
+                    <div key={i} className="tr row">
+                      <span className="m-sku two">
+                        <span>{x.sku}</span>
+                        <small>{LIVE?.products[x.sku]?.name ?? ''}</small>
+                      </span>
+                      <span className="m-wide">{x.req}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        );
+        const hasLeft = !!c.live?.bx || specialFor(c.id).length > 0;
+        return (
+          <div className={`cc-main ${hasLeft ? '' : 'is-single'}`}>
+            {hasLeft && <div className="cc-col">{left}</div>}
+            <div className="cc-col cc-notes">
+              <NotesCard key={`n-${c.id}`} clientId={c.id} bxComment={c.live?.bx?.comment} />
             </div>
-            {specialFor(c.id).map((x, i) => (
-              <div key={i} className="tr row">
-                <span className="m-sku two">
-                  <span>{x.sku}</span>
-                  <small>{LIVE?.products[x.sku]?.name ?? ''}</small>
-                </span>
-                <span className="m-wide">{x.req}</span>
-              </div>
-            ))}
           </div>
-        </>
-      )}
-
-      {c.live?.bx && <BitrixDetails bx={c.live.bx} bitrixId={c.live.bitrixId} />}
+        );
+      })()}
 
       <div className="section-head">
         <h2 className="section-h">Delivery addresses</h2>

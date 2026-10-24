@@ -158,8 +158,10 @@ export function Sidebar({ pinned: pinnedByPage }: { pinned: boolean }) {
         <div className="sb-brand">
           {expanded ? (
             <>
-              <img className="sb-logo-full" src={I.logoLight} width={148} height={24.6} alt="greeneration" />
-              <span className="pill-orderdesk">Order desk</span>
+              <Link to="/" className="sb-home" aria-label="Home" title="Home">
+                <img className="sb-logo-full" src={I.logoLight} width={148} height={24.6} alt="greeneration" />
+                <span className="pill-orderdesk">Order desk</span>
+              </Link>
               <button
                 type="button"
                 className={`sb-pin ${pinned ? 'on' : ''}`}
@@ -175,7 +177,9 @@ export function Sidebar({ pinned: pinnedByPage }: { pinned: boolean }) {
               </button>
             </>
           ) : (
-            <img className="sb-logo-mark" src={I.logoMark} width={20} height={32.88} alt="greeneration" />
+            <Link to="/" className="sb-home" aria-label="Home" title="Home">
+              <img className="sb-logo-mark" src={I.logoMark} width={20} height={32.88} alt="greeneration" />
+            </Link>
           )}
         </div>
         {sections.map((s) => (

@@ -10,6 +10,8 @@ Caddy sends /api/* here; every request needs a valid gp_session cookie (same che
   DELETE /api/notes/<id>           -> 200 | 403 (only the author) | 404
   GET    /api/healthz              -> 200 (no session needed, no data)
   /api/users ...                   -> portal access for Bitrix24 users, see portal_users.py
+  /api/bx/...                      -> client card: Bitrix24 documents and editable fields, see portal_bxfields.py
+  DELETE /api/notes/<id> is for admins only (everyone else can only add notes).
 
 Bitrix24: a note is also appended to the company COMMENTS field ONLY when the company TITLE, checked live with
 crm.company.get right before the write, starts with "[TEST] ". Real companies are never written.
@@ -31,6 +33,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "auth"))
 import portal_auth  # noqa: E402  (session cookie check: same secret, same htpasswd)
 import portal_users  # noqa: E402  (Users page: roles, passwords, invitations)
+import portal_bxfields  # noqa: E402  (client card: Bitrix24 documents and editable fields)
 
 HOST = os.environ.get("PORTAL_NOTES_HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORTAL_NOTES_PORT", "8090"))
@@ -235,12 +238,64 @@ class Handler(BaseHTTPRequestHandler):
                 return portal_users.regenerate(con, uid, me, people, root)
             return portal_users.invite(con, uid, me, people, root, bitrix_call if WEBHOOK else None, self.sender_name(me))
 
+    def bx_company(self, client):
+        cid = company_id_for(client) if CLIENT_RE.match(client or "") else None
+        return cid if cid and cid.isdigit() else None
+
+    def bx_get(self, path, qs):
+        if not self.session_email():
+            return self.send(401, {"error": "not signed in"})
+        if not WEBHOOK:
+            return self.send(503, {"error": "Bitrix24 is not connected on the server"})
+        cid = self.bx_company((qs.get("client") or [""])[0])
+        if not cid:
+            return self.send(404, {"error": "no Bitrix24 company for this client"})
+        try:
+            if path == "/api/bx/files":
+                return self.send(200, portal_bxfields.list_files(bitrix_call, cid))
+            field = (qs.get("field") or [""])[0]
+            fid = (qs.get("id") or [""])[0]
+            if not re.fullmatch(r"UF_CRM_[A-Z0-9_]{1,40}", field) or not fid.isdigit():
+                return self.send(400, {"error": "bad request"})
+            return portal_bxfields.stream_file(self, bitrix_call, cid, field, fid)
+        except Exception as e:
+            msg = str(e).replace(WEBHOOK, "<webhook>")
+            sys.stderr.write(f"bx: {path} failed for company {cid} ({type(e).__name__}: {msg[:160]})\n")
+            return self.send(502, {"error": "Bitrix24 did not answer"})
+
+    def bx_field(self):
+        me = self.session_email()
+        if not me:
+            return self.send(401, {"error": "not signed in"})
+        if not WEBHOOK:
+            return self.send(503, {"error": "Bitrix24 is not connected on the server"})
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+            if n <= 0 or n > MAX_BODY:
+                raise ValueError
+            body = json.loads(self.rfile.read(n))
+            client, key, value = str(body.get("client", "")), str(body.get("key", "")), body.get("value")
+        except Exception:
+            return self.send(400, {"error": "bad request"})
+        cid = self.bx_company(client)
+        if not cid:
+            return self.send(404, {"error": "no Bitrix24 company for this client"})
+        try:
+            code, out = portal_bxfields.save_field(bitrix_call, cid, key, value, portal_bxfields.edit_defs(LIVE_JSON), me)
+        except Exception as e:
+            msg = str(e).replace(WEBHOOK, "<webhook>")
+            sys.stderr.write(f"bx: field {key} not saved for company {cid} ({type(e).__name__}: {msg[:160]})\n")
+            return self.send(502, {"error": "Bitrix24 did not save the field"})
+        return self.send(code, out)
+
     def do_GET(self):
         path, qs = self.route()
         if path == "/api/healthz":
             return self.send(200, {"ok": True})
         if path.startswith("/api/users"):
             return self.users_api(path)
+        if path in ("/api/bx/files", "/api/bx/file"):
+            return self.bx_get(path, qs)
         if path != "/api/notes":
             return self.send(404, {"error": "not found"})
         if not self.session_email():
@@ -259,6 +314,8 @@ class Handler(BaseHTTPRequestHandler):
         path, _ = self.route()
         if path.startswith("/api/users/"):
             return self.users_api(path)
+        if path == "/api/bx/field":
+            return self.bx_field()
         if path != "/api/notes":
             return self.send(404, {"error": "not found"})
         email = self.session_email()
@@ -309,8 +366,8 @@ class Handler(BaseHTTPRequestHandler):
             row = con.execute("SELECT author FROM notes WHERE id=?", (int(m.group(1)),)).fetchone()
             if row is None:
                 return self.send(404, {"error": "no such note"})
-            if row["author"] != email:
-                return self.send(403, {"error": "only the author can delete a note"})
+            if not portal_users.is_admin(con, email, portal_auth.admin_emails()):
+                return self.send(403, {"error": "only admins can delete notes"})
             con.execute("DELETE FROM notes WHERE id=?", (int(m.group(1)),))
         self.send(200, {"ok": True})
 

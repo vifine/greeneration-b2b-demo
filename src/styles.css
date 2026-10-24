@@ -3507,3 +3507,48 @@ body.rz-dragging, body.rz-dragging * { cursor: col-resize !important; user-selec
 .content[data-split] > [data-scroll-host] .table > .tr.th { position: sticky !important; top: 0 !important; z-index: 5; }
 .content[data-split] > [data-scroll-host].kanban { padding-bottom: 8px; }
 .content[data-split] > [data-scroll-host].kanban .kanban-col { max-height: 100%; }
+
+/* Logo = link to Home */
+.sb-home { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; text-decoration: none; border-radius: 8px; }
+.sb-home:focus-visible { outline: 2px solid var(--fern); outline-offset: 4px; }
+
+/* ---------- client card: compact layout ---------- */
+.cc-top { margin-bottom: 0; gap: 12px; }
+.cc-top .set-card { padding: 14px 16px; gap: 10px; }
+.cc-top .section-note { font-size: 13px; line-height: 18px; }
+.cc-main { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); gap: 12px; align-items: start; }
+.cc-main.is-single { grid-template-columns: minmax(0, 1fr); }
+.cc-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.cc-col > .set-card { justify-content: flex-start; padding: 14px 16px; }
+.cc-col .section-head { margin: 0; }
+.cc-col .section-note { font-size: 13px; }
+.cc-notes { position: sticky; top: 0; }
+.cc-notes .notes-list { max-height: 420px; overflow-y: auto; }
+.note-bx { background: var(--soft-light); border-radius: 8px; padding: 8px 10px !important; margin-top: 6px; border-top: 0 !important; }
+.bx-details .bx-grid { row-gap: 10px; }
+.bx-edit { height: 32px; width: 100%; max-width: 280px; }
+.bx-edit select { font-size: 14px; }
+.bx-multi { position: relative; max-width: 280px; }
+.bx-multi-btn { justify-content: space-between; padding: 0 30px 0 10px; font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.bx-multi-btn .ellipsis { min-width: 0; }
+.bx-multi-pop { position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; min-width: 240px; background: var(--white); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14); padding: 6px; display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; }
+.bx-multi-opt { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; font-size: 14px; cursor: pointer; }
+.bx-multi-opt:hover { background: var(--soft-light); }
+.bx-multi-foot { display: flex; justify-content: flex-end; gap: 6px; padding: 6px 2px 2px; border-top: 1px solid var(--border); margin-top: 4px; position: sticky; bottom: -6px; background: var(--white); }
+.docs-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px 16px; }
+.docs-list li { display: flex; flex-direction: column; min-width: 0; padding: 6px 0; }
+.doc-link { display: inline-flex; align-items: center; gap: 8px; color: var(--forest); font-weight: 600; text-decoration: none; min-width: 0; font-size: 14px; }
+.doc-link:hover:not(.is-static) { text-decoration: underline; }
+.doc-link.is-static { color: var(--text); font-weight: 400; }
+.doc-kind { font-size: 12px; padding-left: 24px; }
+
+/* credit class picker with legend */
+.class-picker { position: relative; width: 100%; max-width: 420px; }
+.cp-btn { width: 100%; height: 40px; gap: 10px; padding: 0 36px 0 10px; font: inherit; font-size: 15px; text-align: left; cursor: pointer; }
+.cp-btn .cp-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-pop { position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; right: 0; list-style: none; margin: 0; padding: 6px; background: var(--white); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14); max-height: 380px; overflow-y: auto; }
+.cp-pop button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 6px; font: inherit; font-size: 14px; text-align: left; }
+.cp-pop button:hover { background: var(--soft-light); }
+.cp-pop button.on { background: var(--soft-primary); font-weight: 700; }
+.cp-pop .cls-badge, .cp-btn .cls-badge { cursor: inherit; flex: none; }
+.cls-none { background: var(--soft-light); color: var(--text-2); }

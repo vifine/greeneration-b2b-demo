@@ -418,6 +418,7 @@ new_from = sorted({e.get("newFrom") for rows in prices.values() for e in rows.va
 KEYS_SHEET = "1HonwyWyghTIy-uv2HG6uzvPcfBnH0YSod8o1oLuP9IE"
 bitrix_stats = "skipped"
 bx_fields = []  # definitions of the extra company fields that have a value for at least one company
+bx_edit = {}  # editable list fields on the client card: key -> {"f": field, "m": multiple, "o": [[id, label], ...]}
 bx_fill = {}
 bx_ll = {}  # client id → coordinates stored in the Bitrix24 address field (input for geo.py)
 
@@ -470,7 +471,9 @@ def bitrix_sync():
 
     # Enumeration labels for company user fields
     enums = {}
+    enum_multi = {}
     for f in call("crm.company.userfield.list", {}).get("result", []):
+        enum_multi[f["FIELD_NAME"]] = f.get("MULTIPLE") == "Y"
         if f.get("LIST"):
             enums[f["FIELD_NAME"]] = {str(i["ID"]): i["VALUE"] for i in f["LIST"]}
     zones = {}
@@ -499,6 +502,7 @@ def bitrix_sync():
         ("industry", "INDUSTRY", "s"), ("type", "COMPANY_TYPE", "s"), ("employees", "EMPLOYEES", "s"),
     ]
     BX_IDENTITY = {"passport", "eid"}  # identity documents: shown as present / absent only, never linked
+    BX_EDITABLE = {"delay", "channel", "industry", "type", "employees", "need"}  # list fields editable on the client card
     try:
         bx_defs = call("crm.company.fields", {}).get("result", {})
     except Exception:
@@ -594,6 +598,18 @@ def bitrix_sync():
             e["id"] = 1
         bx_fields.append(e)
     shown = {e["k"] for e in bx_fields}
+    # List fields that can be edited from the client card (written by the notes service, see portal_bxfields.py).
+    for k, f, kd in BX_EXTRA:
+        if k not in BX_EDITABLE:
+            continue
+        opts = list(enums.get(f, {}).items()) if kd == "e" else list(status_lists.get(f, {}).items())
+        if opts:
+            d = bx_defs.get(f) or {}
+            bx_edit[k] = {"f": f, "m": bool(enum_multi.get(f)) if kd == "e" else bool(d.get("isMultiple")), "o": [[i, lbl] for i, lbl in opts]}
+            if k not in shown:  # editable even when no company has a value yet
+                label = re.sub(r"\s*\(archived\)\s*", "", (d.get("listLabel") or d.get("formLabel") or d.get("title") or f), flags=re.I).strip()
+                bx_fields.append({"k": k, "l": label, "t": "t"})
+                shown.add(k)
     print("Bitrix24 extra fields: " + ", ".join(f"{k}={bx_fill[k]}" for k in bx_fill))
 
     by_bitrix = {str(c.get("bitrixId")).replace(".0", ""): c for c in clients.values() if c.get("bitrixId")}
@@ -642,6 +658,19 @@ def bitrix_sync():
                     x[k] = v
         if x:
             bx["x"] = x
+        # Raw ids of the editable list fields (the card shows them as selects).
+        xr = {}
+        for k, f, kd in BX_EXTRA:
+            if k in bx_edit:
+                raw = co.get(f)
+                if isinstance(raw, list):
+                    ids = [str(v) for v in raw if v not in (None, "", 0, "0")]
+                    if ids:
+                        xr[k] = ids
+                elif raw not in (None, "", 0, "0", False):
+                    xr[k] = str(raw)
+        if xr:
+            bx["xr"] = xr
         cm = bx_clean_text(co.get("COMMENTS"))
         if cm:
             bx["comment"] = cm[:800]
@@ -906,6 +935,7 @@ out = {
     "rules": rules,
     "products": products,
     "bxFields": bx_fields,
+    "bxEdit": bx_edit,
     "availability": availability,
     "clients": sorted(clients.values(), key=lambda c: c["name"].lower()),
     "priceFields": PRICE_FIELDS,

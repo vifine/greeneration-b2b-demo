@@ -1,18 +1,21 @@
 import { useState } from 'react';
-import { currentUser, personName } from '../auth';
+import { isAdmin, personName } from '../auth';
 import { NOTE_MAX, useSharedNotes } from '../notes';
 import { Btn, useToast } from './ui';
 
 const when = (iso: string) =>
   new Date(iso).toLocaleString('en-GB', { timeZone: 'Asia/Dubai', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-/** Client card «Notes» on the server build: one list shared by the whole team, each note with author and time. */
-export function SharedNotesCard({ clientId }: { clientId: string }) {
+/**
+ * Client card «Notes» on the server build: one list shared by the whole team, each note with author and time.
+ * The Bitrix24 company comment is shown as the last entry (read-only). Everyone can add notes; only admins delete.
+ */
+export function SharedNotesCard({ clientId, bxComment }: { clientId: string; bxComment?: string }) {
   const { notes, error, add, remove } = useSharedNotes(clientId);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const toast = useToast();
-  const me = currentUser().email;
+  const canDelete = isAdmin();
   const text = draft.trim();
   const tooLong = draft.length > NOTE_MAX;
 
@@ -44,11 +47,11 @@ export function SharedNotesCard({ clientId }: { clientId: string }) {
     <section className="set-card notes-card">
       <div>
         <h2 className="section-h">Notes</h2>
-        <p className="section-note">Free-text notes about the client. Shared with the team.</p>
+        <p className="section-note">Shared with the team. Everyone can add notes; only admins can delete them.</p>
       </div>
       <textarea
         className="notes-input"
-        rows={3}
+        rows={2}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => {
@@ -69,7 +72,7 @@ export function SharedNotesCard({ clientId }: { clientId: string }) {
         <p className="muted notes-empty">Notes are unavailable right now ({error}).</p>
       ) : notes == null ? (
         <p className="muted notes-empty">Loading notes…</p>
-      ) : notes.length === 0 ? (
+      ) : notes.length === 0 && !bxComment ? (
         <p className="muted notes-empty">No notes yet</p>
       ) : (
         <ul className="notes-list">
@@ -78,7 +81,7 @@ export function SharedNotesCard({ clientId }: { clientId: string }) {
               <div className="note-meta">
                 <span className="note-author">{personName(n.author)}</span>
                 <span className="muted">{when(n.ts)}</span>
-                {me && n.author === me && (
+                {canDelete && (
                   <button type="button" className="link-sort note-del" onClick={() => void del(n.id)} aria-label="Delete note">
                     Delete
                   </button>
@@ -87,6 +90,15 @@ export function SharedNotesCard({ clientId }: { clientId: string }) {
               <p className="note-text">{n.text}</p>
             </li>
           ))}
+          {bxComment && (
+            <li className="note-item note-bx">
+              <div className="note-meta">
+                <span className="note-author">Bitrix24</span>
+                <span className="muted">company comment</span>
+              </div>
+              <p className="note-text">{bxComment}</p>
+            </li>
+          )}
         </ul>
       )}
     </section>
