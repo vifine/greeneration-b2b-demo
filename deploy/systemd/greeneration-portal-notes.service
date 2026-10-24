@@ -1,0 +1,30 @@
+[Unit]
+Description=Greeneration portal: shared client notes (127.0.0.1:8090, behind Caddy /api/*)
+After=network.target greeneration-portal-auth.service
+
+[Service]
+Type=simple
+User=portal
+Group=portal
+WorkingDirectory=/opt/greeneration-portal
+# PORTAL_SESSION_SECRET (session check) and BITRIX_WEBHOOK (writes only to [TEST] companies) come from here.
+EnvironmentFile=/etc/greeneration-portal/env
+Environment=PORTAL_NOTES_HOST=127.0.0.1 PORTAL_NOTES_PORT=8090 PORTAL_NOTES_DB=/var/lib/greeneration-portal/notes.db PORTAL_HTPASSWD=/etc/greeneration-portal/web-auth/htpasswd PYTHONUNBUFFERED=1
+# /var/lib/greeneration-portal, owner portal, created by systemd.
+StateDirectory=greeneration-portal
+StateDirectoryMode=0750
+ExecStart=/opt/greeneration-portal/.venv/bin/python /opt/greeneration-portal/deploy/notes/portal_notes.py
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryMax=128M
+
+[Install]
+WantedBy=multi-user.target

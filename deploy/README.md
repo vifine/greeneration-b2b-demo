@@ -13,6 +13,7 @@ GitHub (код) ──┘    только чтение        └─ current →
                      portal-web (nginx в Docker) — 127.0.0.1:8088
                                                │
      Caddy — b2b.greeneration.ae ── /auth/*  → сервис входа greeneration-portal-auth (127.0.0.1:8089)
+                                 ── /api/*   → заметки по клиентам greeneration-portal-notes (127.0.0.1:8090), сам проверяет сессию
                                  ── /live/*  → только с сессией (forward_auth → /auth/check), иначе 401
                                  ── остальное → portal-web (страница входа + приложение, без данных)
 ```
@@ -83,6 +84,8 @@ journalctl -u greeneration-portal-update -n 50 --no-pager
 ```bash
 curl -s http://127.0.0.1:8088/healthz                  # ok
 curl -s http://127.0.0.1:8089/auth/healthz              # {"ok": true} — сервис входа жив
+curl -s http://127.0.0.1:8090/api/healthz               # {"ok": true} — сервис заметок жив
+curl -sI https://b2b.greeneration.ae/api/notes | head -1         # 401 — без входа заметок нет
 systemctl status greeneration-portal-auth --no-pager
 curl -sI https://b2b.greeneration.ae/live/live.json | head -1    # 401 — без входа данных нет
 systemctl list-timers 'greeneration-portal-*'           # следующий запуск
@@ -98,7 +101,36 @@ sudo -u portal ln -sfn releases/<предыдущая> /var/www/greeneration-por
 ```
 Остановить обновления: `sudo systemctl disable --now greeneration-portal-update.timer greeneration-portal-codewatch.timer`.
 Журнал входов: `journalctl -u greeneration-portal-auth -n 50` (пароли и тела запросов не пишутся).
-Убрать всё: `docker compose -p greeneration-portal down`, удалить `/opt/greeneration-portal`, `/var/www/greeneration-portal`, `/etc/greeneration-portal`, юниты systemd.
+Убрать всё: `docker compose -p greeneration-portal down`, удалить `/opt/greeneration-portal`, `/var/www/greeneration-portal`, `/etc/greeneration-portal`, `/var/lib/greeneration-portal` (заметки — сначала резервная копия), юниты systemd.
+
+## Заметки по клиентам
+
+Блок «Notes» в карточке клиента — общий для всех пользователей портала. Сервис `deploy/notes/portal_notes.py`
+(Python, только стандартная библиотека, пользователь `portal`, юнит `greeneration-portal-notes`, 127.0.0.1:8090) хранит
+заметки в SQLite **`/var/lib/greeneration-portal/notes.db`** (папка `portal:portal 750`, создаёт systemd/install.sh).
+Каждая заметка: клиент, автор (email вошедшего), время, текст (до 2000 символов). Удалить заметку может только её автор.
+
+* API: `GET /api/notes[?client=<id>]`, `POST /api/notes {client, text}`, `DELETE /api/notes/<id>`; без сессии — 401,
+  чужая заметка — 403. Сессия та же, что у входа (cookie `gp_session`, общий `PORTAL_SESSION_SECRET`).
+* Старые заметки из браузера (localStorage `gr-client-notes`) при первом открытии портала один раз переносятся на сервер
+  от имени вошедшего и удаляются из браузера. Демо-сборка без сервера по-прежнему хранит заметки в браузере.
+* **Bitrix24:** заметка дописывается в поле «Комментарий» (COMMENTS) компании **только если её название начинается с
+  `[TEST] `** — название проверяется в Битриксе (`crm.company.get`) прямо перед записью, запись `crm.company.update`
+  без события в ленте. Комментарии реальных компаний **никогда не меняются**. Вебхук `BITRIX_WEBHOOK` читается из
+  `/etc/greeneration-portal/env` только на сервере, в браузер и журнал не попадает. Итог по каждой заметке — поле
+  `bitrix` (`written` / `skipped: …` / `error`). Чтобы запись в тестовые компании работала, у вебхука должно быть право на CRM-запись.
+* Код сервиса обновляется вместе с репозиторием, но перечитывается только при перезапуске:
+  `sudo systemctl restart greeneration-portal-notes`. Журнал: `journalctl -u greeneration-portal-notes -n 50` (тексты не пишутся).
+
+**Резервная копия.** Все заметки — один файл. Копия без остановки сервиса:
+```bash
+sudo -u portal sqlite3 /var/lib/greeneration-portal/notes.db ".backup '/var/lib/greeneration-portal/notes-$(date +%F).db'"
+# или без sqlite3:
+sudo -u portal /opt/greeneration-portal/.venv/bin/python -c "import sqlite3,sys;s=sqlite3.connect(sys.argv[1]);d=sqlite3.connect(sys.argv[2]);s.backup(d)" \
+  /var/lib/greeneration-portal/notes.db /var/lib/greeneration-portal/notes-backup.db
+```
+Папку `/var/lib/greeneration-portal` нужно включить в резервное копирование сервера (Acronis у HostingB2B).
+Восстановление: остановить сервис, положить копию на место `notes.db` (владелец `portal`), запустить.
 
 ## Координаты клиентов (карта)
 
@@ -127,6 +159,6 @@ sudo nano /etc/greeneration-portal/google-sa.json      # Google SA key JSON
 sudo chown portal:portal /etc/greeneration-portal/{env,google-sa.json} && sudo chmod 600 /etc/greeneration-portal/{env,google-sa.json}
 sudo bash /opt/greeneration-portal/deploy/make-users.sh
 sudo systemctl start greeneration-portal-update && journalctl -u greeneration-portal-update -n 50 --no-pager
-# then wire b2b.greeneration.ae in Caddy: /auth/* → 8089, /live/* forward_auth /auth/check + 8088, rest → 8088
+# then wire b2b.greeneration.ae in Caddy: /auth/* → 8089, /api/* → 8090 (notes), /live/* forward_auth /auth/check + 8088, rest → 8088
 curl -s http://127.0.0.1:8089/auth/healthz && curl -sI https://b2b.greeneration.ae/live/live.json | head -1   # ok / 401
 ```

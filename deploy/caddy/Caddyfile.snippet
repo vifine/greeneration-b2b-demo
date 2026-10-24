@@ -1,6 +1,7 @@
 # b2b.greeneration.ae in the host Caddy (/etc/caddy/Caddyfile). Reload: sudo systemctl reload caddy.
 # HTTPS certificate is issued automatically.
 #   /auth/*  → login service (deploy/auth/portal_auth.py, 127.0.0.1:8089): sign in / out, session cookie
+#   /api/*   → notes service (deploy/notes/portal_notes.py, 127.0.0.1:8090): shared client notes; checks the session itself (401)
 #   /live/*  → real data; only with a valid session (forward_auth asks /auth/check, otherwise 401)
 #   rest     → portal-web (nginx container, 127.0.0.1:8088): login page + app bundle (demo data only)
 # Caddy running in Docker: replace 127.0.0.1 with host.docker.internal (and add
@@ -15,6 +16,10 @@ b2b.greeneration.ae {
 
 	handle /auth/* {
 		reverse_proxy 127.0.0.1:8089
+	}
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8090
 	}
 
 	handle /live/* {

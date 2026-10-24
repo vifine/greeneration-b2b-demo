@@ -8,6 +8,7 @@
 #   - Node.js 20 + Python venv with google-auth/requests (read-only data sync) and bcrypt (login service)
 #   - secrets file /etc/greeneration-portal/env (placeholders + generated PORTAL_SESSION_SECRET, chmod 600)
 #   - login service greeneration-portal-auth (127.0.0.1:8089): the portal's own sign-in page, session cookie
+#   - notes service greeneration-portal-notes (127.0.0.1:8090): shared client notes, SQLite in /var/lib/greeneration-portal
 #   - web container `portal-web` (nginx, no password) on 127.0.0.1:8088 serving /var/www/greeneration-portal/current;
 #     /live/* (real data) is protected by the proxy asking the login service (forward_auth)
 #   - systemd timers: rebuild every hour 07:00–23:00 Asia/Dubai + within ~2 min of a push to main (codewatch)
@@ -84,6 +85,13 @@ systemctl daemon-reload
 systemctl enable greeneration-portal-auth.service
 systemctl restart greeneration-portal-auth.service
 
+log "Notes service greeneration-portal-notes on 127.0.0.1:8090 (db /var/lib/greeneration-portal/notes.db)"
+install -d -o portal -g portal -m 750 /var/lib/greeneration-portal
+install -m 644 "$APP_DIR/deploy/systemd/greeneration-portal-notes.service" /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable greeneration-portal-notes.service
+systemctl restart greeneration-portal-notes.service
+
 log "Web container portal-web on 127.0.0.1:$PORT"
 install -d -m 755 "$ETC_DIR/nginx"
 # Keep the same inode: the container mounts this single file.
@@ -113,9 +121,9 @@ fi
 echo "Detected: $PROXY"
 case "$PROXY" in
   nginx) echo "Next: sudo cp $APP_DIR/deploy/nginx/b2b.greeneration.ae.conf /etc/nginx/sites-available/ && sudo ln -sf /etc/nginx/sites-available/b2b.greeneration.ae.conf /etc/nginx/sites-enabled/ && sudo certbot --nginx -d $DOMAIN && sudo nginx -t && sudo systemctl reload nginx" ;;
-  caddy|caddy-docker) echo "Next: add $APP_DIR/deploy/caddy/Caddyfile.snippet to the Caddyfile (/auth/* → 8089, /live/* forward_auth, rest → $PORT), caddy validate, reload" ;;
+  caddy|caddy-docker) echo "Next: add $APP_DIR/deploy/caddy/Caddyfile.snippet to the Caddyfile (/auth/* → 8089, /api/* → 8090, /live/* forward_auth, rest → $PORT), caddy validate, reload" ;;
   traefik) echo "Next: copy $APP_DIR/deploy/traefik/b2b.yml into Traefik's dynamic config folder (file provider)" ;;
   nginx-proxy-manager) echo "Next: in Nginx Proxy Manager add Proxy Host $DOMAIN → http://<host-ip>:$PORT, request a Let's Encrypt certificate, force SSL" ;;
   *) echo "Next: see deploy/README.md, section 'Прокси'" ;;
 esac
-echo "Check: curl -s http://127.0.0.1:8089/auth/healthz; curl -sI https://$DOMAIN/live/live.json | head -1   # ok / 401"
+echo "Check: curl -s http://127.0.0.1:8089/auth/healthz; curl -s http://127.0.0.1:8090/api/healthz; curl -sI https://$DOMAIN/live/live.json | head -1   # ok / 401"
