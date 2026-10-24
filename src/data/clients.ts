@@ -37,7 +37,7 @@ if (LIVE) {
     CLIENTS.push({
       id: c.id,
       name: c.name,
-      area: [c.segment, c.class && `Class ${c.class}`].filter(Boolean).join(' · ') || '—',
+      area: c.segment || '—',
       minOrder: LIVE.rules.minOrder,
       creditHold: !!c.rule,
       live: c,

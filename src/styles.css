@@ -3082,3 +3082,8 @@ a.pt-tile:hover { border-color: var(--forest); }
   color: var(--success, #1f7a3d);
   white-space: nowrap;
 }
+
+.clients-table .c-class { flex: 0 0 72px; display: flex; align-items: center; }
+.cls-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 24px; padding: 0 8px; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: help; }
+.set-cards-3 { grid-template-columns: 1.3fr 1fr 1fr; }
+.set-card .min-edit .selectbox select { min-width: 260px; }

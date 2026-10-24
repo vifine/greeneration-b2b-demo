@@ -94,7 +94,7 @@ const figmaOrders: Order[] = [
 ];
 
 // Pad the journal to the volumes shown in the design (11 new, 8 preorder, 36 confirmed).
-const extraClients = CLIENTS.filter((c) => !['verdant', 'olive', 'littlefig', 'corniche', 'marina', 'sandstone', 'fennel', 'cedar'].includes(c.id));
+const extraClients = CLIENTS.filter((c) => !c.live && !['verdant', 'olive', 'littlefig', 'corniche', 'marina', 'sandstone', 'fennel', 'cedar'].includes(c.id));
 const plan: [OrderStage, number][] = [
   ['New request', 9],
   ['Preorder', 6],

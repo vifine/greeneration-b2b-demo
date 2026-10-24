@@ -9,7 +9,7 @@ the token is requested with the read-only scope.
 Columns are found by header name, never by position. If a required header is missing
 the script stops with an error instead of writing wrong data.
 """
-import json, os, re, sys, datetime
+import json, os, re, sys, datetime, hashlib
 import requests
 import google.auth
 from google.oauth2 import service_account
@@ -174,7 +174,8 @@ clients = {}
 def client(name):
     key = norm(name)
     if key not in clients:
-        clients[key] = {"id": "c-" + slug(name), "name": str(name).strip()}
+        # Slug plus a short hash of the full name: long names that share a prefix stay distinct.
+        clients[key] = {"id": f"c-{slug(name)[:40].strip('-')}-{hashlib.md5(key.encode()).hexdigest()[:6]}", "name": str(name).strip()}
     return clients[key]
 
 

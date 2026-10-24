@@ -6,21 +6,84 @@ import { ContactCard, ContactDialog, emptyContact } from '../components/Contacts
 import type { Contact } from '../data/contacts';
 import * as I from '../components/icons';
 import { Shell } from '../components/Shell';
-import { Btn, Dot, SearchBox, useToast } from '../components/ui';
+import { Btn, Dot, SearchBox, SelectBox, useToast } from '../components/ui';
 import { DELIVERY_DAYS_BY_EMIRATE, MIN_ORDER, ZONES, type Address } from '../data/addresses';
 import { balanceOf } from '../data/balances';
 import { CLIENTS, clientById } from '../data/clients';
 import { fmt } from '../data/lines';
 import { useStore } from '../store';
+import { LIVE } from '../data/live';
+
+/** AR TRACKER classes: D blocked (legal case), H only with Head approval, the rest deliver. */
+const CLASS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { A: 'success', B: 'success', C: 'neutral', E: 'neutral', X: 'neutral', H: 'warning', D: 'danger' };
+const CLASS_HINT: Record<string, string> = {
+  A: 'Good payment discipline · deliver',
+  B: 'Pays, needs pushing · deliver',
+  C: 'Poor discipline or no contacts · deliver',
+  E: 'Paid after C, still under watch · deliver',
+  X: 'Delayed by war situation · deliver',
+  H: 'Escalated · deliver only after Head approval',
+  D: 'Legal case · do not deliver',
+};
+const CLASS_ORDER = ['A', 'B', 'C', 'E', 'X', 'H', 'D'];
+const isBlockedClass = (k?: string) => k === 'D' || k === 'H';
+
+function ClassBadge({ k }: { k?: string }) {
+  if (!k) return <span className="muted">—</span>;
+  return (
+    <span className={`cls-badge pill-${CLASS_TONE[k] ?? 'neutral'}`} title={CLASS_HINT[k] ?? ''}>
+      {k}
+    </span>
+  );
+}
+
+function ClassRow({ sheet, value, onChange }: { sheet?: string; value?: string; onChange: (v: string | null) => void }) {
+  const changed = value !== sheet;
+  return (
+    <section className="set-card">
+      <div>
+        <h2 className="section-h">Credit class</h2>
+        <p className="section-note">
+          {value ? `${CLASS_HINT[value]}.` : 'No class in the AR TRACKER.'}
+          {changed ? ` Changed here; ${LIVE?.sources.arTab ?? 'AR TRACKER'} says ${sheet ?? 'no class'}. The sheet itself is not changed.` : ` From ${LIVE?.sources.arTab ?? 'AR TRACKER'}.`}
+        </p>
+      </div>
+      <div className="min-edit">
+        <SelectBox
+          value={value ?? ''}
+          onChange={(v) => onChange(v === (sheet ?? '') ? null : v)}
+          options={[{ value: '', label: '— no class' }, ...CLASS_ORDER.map((k) => ({ value: k, label: `${k} · ${CLASS_HINT[k]}` }))]}
+        />
+        {changed && (
+          <button type="button" className="link-sort" onClick={() => onChange(null)}>
+            Back to sheet value
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
 
 export function ClientsJournal() {
-  const { addresses, invoiceMode, minOverrides } = useStore();
+  const { addresses, invoiceMode, minOverrides, clientClass } = useStore();
   const navigate = useNavigate();
   const [q, setQ] = useState('');
+  const [cls, setCls] = useState('all');
+  const [zone, setZone] = useState('all');
+  const [minF, setMinF] = useState('all');
+  const minOf = (id: string, emirate?: Address['emirate']) => minOverrides[id] ?? MIN_ORDER[emirate ?? 'Dubai'];
   const rows = CLIENTS.map((c) => {
     const own = addresses.filter((a) => a.clientId === c.id);
     return { c, own, main: own.find((a) => a.main) ?? own[0] };
-  }).filter(({ c, own }) => {
+  });
+  const zoneOf = (main?: Address) => (main ? `${main.emirate} · ${main.zone}` : '—');
+  const zoneOptions = [...new Set(rows.map(({ main }) => zoneOf(main)))].sort();
+  const minOptions = [...new Set(rows.map(({ c, main }) => minOf(c.id, main?.emirate)))].sort((a, b) => a - b);
+  const visible = rows.filter(({ c, own, main }) => {
+    if (zone !== 'all' && zoneOf(main) !== zone) return false;
+    if (minF !== 'all' && String(minOf(c.id, main?.emirate)) !== minF) return false;
+    const k = clientClass(c.id) ?? '';
+    if (cls === 'none' ? !!k : cls !== 'all' && k !== cls) return false;
     const n = q.trim().toLowerCase();
     return !n || c.name.toLowerCase().includes(n) || own.some((a) => `${a.name} ${a.area} ${a.line}`.toLowerCase().includes(n));
   });
@@ -29,23 +92,48 @@ export function ClientsJournal() {
       <div className="journal-toolbar">
         <div className="grow" />
         <div className="journal-filters">
+          {LIVE && (
+            <SelectBox
+              value={cls}
+              onChange={setCls}
+              options={[
+                { value: 'all', label: 'All classes' },
+                ...CLASS_ORDER.map((k) => ({ value: k, label: `Class ${k} · ${CLIENTS.filter((c) => clientClass(c.id) === k).length}` })),
+                { value: 'none', label: 'No class' },
+              ]}
+            />
+          )}
+          <SelectBox
+            value={zone}
+            onChange={setZone}
+            options={[{ value: 'all', label: 'All zones' }, ...zoneOptions.map((z) => ({ value: z, label: z }))]}
+          />
+          <SelectBox
+            value={minF}
+            onChange={setMinF}
+            options={[{ value: 'all', label: 'Any min order' }, ...minOptions.map((m) => ({ value: String(m), label: `Min AED ${fmt(m)}` }))]}
+          />
           <SearchBox value={q} onChange={setQ} placeholder="Search client, area, address" className="journal-search" />
         </div>
       </div>
       <div className="table journal clients-table">
         <div className="tr th">
           <span className="c-client">Client</span>
+          <span className="c-class">Class</span>
           <span className="c-addr">Main delivery address</span>
           <span className="c-emirate">Emirate · zone</span>
           <span className="c-points">Addresses</span>
           <span className="c-mode">Invoices</span>
           <span className="c-min">Min order</span>
         </div>
-        {rows.map(({ c, own, main }) => (
-          <button type="button" key={c.id} className={`tr row ${c.creditHold ? 'stripe-danger' : ''}`} onClick={() => navigate(`/customers/clients/${c.id}`)}>
+        {visible.map(({ c, own, main }) => (
+          <button type="button" key={c.id} className={`tr row ${(c.live ? isBlockedClass(clientClass(c.id)) : c.creditHold) ? 'stripe-danger' : ''}`} onClick={() => navigate(`/customers/clients/${c.id}`)}>
             <span className="c-client two">
               <span>{c.name}</span>
-              <small>{c.creditHold ? 'Credit hold' : c.area}</small>
+              <small>{c.live ? c.live.segment ?? '—' : c.creditHold ? 'Credit hold' : c.area}</small>
+            </span>
+            <span className="c-class">
+              <ClassBadge k={clientClass(c.id)} />
             </span>
             <span className="c-addr two">
               <span className="ellipsis">{main ? `${main.line}, ${main.area}` : '—'}</span>
@@ -62,13 +150,13 @@ export function ClientsJournal() {
             </span>
             <span className="c-min right two">
               <span>
-                <Money v={minOverrides[c.id] ?? MIN_ORDER[main?.emirate ?? 'Dubai']} />
+                <Money v={minOf(c.id, main?.emirate)} />
               </span>
               <small>{minOverrides[c.id] != null ? 'client' : 'by emirate'}</small>
             </span>
           </button>
         ))}
-        {!rows.length && <div className="empty">No clients match.</div>}
+        {!visible.length && <div className="empty">No clients match.</div>}
       </div>
     </Shell>
   );
@@ -76,7 +164,7 @@ export function ClientsJournal() {
 
 export function ClientCard() {
   const { id } = useParams();
-  const { addresses, saveAddress, makeMainAddress, invoiceMode, setInvoiceMode, minOverrides, setMinOrder, contacts, saveContact, removeContact } = useStore();
+  const { addresses, saveAddress, makeMainAddress, invoiceMode, setInvoiceMode, minOverrides, setMinOrder, contacts, saveContact, removeContact, clientClass, setClientClass } = useStore();
   const navigate = useNavigate();
   const [person, setPerson] = useState<(Omit<Contact, 'id'> & { id?: string }) | null>(null);
   const toast = useToast();
@@ -91,10 +179,10 @@ export function ClientCard() {
         <div className="card-title">
           <div className="card-name gap16">
             <h1>{c.name}</h1>
-            {c.creditHold && (
+            {(c.live ? isBlockedClass(clientClass(c.id)) : c.creditHold) && (
               <span className="stage text-danger">
                 <Dot tone="danger" />
-                Credit hold
+                {c.live ? (clientClass(c.id) === 'D' ? 'Class D · do not deliver' : 'Class H · needs Head approval') : 'Credit hold'}
               </span>
             )}
           </div>
@@ -117,7 +205,18 @@ export function ClientCard() {
         </div>
       </div>
 
-      <div className="set-cards">
+      <div className={`set-cards ${c.live ? 'set-cards-3' : ''}`}>
+      {c.live && (
+        <ClassRow
+          sheet={c.live.class}
+          value={clientClass(c.id)}
+          onChange={(v) => {
+            setClientClass(c.id, v);
+            const k = v ?? c.live?.class;
+            toast(`${c.name}: class ${k ?? '—'}${isBlockedClass(k) ? ' · new orders on hold' : ''}`);
+          }}
+        />
+      )}
       <MinOrderRow
         key={c.id}
         value={minOverrides[c.id]}

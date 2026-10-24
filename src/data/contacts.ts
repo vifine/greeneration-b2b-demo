@@ -36,7 +36,7 @@ const SETS: ContactRole[][] = [
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z]+/g, '');
 
 let k = 0;
-export const INITIAL_CONTACTS: Contact[] = CLIENTS.flatMap((c, ci) => {
+export const INITIAL_CONTACTS: Contact[] = CLIENTS.filter((c) => !c.live).flatMap((c, ci) => {
   const roles = SETS[ci % SETS.length];
   return roles.map((role, i): Contact => {
     const n = k++;

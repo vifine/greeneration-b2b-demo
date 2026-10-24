@@ -150,9 +150,15 @@ interface Store {
   setMinOrder: (clientId: string, v: number | null) => void;
   invoiceMode: (clientId: string) => InvoiceMode;
   setInvoiceMode: (clientId: string, m: InvoiceMode) => void;
+  /** Credit class changed in the portal (the AR TRACKER sheet itself is never written). */
+  classOverrides: Record<string, string>;
+  /** Effective class: portal change first, then the AR TRACKER value. */
+  clientClass: (clientId: string) => string | undefined;
+  setClientClass: (clientId: string, cls: string | null) => void;
 }
 
 export type InvoiceMode = 'approve' | 'auto';
+const CLASS_KEY = 'gr-class-overrides';
 const AUTO_AT_START = ['kintsugi', 'saffron', 'cedar'];
 
 const Ctx = createContext<Store | null>(null);
@@ -166,6 +172,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [claims, setClaims] = useState<Claim[]>(INITIAL_CLAIMS);
   const [contacts, setContacts] = useState<Contact[]>(INITIAL_CONTACTS);
   const [minOverrides, setMinState] = useState<Record<string, number>>({ littlefig: 100 });
+  const [classOverrides, setClassState] = useState<Record<string, string>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(CLASS_KEY) ?? '{}');
+    } catch {
+      return {};
+    }
+  });
   setAddressBook(addresses);
   setMinOverrides(minOverrides);
   const store = useMemo<Store>(() => {
@@ -210,6 +223,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           else next[id] = v;
           return next;
         }),
+      classOverrides,
+      clientClass: (id) => classOverrides[id] ?? clientById(id)?.live?.class,
+      setClientClass: (id, cls) =>
+        setClassState((m) => {
+          const next = { ...m };
+          if (cls == null) delete next[id];
+          else next[id] = cls;
+          try {
+            localStorage.setItem(CLASS_KEY, JSON.stringify(next));
+          } catch {
+            /* storage unavailable: keep in memory */
+          }
+          return next;
+        }),
       invoiceMode: (id) => modes[id] ?? 'approve',
       setInvoiceMode: (id, m) => setModes((x) => ({ ...x, [id]: m })),
       updateRequest: (id, fn) => setRequests((rs) => rs.map((r) => (r.id === id ? fn(r) : r))),
@@ -238,7 +265,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       removeContact: (id) => setContacts((list) => list.filter((x) => x.id !== id)),
     };
-  }, [requests, orders, addresses, modes, minOverrides, claims, contacts]);
+  }, [requests, orders, addresses, modes, minOverrides, claims, contacts, classOverrides]);
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }

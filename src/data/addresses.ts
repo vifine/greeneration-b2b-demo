@@ -80,7 +80,7 @@ function phone(h: number) {
   return `+971 5${h % 9} ${String(100 + ((h * 53) % 900))} ${String(1000 + ((h * 37) % 9000))}`;
 }
 
-export const INITIAL_ADDRESSES: Address[] = CLIENTS.flatMap((c, ci) => {
+export const INITIAL_ADDRESSES: Address[] = CLIENTS.filter((c) => !c.live).flatMap((c, ci) => {
   const h = ci * 7 + c.name.length;
   const main: Address = {
     id: `${c.id}-1`,
