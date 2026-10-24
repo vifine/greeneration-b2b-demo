@@ -259,13 +259,17 @@ def regenerate(con, uid, me, people, root_admins):
     return 200, {"password": pw}
 
 
-def message_text(p, email, pw, sender_name):
+ROLE_LABEL = {"owner": "Owner", "admin": "Admin", "user": "User", "none": "No access"}
+
+
+def message_text(p, email, pw, sender_name, role):
     first = (p.get("name") or "").split(" ")[0] or "there"
     return (
         f"Hello {first}!\n"
         f"{sender_name} has given you access to the Greeneration order desk: {PORTAL_URL}\n\n"
         f"Login: {email}\n"
-        f"Password: {pw}\n\n"
+        f"Password: {pw}\n"
+        f"Role: {ROLE_LABEL.get(role, role)}\n\n"
         "Please keep the password to yourself. If you lose it, ask an admin for a new one."
     )
 
@@ -291,7 +295,8 @@ def preview(con, uid, people, root_admins, sender_name):
     with _lock:
         sync_rows(con, people, root_admins)
         pw = ensure_password(con, uid)
-    return 200, {"text": message_text(p, email, pw, sender_name), "to": p.get("name"), "password": pw}
+        role = role_of(con, email, root_admins)
+    return 200, {"text": message_text(p, email, pw, sender_name, role), "to": p.get("name"), "password": pw}
 
 
 def invite(con, uid, me, people, root_admins, bitrix_call, sender_name):
@@ -318,8 +323,9 @@ def invite(con, uid, me, people, root_admins, bitrix_call, sender_name):
             (email, h, now_iso(), now_iso(), me, uid),
         )
         write_htpasswd(con)
+        role = role_of(con, email, root_admins)
     try:
-        bitrix_call("im.message.add", {"DIALOG_ID": uid, "MESSAGE": message_text(p, email, pw, sender_name), "SYSTEM": "N"})
+        bitrix_call("im.message.add", {"DIALOG_ID": uid, "MESSAGE": message_text(p, email, pw, sender_name, role), "SYSTEM": "N"})
     except Exception as e:
         sys.stderr.write(f"users: message for bitrix user {uid} not sent ({type(e).__name__})\n")
         return 502, {"error": "the new password is active, but the Bitrix24 message was not sent; send it yourself"}
