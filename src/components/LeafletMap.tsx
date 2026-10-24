@@ -2,6 +2,7 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useRef } from 'react';
+import { MaptilerLayer } from '@maptiler/leaflet-maptilersdk';
 import { LIVE } from '../data/live';
 
 const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -13,11 +14,8 @@ function baseMap(el: HTMLElement, opts: L.MapOptions) {
   map.attributionControl.setPrefix(false);
   const key = LIVE?.mapKey;
   if (key) {
-    // MapTiler Streets with English labels (key restricted to b2b.greeneration.ae, kept in the private keys sheet).
-    L.tileLayer(`https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=${key}&language=en`, {
-      maxZoom: 20,
-      attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener noreferrer">&copy; MapTiler</a> ' + ATTRIBUTION,
-    }).addTo(map);
+    // MapTiler Streets (vector) with English labels; key restricted to b2b.greeneration.ae.
+    new MaptilerLayer({ apiKey: key, style: 'streets-v2', language: 'en' }).addTo(map);
   } else {
     L.tileLayer(TILES, { maxZoom: 19, attribution: ATTRIBUTION }).addTo(map);
   }
