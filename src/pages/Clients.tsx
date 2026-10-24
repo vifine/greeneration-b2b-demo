@@ -168,7 +168,18 @@ export function ClientsJournal() {
   const onMapCount = matching.length - missingCount;
   const visible = noCoords ? withPoint.filter((x) => !x.point).map((x) => x.r) : matching;
   type Row = (typeof visible)[number];
-  const renderRow = ({ c, own, main }: Row) => (
+  /** The reason a client row is marked red (the stripe on the left), or null. */
+  const holdReason = (c: Row['c']) =>
+    c.live
+      ? isBlockedClass(clientClass(c.id))
+        ? clientClass(c.id) === 'D'
+          ? 'Class D · do not deliver'
+          : 'Class H · needs Head approval'
+        : null
+      : c.creditHold
+        ? 'Credit hold'
+        : null;
+  const renderRow = ({ c, main }: Row) => (
           <button type="button" key={c.id} className={`tr row ${(c.live ? isBlockedClass(clientClass(c.id)) : c.creditHold) ? 'stripe-danger' : ''}`} onClick={() => navigate(`/customers/clients/${c.id}`)}>
             <span className="c-client two">
               <span className="name-cls">
@@ -194,7 +205,16 @@ export function ClientsJournal() {
                     : ''}
               </small>
             </span>
-            <span className="c-points">{own.length}</span>
+            <span className="c-hold">
+              {holdReason(c) ? (
+                <span className="text-danger hold-cell">
+                  <Dot tone="danger" />
+                  <span className="ellipsis">{holdReason(c)}</span>
+                </span>
+              ) : (
+                <span className="muted">—</span>
+              )}
+            </span>
             <span className="c-mode">
               <Dot tone={invoiceMode(c.id) === 'auto' ? 'success' : 'info'} />
               {invoiceMode(c.id) === 'auto' ? 'Sent automatically' : 'Coordinator approves'}
@@ -328,7 +348,7 @@ export function ClientsJournal() {
           <span className="c-client">Client</span>
           <span className="c-addr">Main delivery address</span>
           <span className="c-emirate">Emirate · zone</span>
-          <span className="c-points">Addresses</span>
+          <span className="c-hold" title="Why the row is marked red: new orders on hold">Order block</span>
           <span className="c-mode">Invoices</span>
           <span className="c-min">Min order</span>
         </div>

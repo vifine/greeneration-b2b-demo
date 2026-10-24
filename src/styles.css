@@ -2603,7 +2603,8 @@ button.kpi {
 .clients-table .c-addr { flex: 1 1 auto; min-width: 0; }
 .clients-table .c-addr .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .clients-table .c-emirate { flex: 0 0 200px; }
-.clients-table .c-points { flex: 0 0 100px; text-align: right; }
+.clients-table .c-hold { flex: 0 0 230px; min-width: 0; }
+.hold-cell { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; }
 .clients-table .c-min { flex: 0 0 130px; text-align: right; padding-right: 0 !important; }
 
 .section-h { font-size: 18px; font-weight: 800; color: var(--heading); margin: 8px 0 4px; }
