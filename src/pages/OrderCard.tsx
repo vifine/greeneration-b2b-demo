@@ -14,6 +14,7 @@ import { Shell } from '../components/Shell';
 import { isTestDeal } from '../data/testDeals';
 import { bitrixDealUrl } from '../data/live';
 import { Btn, Dot, useToast } from '../components/ui';
+import { ClassBadge } from '../components/ClassBadge';
 import { clientById } from '../data/clients';
 import { deliveryFor } from '../data/delivery';
 import { fmt, lineSum } from '../data/lines';
@@ -52,7 +53,7 @@ function Kv({ f }: { f: PaymentField }) {
 
 export function OrderCard() {
   const { id } = useParams();
-  const { orders, updateOrder, addresses, saveAddress } = useStore();
+  const { orders, updateOrder, addresses, saveAddress, clientClass } = useStore();
   const [newAddr, setNewAddr] = useState(false);
   const [reply, setReply] = useState(false);
   const toast = useToast();
@@ -112,7 +113,10 @@ export function OrderCard() {
       <div className="card-header">
         <div className="card-title">
           <div className="card-name gap16">
-            <h1>{client.name}</h1>
+            <span className="name-cls">
+              <h1>{client.name}</h1>
+              <ClassBadge k={clientClass(o.clientId)} />
+            </span>
             <span className="stage">
               <Dot tone={STAGE_TONE[o.stage]} />
               {o.stage}

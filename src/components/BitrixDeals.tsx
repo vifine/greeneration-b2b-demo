@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Money } from './Money';
 import { Dot } from './ui';
+import { ClassBadge } from './ClassBadge';
+import { useStore } from '../store';
 import { clientById } from '../data/clients';
 import { bitrixDealUrl, LIVE, shortDate, type LiveDeal } from '../data/live';
 import type { Tone } from '../data/types';
@@ -88,6 +90,7 @@ export function allDeals() {
 
 /** Orders journal tab: real Bitrix24 orders (read-only). With `clientId`, all of that client's deals. */
 export function BitrixOrdersTable({ q, clientId }: { q: string; clientId?: string | null }) {
+  const { clientClass } = useStore();
   const [open, setOpen] = useState<number | null>(null);
   const n = q.trim().toLowerCase().replace(/^#/, '');
   const rows = allDeals()
@@ -126,9 +129,12 @@ export function BitrixOrdersTable({ q, clientId }: { q: string; clientId?: strin
               }}
             >
               <span className="c-client two">
-                <Link to={`/customers/clients/${cid}`} className="ellipsis" onClick={(e) => e.stopPropagation()}>
-                  {clientById(cid)?.name ?? cid}
-                </Link>
+                <span className="name-cls">
+                  <Link to={`/customers/clients/${cid}`} className="ellipsis" onClick={(e) => e.stopPropagation()}>
+                    {clientById(cid)?.name ?? cid}
+                  </Link>
+                  <ClassBadge k={clientClass(cid)} />
+                </span>
                 <small>
                   <DealLink id={d[0]} /> · created {day(d[1])}
                   {d[7] ? ` · LPO ${d[7]}` : ''}

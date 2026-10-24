@@ -6,10 +6,11 @@ import { Money } from '../components/Money';
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Shell } from '../components/Shell';
+import { ClassBadge } from '../components/ClassBadge';
 import { Dot, FilterSelect, SearchBox, Tabs } from '../components/ui';
-import { matchesPaymentFilter, PAYMENT_FILTERS, paymentView, type PaymentFilter } from '../data/payments';
+import { matchesPaymentFilter, PAYMENT_FILTERS, paymentView, type PaymentFilter, type PaymentView } from '../data/payments';
 import { clientById } from '../data/clients';
-import type { OrderStage, Tone } from '../data/types';
+import type { Client, Order, OrderStage, Tone } from '../data/types';
 import { orderIssue, orderCurrentTotal, orderOriginalTotal, requestIssue, requestTotal, useStore } from '../store';
 
 function Toolbar<T extends string>({
@@ -200,10 +201,81 @@ type OrdTab = (typeof ORD_TABS)[number];
 const STAGE_OF: Record<Exclude<OrdTab, 'all' | 'bitrix'>, OrderStage> = { new: 'New request', preorder: 'Preorder', confirmed: 'Confirmed' };
 const STAGE_TONE: Record<OrderStage, Tone> = { 'New request': 'info', Preorder: 'warning', Confirmed: 'success' };
 
+type OrdView = 'list' | 'kanban';
+type OrdRow = { o: Order; client: Client; pay: PaymentView };
+
+/** Orders as columns by stage. Shows the stage of the active tab (all three on "All"). */
+function OrdersKanban({ rows, tab, onOpen }: { rows: OrdRow[]; tab: OrdTab; onOpen: (id: string) => void }) {
+  const { clientClass } = useStore();
+  const stages: OrderStage[] = tab === 'all' || tab === 'bitrix' ? ['New request', 'Preorder', 'Confirmed'] : [STAGE_OF[tab]];
+  return (
+    <div className="kanban">
+      {stages.map((stage) => {
+        const col = rows.filter((x) => x.o.stage === stage);
+        const sum = col.reduce((s, x) => s + orderOriginalTotal(x.o), 0);
+        return (
+          <section key={stage} className="kanban-col" aria-label={stage}>
+            <header className="kanban-head">
+              <Dot tone={STAGE_TONE[stage]} />
+              <b>{stage}</b>
+              <span className="kanban-count">{col.length}</span>
+              <span className="kanban-sum">
+                <Money v={sum} />
+              </span>
+            </header>
+            {col.map(({ o, client, pay }) => {
+              const issue = orderIssue(o)?.text;
+              const n = o.lines.filter((l) => !l.added).length;
+              return (
+                <button type="button" key={o.id} className={`kcard ${issue ? 'has-issue' : ''}`} onClick={() => onOpen(o.id)}>
+                  <span className="kcard-top">
+                    <span className="kcard-name ellipsis">{client.name}</span>
+                    <ClassBadge k={clientClass(o.clientId)} />
+                  </span>
+                  <span className="kcard-meta">
+                    #{o.id} · {o.channel}
+                  </span>
+                  <span className="kcard-meta">
+                    {o.delivery.day} · {o.delivery.window}
+                  </span>
+                  {issue && (
+                    <span className="kcard-issue">
+                      <Dot tone="warning" />
+                      <span className="ellipsis">{issue}</span>
+                    </span>
+                  )}
+                  <span className="kcard-foot">
+                    <span className={pay.danger ? 'text-danger ellipsis' : 'ellipsis'}>{pay.label}</span>
+                    <span>
+                      <Money v={orderOriginalTotal(o)} bold />
+                      <small>
+                        {' '}· {n} line{n === 1 ? '' : 's'}
+                      </small>
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+            {!col.length && <div className="kcard-empty">No orders</div>}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
 export function OrdersJournal() {
-  const { orders } = useStore();
+  const { orders, clientClass } = useStore();
   const navigate = useNavigate();
   const { tab, q, ids, from, client, clearClient, clearIds, setTab, setQ } = useTabParam<OrdTab>(ORD_TABS, 'all');
+  const [params, setParams] = useSearchParams();
+  const view: OrdView = params.get('view') === 'kanban' ? 'kanban' : 'list';
+  const setView = (v: OrdView) => {
+    const p = new URLSearchParams(params);
+    if (v === 'kanban') p.set('view', 'kanban');
+    else p.delete('view');
+    setParams(p, { replace: true });
+  };
   const [dday, setDday] = useState<DeliveryFilter>('upcoming');
   const [payF, setPayF] = useState<PaymentFilter>('all');
   const rows = orders.map((o) => ({ o, client: clientById(o.clientId), pay: paymentView(o, orderCurrentTotal(o), orderOriginalTotal(o)) }));
@@ -228,6 +300,15 @@ export function OrdersJournal() {
         q={q}
         setQ={setQ}
       >
+        {tab !== 'bitrix' && (
+          <div className="seg seg-sm" role="radiogroup" aria-label="Orders view">
+            {(['list', 'kanban'] as const).map((v) => (
+              <button key={v} type="button" role="radio" aria-checked={view === v} className={view === v ? 'on' : ''} onClick={() => setView(v)}>
+                {v === 'list' ? 'List' : 'Kanban'}
+              </button>
+            ))}
+          </div>
+        )}
         {tab !== 'bitrix' && <FilterSelect value={dday} onChange={setDday} options={DELIVERY_FILTERS('upcoming')} />}
         {tab !== 'bitrix' && <FilterSelect value={payF} onChange={setPayF} options={PAYMENT_FILTERS} />}
       </Toolbar>
@@ -243,6 +324,9 @@ export function OrdersJournal() {
       ) : (
       <>
       {ids && <FromHome n={visible.length} from={from} onClear={clearIds} />}
+      {view === 'kanban' ? (
+        <OrdersKanban rows={visible} tab={tab} onOpen={(id) => navigate(`/crm/orders/${id}`)} />
+      ) : (
       <div className="table journal ord-table">
         <div className="tr th">
           <span className="c-client">Client</span>
@@ -259,7 +343,10 @@ export function OrdersJournal() {
           return (
             <button type="button" key={o.id} className={`tr row ${issue ? 'stripe-warning' : ''}`} onClick={() => navigate(`/crm/orders/${o.id}`)}>
               <span className="c-client two">
-                <span>{client.name}</span>
+                <span className="name-cls">
+                  <span className="ellipsis">{client.name}</span>
+                  <ClassBadge k={clientClass(o.clientId)} />
+                </span>
                 <small>
                   #{o.id} · {o.channel}
                 </small>
@@ -301,6 +388,7 @@ export function OrdersJournal() {
         })}
         {!visible.length && <div className="empty">No orders match.</div>}
       </div>
+      )}
       </>
       )}
     </Shell>
