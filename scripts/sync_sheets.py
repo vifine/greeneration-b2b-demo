@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Read Greeneration's working Google Sheets (read-only) and write public/live/live.json.
 
-Credentials: GOOGLE_SA_JSON (key file content) or GOOGLE_APPLICATION_CREDENTIALS (path).
+Credentials: keyless Workload Identity Federation in GitHub Actions (preferred),
+GOOGLE_SA_JSON (key file content) or GOOGLE_APPLICATION_CREDENTIALS (path to a key or WIF config).
 The service account has editor rights on these files, but this script only ever reads:
 the token is requested with the read-only scope.
 
@@ -10,6 +11,7 @@ the script stops with an error instead of writing wrong data.
 """
 import json, os, re, sys, datetime
 import requests
+import google.auth
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 
@@ -25,11 +27,12 @@ API = "https://sheets.googleapis.com/v4/spreadsheets"
 
 
 def creds():
-    raw = os.environ.get("GOOGLE_SA_JSON")
+    raw = (os.environ.get("GOOGLE_SA_JSON") or "").strip()
     if raw:
         c = service_account.Credentials.from_service_account_info(json.loads(raw), scopes=SCOPE)
     else:
-        c = service_account.Credentials.from_service_account_file(os.environ["GOOGLE_APPLICATION_CREDENTIALS"], scopes=SCOPE)
+        # Key file, or keyless Workload Identity Federation from GitHub Actions (google-github-actions/auth).
+        c, _ = google.auth.default(scopes=SCOPE)
     c.refresh(Request())
     return {"Authorization": "Bearer " + c.token}
 
