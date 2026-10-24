@@ -36,6 +36,36 @@ export interface LiveClient {
   group?: string;
   paymentDelay?: string;
   paymentType?: string;
+  /** Read-only snapshot of the Bitrix24 company card. */
+  bx?: LiveBitrix;
+}
+
+export interface LiveBitrixContact {
+  name: string;
+  post?: string;
+  phone?: string | null;
+  email?: string | null;
+}
+
+export interface LiveBitrix {
+  zone?: string;
+  zoneTier?: number;
+  zoneInactive?: boolean;
+  address?: string;
+  deliveryTime?: string;
+  deliveryNote?: string;
+  segment?: string;
+  status?: string;
+  priority?: string;
+  paymentType?: string;
+  paymentDelay?: string;
+  group?: string;
+  manager?: string;
+  driver?: string;
+  mapLink?: string;
+  phone?: string;
+  email?: string;
+  contacts?: LiveBitrixContact[];
 }
 
 export interface LiveSpecial {

@@ -62,10 +62,18 @@ export const ZONE_COLOR: Record<string, string> = {
 export const NO_COLOR = '#9aa1a9';
 
 /** Colour for a zone label such as "Dubai · D3" or "Sharjah · S1". */
+const ZONE_PALETTE = ['#2f6fb3', '#1f8a80', '#7c5cbf', '#d9822b', '#c2477f', '#8a6d3b', '#3f51b5', '#2f7d4a', '#b5543a', '#5b8a1f', '#a0782c', '#6a4fa3', '#1c7fa6', '#c0392b', '#4e7d6b', '#9a4f8f'];
+function hashColor(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return ZONE_PALETTE[h % ZONE_PALETTE.length];
+}
+
+/** Colour for a zone label: demo zones ("Dubai · D3") use fixed colours, Bitrix24 zone names get a stable colour of their own. */
 export function zoneColor(label?: string | null) {
   if (!label || label === '—') return NO_COLOR;
   const [emirate, zone] = label.split(' · ');
-  return ZONE_COLOR[zone] ?? ZONE_COLOR[emirate] ?? NO_COLOR;
+  return ZONE_COLOR[zone] ?? ZONE_COLOR[emirate] ?? hashColor(label);
 }
 
 export const tint = (hex: string, alpha = 0.1) => `${hex}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`;

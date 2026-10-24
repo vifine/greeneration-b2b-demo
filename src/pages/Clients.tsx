@@ -103,11 +103,17 @@ export function ClientsJournal() {
     const own = addresses.filter((a) => a.clientId === c.id);
     return { c, own, main: own.find((a) => a.main) ?? own[0] };
   });
-  const zoneOf = (main?: Address) => (main ? `${main.emirate} · ${main.zone}` : '—');
-  const zoneOptions = [...new Set(rows.map(({ main }) => zoneOf(main)))].sort();
+  // Zone: Bitrix24 zone for real clients, demo address zone for test clients.
+  const zoneLabel = ({ c, main }: { c: (typeof CLIENTS)[number]; main?: Address }) =>
+    c.live ? c.live.bx?.zone ?? '—' : main ? `${main.emirate} · ${main.zone}` : '—';
+  const zoneTier: Record<string, number> = {};
+  for (const r of rows) if (r.c.live?.bx?.zone) zoneTier[r.c.live.bx.zone] = r.c.live.bx.zoneTier ?? 9;
+  const zoneSort = (a: string, b: string) =>
+    a === '—' ? 1 : b === '—' ? -1 : (zoneTier[a] ?? 99) - (zoneTier[b] ?? 99) || a.localeCompare(b); // demo zones after real ones
+  const zoneOptions = [...new Set(rows.map((r) => zoneLabel(r)))].sort(zoneSort);
   const minOptions = [...new Set(rows.map(({ c, main }) => minOf(c.id, main?.emirate)))].sort((a, b) => a - b);
   const visible = rows.filter(({ c, own, main }) => {
-    if (zone !== 'all' && zoneOf(main) !== zone) return false;
+    if (zone !== 'all' && zoneLabel({ c, main }) !== zone) return false;
     if (minF !== 'all' && String(minOf(c.id, main?.emirate)) !== minF) return false;
     if (!matchesClass(cls, clientClass(c.id))) return false;
     const n = q.trim().toLowerCase();
@@ -124,15 +130,21 @@ export function ClientsJournal() {
               <ClassBadge k={clientClass(c.id)} />
             </span>
             <span className="c-addr two">
-              <span className="ellipsis">{main ? `${main.line}, ${main.area}` : '—'}</span>
-              <small>{main ? `${main.name} · receiving ${main.hours || '—'}` : ''}</small>
+              <span className="ellipsis">{main ? `${main.line}, ${main.area}` : c.live?.bx?.address ?? '—'}</span>
+              <small>{main ? `${main.name} · receiving ${main.hours || '—'}` : c.live?.bx?.deliveryTime ? `Delivery ${c.live.bx.deliveryTime}` : ''}</small>
             </span>
             <span className="c-emirate two">
               <span className="zone-cell">
-                {main && <ZoneDot label={`${main.emirate} · ${main.zone}`} />}
-                {main ? `${main.emirate} · ${main.zone}` : '—'}
+                {zoneLabel({ c, main }) !== '—' && <ZoneDot label={zoneLabel({ c, main })} />}
+                {zoneLabel({ c, main })}
               </span>
-              <small>{main ? `${DELIVERY_DAYS_BY_EMIRATE[main.emirate]} · ${ZONES[main.zone].slot}` : ''}</small>
+              <small>
+                {main
+                  ? `${DELIVERY_DAYS_BY_EMIRATE[main.emirate]} · ${ZONES[main.zone].slot}`
+                  : c.live?.bx
+                    ? [c.live.bx.zoneTier && `tier ${c.live.bx.zoneTier}`, c.live.bx.driver].filter(Boolean).join(' · ')
+                    : ''}
+              </small>
             </span>
             <span className="c-points">{own.length}</span>
             <span className="c-mode">
@@ -152,11 +164,11 @@ export function ClientsJournal() {
     if (groupBy === 'none') return [{ label: null, rows: visible }];
     const m = new Map<string, Row[]>();
     for (const r of visible) {
-      const key = groupBy === 'class' ? clientClass(r.c.id) ?? '' : zoneOf(r.main);
+      const key = groupBy === 'class' ? clientClass(r.c.id) ?? '' : zoneLabel(r);
       m.set(key, [...(m.get(key) ?? []), r]);
     }
     const keys = [...m.keys()].sort((a, b) =>
-      groupBy === 'class' ? GROUP_ORDER.indexOf(a) - GROUP_ORDER.indexOf(b) : a === '—' ? 1 : b === '—' ? -1 : a.localeCompare(b),
+      groupBy === 'class' ? GROUP_ORDER.indexOf(a) - GROUP_ORDER.indexOf(b) : zoneSort(a, b),
     );
     return keys.map((k) => ({ label: k, rows: m.get(k)! }));
   })();
@@ -175,7 +187,7 @@ export function ClientsJournal() {
           <SelectBox
             value={zone}
             onChange={setZone}
-            options={[{ value: 'all', label: 'All zones' }, ...zoneOptions.map((z) => ({ value: z, label: z }))]}
+            options={[{ value: 'all', label: 'All zones' }, ...zoneOptions.map((z) => ({ value: z, label: zoneTier[z] ? `${z} · tier ${zoneTier[z]}` : z }))]}
           />
           <SelectBox
             value={minF}
@@ -236,7 +248,8 @@ export function ClientsJournal() {
               >
                 <img className="group-chevron" src={I.icChevronDownDark} width={16} height={16} alt="" />
                 {groupBy === 'class' ? <ClassBadge k={g.label || undefined} /> : <ZoneDot label={g.label} />}
-                <b>{groupBy === 'class' ? (g.label ? CLASS_HINT[g.label] ?? `Class ${g.label}` : 'No class') : g.label}</b>
+                <b>{groupBy === 'class' ? (g.label ? CLASS_HINT[g.label] ?? `Class ${g.label}` : 'No class') : g.label === '—' ? 'No zone' : g.label}</b>
+                {groupBy === 'zone' && zoneTier[g.label] ? <span>tier {zoneTier[g.label]}</span> : null}
                 <span>
                   {g.rows.length} {g.rows.length === 1 ? 'client' : 'clients'}
                 </span>
@@ -285,11 +298,16 @@ export function ClientCard() {
                 </Link>
               </>
             ) : null}
-            {c.live?.responsible && <> · Manager {c.live.responsible}</>}
-            {(c.live?.paymentDelay || c.live?.paymentType) && (
-              <> · Terms {[c.live.paymentDelay && `${c.live.paymentDelay} days`, c.live.paymentType].filter(Boolean).join(' · ')}</>
-            )}
-            {c.live?.group && <> · Group {c.live.group}</>}
+            {(c.live?.bx?.manager ?? c.live?.responsible) && <> · Manager {c.live?.bx?.manager ?? c.live?.responsible}</>}
+            {(() => {
+              const d = c.live?.bx?.paymentDelay ?? c.live?.paymentDelay;
+              const t = c.live?.bx?.paymentType ?? c.live?.paymentType;
+              return d || t ? <> · Terms {[d && `${d} days`, t].filter(Boolean).join(' · ')}</> : null;
+            })()}
+            {(c.live?.bx?.group ?? c.live?.group) && <> · Group {c.live?.bx?.group ?? c.live?.group}</>}
+            {c.live?.bx?.segment && <> · {c.live.bx.segment}</>}
+            {c.live?.bx?.priority && <> · {c.live.bx.priority}</>}
+            {c.live?.bx?.status && <> · Status {c.live.bx.status}</>}
             {c.live?.bitrixId != null && c.live.bitrixId !== '' && <> · Bitrix24 #{String(c.live.bitrixId).replace(/\.0$/, '')}</>}
           </p>
         </div>
@@ -411,6 +429,44 @@ export function ClientCard() {
         <p className="section-note">Every request and order picks one of these points. The main address is used when the client doesn't say otherwise.</p>
       </div>
       <div className="addr-grid">
+        {c.live?.bx && (c.live.bx.address || c.live.bx.zone) && (
+          <article className={`addr ${own.length ? '' : 'is-main'}`}>
+            <div className="addr-h">
+              <b>Main delivery point</b>
+              <span className="addr-tag">From Bitrix24</span>
+            </div>
+            <p>{c.live.bx.address ?? 'No address in Bitrix24'}</p>
+            <dl>
+              <dt>Zone</dt>
+              <dd>
+                <span className="zone-cell">
+                  {c.live.bx.zone && <ZoneDot label={c.live.bx.zone} />}
+                  {c.live.bx.zone ?? '—'}
+                  {c.live.bx.zoneTier ? ` · tier ${c.live.bx.zoneTier}` : ''}
+                  {c.live.bx.zoneInactive ? ' · zone marked "no use"' : ''}
+                </span>
+              </dd>
+              <dt>Delivery</dt>
+              <dd>{c.live.bx.deliveryTime ?? '—'}</dd>
+              <dt>Driver</dt>
+              <dd>{c.live.bx.driver ?? '—'}</dd>
+              {c.live.bx.deliveryNote && (
+                <>
+                  <dt>Note</dt>
+                  <dd>{c.live.bx.deliveryNote}</dd>
+                </>
+              )}
+            </dl>
+            <div className="addr-a">
+              {c.live.bx.mapLink && (
+                <a className="link-sort" href={c.live.bx.mapLink} target="_blank" rel="noopener noreferrer">
+                  Open map
+                </a>
+              )}
+              <span className="muted">Read-only · edit in Bitrix24</span>
+            </div>
+          </article>
+        )}
         {own.map((a) => (
           <AddressCard
             key={a.id}

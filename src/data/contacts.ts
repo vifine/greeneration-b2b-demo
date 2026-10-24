@@ -60,17 +60,47 @@ export const INITIAL_CONTACTS: Contact[] = CLIENTS.filter((c) => !c.live).flatMa
   });
 });
 
-// Real clients: one main contact from the Bitrix24 company export (AR TRACKER → Companies).
+// Real clients: contacts from Bitrix24 when synced, otherwise one main contact from the company export (AR TRACKER).
+const POST_ROLE: [RegExp, ContactRole][] = [
+  [/sous/i, 'Sous chef'],
+  [/chef|kitchen/i, 'Chef'],
+  [/account|financ/i, 'Accountant'],
+  [/purchas|procure|buyer/i, 'Purchasing'],
+  [/owner|ceo|director|manager|gm/i, 'Owner'],
+  [/bar/i, 'Bar manager'],
+  [/receiv|store/i, 'Receiving'],
+];
 for (const c of CLIENTS) {
+  const bxContacts = (c.live?.bx?.contacts ?? []).filter((p) => p.phone || p.email);
+  if (bxContacts.length) {
+    bxContacts.forEach((p, i) =>
+      INITIAL_CONTACTS.push({
+        id: `${c.id}-bx${i}`,
+        clientId: c.id,
+        name: p.name,
+        role: POST_ROLE.find(([re]) => re.test(`${p.post ?? ''} ${p.name}`))?.[1] ?? 'Purchasing',
+        phone: p.phone ?? '',
+        email: p.email ?? '',
+        orders: true,
+        invoices: i === 0,
+        inGroup: false,
+        portal: false,
+        primary: i === 0,
+      }),
+    );
+    continue;
+  }
   const l = c.live;
-  if (!l || (!l.phone && !l.email)) continue;
+  const phone = l?.bx?.phone ?? l?.phone;
+  const email = l?.bx?.email ?? l?.email;
+  if (!l || (!phone && !email)) continue;
   INITIAL_CONTACTS.push({
     id: `${c.id}-b24`,
     clientId: c.id,
     name: 'Main contact (Bitrix24)',
     role: 'Purchasing',
-    phone: l.phone ?? '',
-    email: l.email ?? '',
+    phone: phone ?? '',
+    email: email ?? '',
     orders: true,
     invoices: true,
     inGroup: false,

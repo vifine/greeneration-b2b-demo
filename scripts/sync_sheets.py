@@ -412,6 +412,140 @@ for cid, rows in prices.items():
             compact.setdefault(cid, {})[sku] = a
 new_from = sorted({e.get("newFrom") for rows in prices.values() for e in rows.values() if e.get("newFrom")})
 
+# ---------- Bitrix24: companies and contacts (read-only) ----------
+# The inbound webhook URL is read from cell A1 of a private sheet (env BITRIX_WEBHOOK for local runs).
+# Only *.list / *.get methods are called. The URL is never printed.
+KEYS_SHEET = "1HonwyWyghTIy-uv2HG6uzvPcfBnH0YSod8o1oLuP9IE"
+bitrix_stats = "skipped"
+
+
+def bitrix_sync():
+    global bitrix_stats
+    hook = (os.environ.get("BITRIX_WEBHOOK") or "").strip()
+    if not hook:
+        try:
+            v = values(KEYS_SHEET, "A1:A1")
+            hook = str(v[0][0]).strip() if v and v[0] else ""
+        except Exception as e:  # sheet missing or not shared
+            print("Bitrix24: keys sheet not readable, skipped:", type(e).__name__)
+            return
+    if not re.match(r"^https://[^/]+/rest/\d+/[A-Za-z0-9]+/?$", hook):
+        print("Bitrix24: no webhook in the keys sheet (A1), skipped")
+        return
+    hook = hook.rstrip("/") + "/"
+    import time
+
+    def call(method, params=None):
+        assert method.endswith((".list", ".get", ".fields")), method  # read-only guard
+        for attempt in range(3):
+            try:
+                r = requests.post(hook + method + ".json", json=params or {}, timeout=60)
+                if r.status_code == 503:  # rate limit
+                    time.sleep(1.5)
+                    continue
+                r.raise_for_status()
+                time.sleep(0.35)
+                return r.json()
+            except requests.RequestException as e:
+                last = type(e).__name__
+                time.sleep(1)
+        raise RuntimeError(f"Bitrix24 {method} failed ({last})")
+
+    def all_pages(method, params):
+        out_, start = [], 0
+        while True:
+            r = call(method, {**params, "start": start})
+            out_ += r.get("result", [])
+            if "next" not in r:
+                return out_
+            start = r["next"]
+
+    # Enumeration labels for company user fields
+    enums = {}
+    for f in call("crm.company.userfield.list", {}).get("result", []):
+        if f.get("LIST"):
+            enums[f["FIELD_NAME"]] = {str(i["ID"]): i["VALUE"] for i in f["LIST"]}
+    zones = {}
+    start = 0
+    while True:
+        r = call("lists.element.get", {"IBLOCK_TYPE_ID": "lists", "IBLOCK_ID": 16, "start": start})
+        for z in r.get("result", []):
+            zones[str(z["ID"])] = z["NAME"]
+        if "next" not in r:
+            break
+        start = r["next"]
+
+    sel = ["ID", "TITLE", "ASSIGNED_BY_ID", "PHONE", "EMAIL", "UF_CRM_DELIVERY_ZONE", "UF_CRM_DELIVERY_ADDRESS", "UF_CRM_DELIVERY_NOTE",
+           "UF_CRM_TIME_OF_DELIVERY", "UF_CRM_CLIENT_SEGMENT", "UF_CRM_CLIENT_STATUS", "UF_CRM_PREFERRED_PAYMENT_TYPE",
+           "UF_CRM_AGREED_PAYMENT_DALAY_DAYS", "UF_CRM_1756222582502", "UF_CRM_GROUP", "UF_CRM_ASSIGNED_DRIVER", "UF_CRM_GOOGLE_MAP_LINK"]
+    companies = all_pages("crm.company.list", {"select": sel, "order": {"ID": "ASC"}})
+    contacts = all_pages("crm.contact.list", {"select": ["ID", "COMPANY_ID", "NAME", "LAST_NAME", "POST", "PHONE", "EMAIL"],
+                                              "filter": {">COMPANY_ID": 0}, "order": {"ID": "ASC"}})
+    user_ids = sorted({str(c.get(k)) for c in companies for k in ("ASSIGNED_BY_ID", "UF_CRM_ASSIGNED_DRIVER") if c.get(k)})
+    users = {}
+    for i in range(0, len(user_ids), 50):
+        for u in call("user.get", {"FILTER": {"ID": user_ids[i:i + 50]}}).get("result", []):
+            users[str(u["ID"])] = " ".join(x for x in (u.get("NAME"), u.get("LAST_NAME")) if x).strip()
+
+    def enum(field, v):
+        if isinstance(v, list):
+            return ", ".join(enums.get(field, {}).get(str(x), "") for x in v if x) or None
+        return enums.get(field, {}).get(str(v)) if v else None
+
+    def first(multi):
+        return next((m.get("VALUE") for m in (multi or []) if m.get("VALUE")), None)
+
+    contacts_by_co = {}
+    for p in contacts:
+        cid = str(p.get("COMPANY_ID") or "")
+        lst = contacts_by_co.setdefault(cid, [])
+        if len(lst) < 5:
+            name = " ".join(x for x in (p.get("NAME"), p.get("LAST_NAME")) if x).strip()
+            lst.append({"name": name or "—", "post": (p.get("POST") or "").strip(), "phone": first(p.get("PHONE")), "email": first(p.get("EMAIL"))})
+
+    by_bitrix = {str(c.get("bitrixId")).replace(".0", ""): c for c in clients.values() if c.get("bitrixId")}
+    matched = 0
+    for co in companies:
+        bid = str(co["ID"])
+        c = by_bitrix.get(bid) or find_client(co.get("TITLE"))
+        if not c:
+            continue  # keep the client list as it is (only Prices / AR clients)
+        matched += 1
+        zname = zones.get(str(co.get("UF_CRM_DELIVERY_ZONE") or ""))
+        m = re.search(r"-\s*(\d+)\s*$", zname or "")
+        addr = (co.get("UF_CRM_DELIVERY_ADDRESS") or "").split("|")[0].strip() or None
+        bx = {
+            "zone": re.sub(r"\s*-\s*\d+\s*$", "", zname).replace("ZZZ NO USE", "").strip() if zname else None,
+            "zoneTier": int(m.group(1)) if m else None,
+            "zoneInactive": bool(zname and zname.startswith("ZZZ")),
+            "address": addr,
+            "deliveryTime": (co.get("UF_CRM_TIME_OF_DELIVERY") or "").strip() or None,
+            "deliveryNote": (co.get("UF_CRM_DELIVERY_NOTE") or "").strip() or None,
+            "segment": enum("UF_CRM_CLIENT_SEGMENT", co.get("UF_CRM_CLIENT_SEGMENT")),
+            "status": enum("UF_CRM_CLIENT_STATUS", co.get("UF_CRM_CLIENT_STATUS")),
+            "priority": enum("UF_CRM_1756222582502", co.get("UF_CRM_1756222582502")),
+            "paymentType": enum("UF_CRM_PREFERRED_PAYMENT_TYPE", co.get("UF_CRM_PREFERRED_PAYMENT_TYPE")),
+            "paymentDelay": (str(co.get("UF_CRM_AGREED_PAYMENT_DALAY_DAYS") or "").strip() or None),
+            "group": enum("UF_CRM_GROUP", co.get("UF_CRM_GROUP")),
+            "manager": users.get(str(co.get("ASSIGNED_BY_ID") or "")),
+            "driver": users.get(str(co.get("UF_CRM_ASSIGNED_DRIVER") or "")),
+            "mapLink": co.get("UF_CRM_GOOGLE_MAP_LINK") or None,
+            "phone": first(co.get("PHONE")),
+            "email": first(co.get("EMAIL")),
+            "contacts": contacts_by_co.get(bid, []),
+        }
+        if bx["group"] == "No":
+            bx["group"] = None
+        c["bitrixId"] = bid
+        c["bx"] = {k: v for k, v in bx.items() if v not in (None, "", [], False)}
+    bitrix_stats = f"companies {len(companies)}, contacts {len(contacts)}, matched to portal clients {matched}, zones {len(zones)}"
+
+
+try:
+    bitrix_sync()
+except Exception as e:  # never fail the build because of Bitrix24
+    print("Bitrix24: sync failed, skipped:", type(e).__name__, str(e)[:120].replace(os.environ.get("BITRIX_WEBHOOK", "") or "\x00", "<webhook>"))
+
 # ---------- Service rules from the SOP (Coordinator sheet) ----------
 rules = {"minOrder": 150, "cutoff": "22:30", "sameDay": {"before": "12:00", "minAmount": 800, "window": "14:00–16:00"}}
 try:
@@ -452,6 +586,7 @@ os.makedirs(os.path.dirname(dest), exist_ok=True)
 with open(dest, "w") as f:
     json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
 print("rules", rules)
+print("Bitrix24:", bitrix_stats)
 print(f"contacts matched {co_matched}, special req SKUs {len(special)} (with client {sum(1 for v in special.values() for e in v if e['clients'])}), "
       f"shortage rows {oos_matched} for {len(shortages)} clients, credit notes {len(credit_notes)} "
       f"({sum(1 for x in credit_notes if x['clientId'])} matched), inventory {inventory_at}")
