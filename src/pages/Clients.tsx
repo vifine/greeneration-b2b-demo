@@ -15,7 +15,7 @@ import { useStore } from '../store';
 import { LIVE } from '../data/live';
 
 /** AR TRACKER classes: D blocked (legal case), H only with Head approval, the rest deliver. */
-const CLASS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { A: 'success', B: 'success', C: 'neutral', E: 'neutral', X: 'neutral', H: 'warning', D: 'danger' };
+const CLASS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { A: 'success', B: 'success', C: 'neutral', E: 'neutral', X: 'neutral', H: 'warning', D: 'danger', T: 'info' };
 const CLASS_HINT: Record<string, string> = {
   A: 'Good payment discipline · deliver',
   B: 'Pays, needs pushing · deliver',
@@ -24,6 +24,7 @@ const CLASS_HINT: Record<string, string> = {
   X: 'Delayed by war situation · deliver',
   H: 'Escalated · deliver only after Head approval',
   D: 'Legal case · do not deliver',
+  T: 'Test client · demo data',
 };
 const CLASS_ORDER = ['A', 'B', 'C', 'E', 'X', 'H', 'D'];
 const isBlockedClass = (k?: string) => k === 'D' || k === 'H';
@@ -98,7 +99,7 @@ export function ClientsJournal() {
               onChange={setCls}
               options={[
                 { value: 'all', label: 'All classes' },
-                ...CLASS_ORDER.map((k) => ({ value: k, label: `Class ${k} · ${CLIENTS.filter((c) => clientClass(c.id) === k).length}` })),
+                ...[...CLASS_ORDER, 'T'].map((k) => ({ value: k, label: `${k === 'T' ? 'Test' : 'Class'} ${k} · ${CLIENTS.filter((c) => clientClass(c.id) === k).length}` })),
                 { value: 'none', label: 'No class' },
               ]}
             />

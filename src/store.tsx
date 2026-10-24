@@ -224,7 +224,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return next;
         }),
       classOverrides,
-      clientClass: (id) => classOverrides[id] ?? clientById(id)?.live?.class,
+      clientClass: (id) => {
+        const c = clientById(id);
+        if (!c?.live) return 'T'; // demo client
+        return classOverrides[id] ?? c.live.class;
+      },
       setClientClass: (id, cls) =>
         setClassState((m) => {
           const next = { ...m };
