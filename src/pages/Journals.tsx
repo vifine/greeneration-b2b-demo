@@ -232,8 +232,8 @@ function OrdersKanban({ rows, tab, onOpen }: { rows: OrdRow[]; tab: OrdTab; onOp
               return (
                 <button type="button" key={o.id} className={`kcard ${issue ? 'has-issue' : ''}`} onClick={() => onOpen(o.id)}>
                   <span className="kcard-top">
-                    <span className="kcard-name ellipsis">{client.name}</span>
                     <ClassBadge k={clientClass(o.clientId)} />
+                    <span className="kcard-name ellipsis">{client.name}</span>
                   </span>
                   <span className="kcard-meta">
                     #{o.id} · {o.channel}
@@ -349,8 +349,8 @@ export function OrdersJournal() {
             <button type="button" key={o.id} className={`tr row ${issue ? 'stripe-warning' : ''}`} onClick={() => navigate(`/crm/orders/${o.id}`)}>
               <span className="c-client two">
                 <span className="name-cls">
-                  <span className="ellipsis">{client.name}</span>
                   <ClassBadge k={clientClass(o.clientId)} />
+                  <span className="ellipsis">{client.name}</span>
                 </span>
                 <small>
                   #{o.id} · {o.channel}

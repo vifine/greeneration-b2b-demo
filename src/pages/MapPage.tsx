@@ -46,9 +46,9 @@ export function ClientsMapView({
         const bx = r.c.live?.bx;
         const line = (label: string, v?: string | null) => (v ? `<dt>${label}</dt><dd>${esc(v)}</dd>` : '');
         const popup =
-          `<div class="cp-h"><b>${esc(r.c.name)}</b>` +
+          `<div class="cp-h">` +
           (k ? `<span class="cls-badge" style="color:${col};background:${tint(col, 0.14)}" title="${esc(CLASS_HINT[k] ?? '')}">${k}</span>` : '') +
-          `</div><dl>` +
+          `<b>${esc(r.c.name)}</b></div><dl>` +
           line('Zone', r.zoneLabel !== '—' ? `${r.zoneLabel}${bx?.zoneTier ? ` · tier ${bx.zoneTier}` : ''}` : null) +
           line('Delivery', bx?.deliveryTime ?? (r.main?.hours || null)) +
           line('Driver', bx?.driver) +

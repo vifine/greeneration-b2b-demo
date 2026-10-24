@@ -170,11 +170,11 @@ export function ClientsJournal() {
   const renderRow = ({ c, own, main }: Row) => (
           <button type="button" key={c.id} className={`tr row ${(c.live ? isBlockedClass(clientClass(c.id)) : c.creditHold) ? 'stripe-danger' : ''}`} onClick={() => navigate(`/customers/clients/${c.id}`)}>
             <span className="c-client two">
-              <span>{c.name}</span>
+              <span className="name-cls">
+                <ClassBadge k={clientClass(c.id)} />
+                <span className="ellipsis">{c.name}</span>
+              </span>
               <small>{c.live ? c.live.segment ?? '—' : c.creditHold ? 'Credit hold' : c.area}</small>
-            </span>
-            <span className="c-class">
-              <ClassBadge k={clientClass(c.id)} />
             </span>
             <span className="c-addr two">
               <span className="ellipsis">{main ? `${main.line}, ${main.area}` : c.live?.bx?.address ?? '—'}</span>
@@ -325,7 +325,6 @@ export function ClientsJournal() {
       <div className="table journal clients-table">
         <div className="tr th">
           <span className="c-client">Client</span>
-          <span className="c-class">Class</span>
           <span className="c-addr">Main delivery address</span>
           <span className="c-emirate">Emirate · zone</span>
           <span className="c-points">Addresses</span>

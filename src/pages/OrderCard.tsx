@@ -114,8 +114,8 @@ export function OrderCard() {
         <div className="card-title">
           <div className="card-name gap16">
             <span className="name-cls">
-              <h1>{client.name}</h1>
               <ClassBadge k={clientClass(o.clientId)} />
+              <h1>{client.name}</h1>
             </span>
             <span className="stage">
               <Dot tone={STAGE_TONE[o.stage]} />

@@ -142,8 +142,8 @@ export function BitrixOrdersKanban({ q, clientId }: { q: string; clientId?: stri
                 }}
               >
                 <span className="kcard-top">
-                  <span className="kcard-name ellipsis">{clientById(cid)?.name ?? cid}</span>
                   <ClassBadge k={clientClass(cid)} />
+                  <span className="kcard-name ellipsis">{clientById(cid)?.name ?? cid}</span>
                 </span>
                 <span className="kcard-meta">
                   <DealLink id={d[0]} /> · created {day(d[1])}
@@ -211,10 +211,10 @@ export function BitrixOrdersTable({ q, clientId }: { q: string; clientId?: strin
             >
               <span className="c-client two">
                 <span className="name-cls">
+                  <ClassBadge k={clientClass(cid)} />
                   <Link to={`/customers/clients/${cid}`} className="ellipsis" onClick={(e) => e.stopPropagation()}>
                     {clientById(cid)?.name ?? cid}
                   </Link>
-                  <ClassBadge k={clientClass(cid)} />
                 </span>
                 <small>
                   <DealLink id={d[0]} /> · created {day(d[1])}
