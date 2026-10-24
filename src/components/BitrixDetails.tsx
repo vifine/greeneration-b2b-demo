@@ -26,15 +26,16 @@ function EditCell({ clientId, d, value, onSaved }: { clientId: string; d: Def; v
       setBusy(false);
     }
   };
-  if (!def.m) {
+  if (!def.m || def.one) {
+    const one = Array.isArray(value) ? value[0] ?? '' : value ?? '';
     return (
       <Dropdown
         size="sm"
         className="bx-edit"
-        value={typeof value === 'string' ? value : ''}
+        value={one}
         disabled={busy}
         ariaLabel={d.l}
-        onChange={(v) => void save(v)}
+        onChange={(v) => void save(def.one ? (v ? [v] : []) : v)}
         options={[{ value: '', label: '—' }, ...options]}
       />
     );
@@ -46,17 +47,25 @@ function EditCell({ clientId, d, value, onSaved }: { clientId: string; d: Def; v
   );
 }
 
-/** Bitrix24 company fields: list fields are editable (saved to Bitrix24), the rest read-only. Files are in ClientDocuments. */
+/** Order of the fields in Details (others follow in sync order). */
+const ORDER = ['status', 'segment', 'priority', 'manager', 'payType', 'delay', 'channel', 'groupList', 'supplyList', 'industry', 'type', 'employees', 'need', 'outlets', 'revenue'];
+/** Shorter labels than the Bitrix24 ones. */
+const LABEL: Record<string, string> = { status: 'Status', segment: 'Segment', priority: 'Priority', payType: 'Payment type', delay: 'Payment delay', groupList: 'Group', supplyList: 'Supply system' };
+
+/** Company fields from Bitrix24: list fields are editable (saved to Bitrix24), the rest read-only. Files are in ClientDocuments. */
 export function BitrixDetails({ clientId, bx }: { clientId: string; bx?: LiveBitrix; bitrixId?: string | number }) {
   const [raw, setRaw] = useState<Record<string, string | string[]>>(bx?.xr ?? {});
   const defs = (LIVE?.bxFields ?? []).filter((d) => d.t !== 'f');
   const editable = (k: string) => SERVER_AUTH && !!LIVE?.bxEdit?.[k];
   const x = bx?.x ?? {};
   // Fields marked "(Archived)" in Bitrix24 are not shown, unless they are edited here (Need products).
-  const rows = defs.filter((d) => editable(d.k) || (x[d.k] != null && !d.a));
+  const rows: Def[] = defs.filter((d) => editable(d.k) || (x[d.k] != null && !d.a)).map((d) => ({ ...d, l: LABEL[d.k] ?? d.l }));
+  // Responsible person of the company card (ASSIGNED_BY_ID), read-only here.
+  if (bx?.manager) rows.push({ k: 'manager', l: 'Responsible', t: 't' });
+  const valueOf = (k: string) => (k === 'manager' ? bx?.manager : x[k]);
   if (!rows.length) return null;
   const cell = (d: Def) => {
-    const v = x[d.k];
+    const v = valueOf(d.k);
     const val = editable(d.k) ? (
       <EditCell clientId={clientId} d={d} value={raw[d.k]} onSaved={(nv) => setRaw((r) => ({ ...r, [d.k]: nv }))} />
     ) : d.t === 'b' ? (
@@ -73,13 +82,16 @@ export function BitrixDetails({ clientId, bx }: { clientId: string; bx?: LiveBit
       </div>
     );
   };
-  // Editable fields first.
-  const main = [...rows].sort((a, b) => Number(editable(b.k)) - Number(editable(a.k)));
+  const rank = (k: string) => {
+    const i = ORDER.indexOf(k);
+    return i < 0 ? ORDER.length : i;
+  };
+  const main = [...rows].sort((a, b) => rank(a.k) - rank(b.k));
   return (
     <section className="set-card bx-details">
       <div className="section-head">
-        <h2 className="section-h">Bitrix24 details</h2>
-        <p className="section-note">Company fields in Bitrix24. Lists are saved to Bitrix24 right away; the rest is read-only.</p>
+        <h2 className="section-h">Details</h2>
+        <p className="section-note">Company card in Bitrix24. Lists are saved to Bitrix24 right away; the rest is read-only.</p>
       </div>
       <div className="kv-grid bx-grid">{main.map(cell)}</div>
     </section>

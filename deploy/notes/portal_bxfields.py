@@ -152,6 +152,8 @@ def save_field(bitrix_call, cid, key, value, edit_defs, me):
     if not d:
         return 400, {"error": "this field cannot be edited here"}
     allowed = {str(i) for i, _ in d.get("o", [])}
+    if d.get("m") and not isinstance(value, list):  # a multiple field picked as one value on the card (Priority)
+        value = [value] if value else []
     if d.get("m"):
         vals = [str(v) for v in (value if isinstance(value, list) else [])]
         if any(v not in allowed for v in vals):

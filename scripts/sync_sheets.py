@@ -500,9 +500,13 @@ def bitrix_sync():
         ("addContact", "UF_CRM_ADDITIONAL_CONTACT", "c"), ("passport", "UF_CRM_1784704809229", "f"), ("discount", "UF_CRM_NEGOTIATED_DISCOUNT", "n"),
         ("junk", "UF_CRM_6792446093F07", "e"), ("otherEntity", "UF_CRM_1755600623", "c"), ("cheque", "UF_CRM_1784619203008", "f"), ("contracts", "UF_CRM_1784704783108", "f"),
         ("industry", "INDUSTRY", "s"), ("type", "COMPANY_TYPE", "s"), ("employees", "EMPLOYEES", "s"),
+        ("status", "UF_CRM_CLIENT_STATUS", "e"), ("segment", "UF_CRM_CLIENT_SEGMENT", "e"), ("priority", "UF_CRM_1756222582502", "e"),
+        ("payType", "UF_CRM_PREFERRED_PAYMENT_TYPE", "e"), ("groupList", "UF_CRM_GROUP", "e"),
     ]
     BX_IDENTITY = {"passport", "eid"}  # identity documents: shown as present / absent only, never linked
-    BX_EDITABLE = {"delay", "channel", "industry", "type", "employees", "need"}  # list fields editable on the client card
+    BX_EDITABLE = {"delay", "channel", "industry", "type", "employees", "need", "status", "segment", "priority", "payType",
+                   "groupList", "supplyList"}  # list fields editable on the client card
+    BX_ONE = {"priority"}  # multiple in Bitrix24, but one value is chosen on the card
     try:
         bx_defs = call("crm.company.fields", {}).get("result", {})
     except Exception:
@@ -606,6 +610,8 @@ def bitrix_sync():
         if opts:
             d = bx_defs.get(f) or {}
             bx_edit[k] = {"f": f, "m": bool(enum_multi.get(f)) if kd == "e" else bool(d.get("isMultiple")), "o": [[i, lbl] for i, lbl in opts]}
+            if k in BX_ONE:
+                bx_edit[k]["one"] = True
             if k not in shown:  # editable even when no company has a value yet
                 label = re.sub(r"\s*\(archived\)\s*", "", (d.get("listLabel") or d.get("formLabel") or d.get("title") or f), flags=re.I).strip()
                 bx_fields.append({"k": k, "l": label, "t": "t"})
