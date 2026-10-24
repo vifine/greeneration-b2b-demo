@@ -3451,9 +3451,11 @@ a.pt-tile:hover { border-color: var(--forest); }
 .users-table .tr > span { min-width: 0; padding-right: 16px; }
 .users-table .tr.row { min-height: 60px; padding-top: 0; }
 .users-table .th > span { position: relative; height: 100%; display: flex; align-items: center; }
-.col-resize { position: absolute; top: 8px; bottom: 8px; right: 6px; width: 9px; cursor: col-resize; touch-action: none; display: flex; justify-content: center; }
-.col-resize::after { content: ''; width: 2px; border-radius: 1px; background: var(--border); transition: background 0.15s; }
-.col-resize:hover::after, .col-resize.dragging::after { background: var(--forest); }
+/* Drag handle at the right edge of each header cell: a visible double bar, darker on hover. */
+.col-resize { position: absolute; top: 6px; bottom: 6px; right: 2px; width: 14px; cursor: col-resize; touch-action: none; display: flex; justify-content: center; align-items: center; gap: 2px; border-radius: 4px; }
+.col-resize::before, .col-resize::after { content: ''; width: 2px; height: 18px; border-radius: 1px; background: var(--forest); opacity: 0.35; transition: opacity 0.15s; }
+.col-resize:hover, .col-resize.dragging { background: rgba(42, 77, 54, 0.1); }
+.col-resize:hover::before, .col-resize:hover::after, .col-resize.dragging::before, .col-resize.dragging::after { opacity: 1; }
 .users-table.resizing, .users-table.resizing * { cursor: col-resize !important; user-select: none; }
 .users-table .u-name { display: flex; align-items: center; gap: 12px; }
 .users-table .u-name .two { min-width: 0; }
