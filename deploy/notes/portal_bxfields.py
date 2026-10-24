@@ -151,7 +151,15 @@ def save_field(bitrix_call, cid, key, value, edit_defs, me):
     d = edit_defs.get(key)
     if not d:
         return 400, {"error": "this field cannot be edited here"}
-    allowed = {str(i) for i, _ in d.get("o", [])}
+    if d.get("t") == "n":  # whole number
+        txt = str(value if value is not None else "").strip()
+        if not txt:
+            if d.get("r"):
+                return 400, {"error": "this field is required in Bitrix24"}
+        elif not re.fullmatch(r"\d{1,5}", txt):
+            return 400, {"error": "enter a whole number"}
+        value = txt
+        allowed = {str(i) for i, _ in d.get("o", [])}
     if d.get("m") and not isinstance(value, list):  # a multiple field picked as one value on the card (Priority)
         value = [value] if value else []
     if d.get("m"):
@@ -160,7 +168,7 @@ def save_field(bitrix_call, cid, key, value, edit_defs, me):
             return 400, {"error": "unknown value"}
     else:
         vals = str(value or "")
-        if vals and vals not in allowed:
+        if vals and vals not in allowed and d.get("t") != "n":
             return 400, {"error": "unknown value"}
     if d.get("r") and not vals:
         return 400, {"error": "this field is required in Bitrix24"}

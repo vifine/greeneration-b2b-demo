@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SERVER_AUTH } from '../auth';
 import { fileUrl, loadDocs, saveBxField, type BxDocs } from '../bx';
 import { bitrixCompanyUrl, LIVE, type LiveBitrix } from '../data/live';
 import * as I from './icons';
-import { Dropdown, MultiDropdown, useToast } from './ui';
+import { Dropdown, MultiDropdown, Stepper, useToast } from './ui';
 
 type Def = NonNullable<NonNullable<typeof LIVE>['bxFields']>[number];
 
@@ -26,6 +26,7 @@ function EditCell({ clientId, d, value, onSaved }: { clientId: string; d: Def; v
       setBusy(false);
     }
   };
+  if (def.t === 'n') return <NumberCell d={d} value={typeof value === 'string' ? value : ''} required={!!def.r} busy={busy} onSave={(v) => void save(v)} />;
   if (!def.m || def.one) {
     const one = Array.isArray(value) ? value[0] ?? '' : value ?? '';
     return (
@@ -45,6 +46,29 @@ function EditCell({ clientId, d, value, onSaved }: { clientId: string; d: Def; v
     <div className="bx-edit">
       <MultiDropdown size="sm" required={def.r} value={Array.isArray(value) ? value : value ? [value] : []} disabled={busy} ariaLabel={d.l} onChange={(v) => void save(v)} options={options} />
     </div>
+  );
+}
+
+/** Whole number with − / + (the site's quantity stepper) and typing; saved 0.8 s after the last change. Minimum 1 when required. */
+function NumberCell({ d, value, required, busy, onSave }: { d: Def; value: string; required: boolean; busy: boolean; onSave: (v: string) => void }) {
+  const min = required ? 1 : 0;
+  const start = Math.max(min, parseInt(value || '0', 10) || 0);
+  const [draft, setDraft] = useState(start);
+  const timer = useRef<number>();
+  useEffect(() => setDraft(start), [start]);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const change = (n: number) => {
+    const v = Math.max(min, Math.min(99999, n));
+    setDraft(v);
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
+      if (String(v) !== value) onSave(String(v));
+    }, 800);
+  };
+  return (
+    <span className="bx-num" aria-label={d.l}>
+      <Stepper value={draft} onChange={change} disabled={busy} />
+    </span>
   );
 }
 
@@ -101,7 +125,7 @@ export function BitrixDetails({
     <section className="set-card bx-details">
       <div className="section-head">
         <h2 className="section-h">Details</h2>
-        <p className="section-note">Company card in Bitrix24. Lists are saved to Bitrix24 right away; the rest is read-only.</p>
+        <p className="section-note">Company card in Bitrix24. Changes are saved to Bitrix24 right away; the rest is read-only.</p>
       </div>
       <div className="kv-grid bx-grid">{main.map(cell)}</div>
     </section>

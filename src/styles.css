@@ -3602,3 +3602,6 @@ textarea.input { height: auto; padding: 10px 12px; }
 .fact-tag.is-info { background: #e6f0f8; color: #2b5d8a; }
 .fact-tag.is-muted { background: #ececE7; color: var(--text-2); }
 .dd-req { margin-right: auto; align-self: center; font-size: 12px; color: var(--danger, #b42318); }
+
+.input.input-sm { height: 32px; font-size: 14px; padding: 0 10px; border-radius: 6px; }
+.bx-num { display: inline-flex; }

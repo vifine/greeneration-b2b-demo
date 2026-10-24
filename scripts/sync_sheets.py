@@ -506,6 +506,7 @@ def bitrix_sync():
     BX_IDENTITY = {"passport", "eid"}  # identity documents: shown as present / absent only, never linked
     BX_EDITABLE = {"delay", "channel", "industry", "type", "employees", "status", "segment", "priority", "payType",
                    "groupList", "supplyList"}  # list fields editable on the client card
+    BX_EDIT_NUM = {"outlets"}  # whole numbers edited on the card (Number of outlets inside)
     BX_ONE = {"priority"}  # multiple in Bitrix24, but one value is chosen on the card
     try:
         bx_defs = call("crm.company.fields", {}).get("result", {})
@@ -619,6 +620,13 @@ def bitrix_sync():
                 label = re.sub(r"\s*\(archived\)\s*", "", (d.get("listLabel") or d.get("formLabel") or d.get("title") or f), flags=re.I).strip()
                 bx_fields.append({"k": k, "l": label, "t": "t"})
                 shown.add(k)
+    # Whole-number fields editable on the card.
+    for k, f, kd in BX_EXTRA:
+        if k in BX_EDIT_NUM:
+            d = bx_defs.get(f) or {}
+            bx_edit[k] = {"f": f, "m": False, "t": "n", "o": []}
+            if d.get("isRequired"):
+                bx_edit[k]["r"] = True
     print("Bitrix24 extra fields: " + ", ".join(f"{k}={bx_fill[k]}" for k in bx_fill))
 
     by_bitrix = {str(c.get("bitrixId")).replace(".0", ""): c for c in clients.values() if c.get("bitrixId")}
@@ -673,6 +681,13 @@ def bitrix_sync():
         for k, f, kd in BX_EXTRA:
             if k in bx_edit:
                 raw = co.get(f)
+                if bx_edit[k].get("t") == "n":
+                    try:
+                        n = float(str(raw).replace(",", "."))
+                        xr[k] = str(int(n)) if n == int(n) else str(n)
+                    except (TypeError, ValueError):
+                        pass
+                    continue
                 if isinstance(raw, list):
                     ids = [str(v) for v in raw if v not in (None, "", 0, "0")]
                     if ids:
