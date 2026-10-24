@@ -15,6 +15,7 @@ import { ComingSoon } from './pages/ComingSoon';
 import { Home } from './pages/Home';
 import { OrdersJournal, RequestsJournal } from './pages/Journals';
 import { Login } from './pages/Login';
+import { MapPage } from './pages/MapPage';
 import { OrderCard } from './pages/OrderCard';
 import { RequestCard } from './pages/RequestCard';
 import { StoreProvider } from './store';
@@ -50,6 +51,7 @@ export default function App() {
             <Route path="/audit" element={<Private><AuditLog /></Private>} />
             <Route path="/customers/clients" element={<Private><ClientsJournal /></Private>} />
             <Route path="/customers/clients/:id" element={<Private><ClientCard /></Private>} />
+            <Route path="/customers/map" element={<Private><MapPage /></Private>} />
             <Route path="/customers/contacts" element={<Private><ContactsJournal /></Private>} />
             <Route path="/customers/balances" element={<Private><Balances /></Private>} />
             <Route path="/customers/balances/:id" element={<Private><BalanceDetail /></Private>} />

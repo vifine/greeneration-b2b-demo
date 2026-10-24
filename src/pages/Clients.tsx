@@ -16,6 +16,8 @@ import { CLIENTS, clientById } from '../data/clients';
 import { fmt } from '../data/lines';
 import { useStore } from '../store';
 import { LIVE } from '../data/live';
+import { MiniMap } from '../components/MapLazy';
+import { clientPoint } from '../data/geo';
 import { ClassBadge, CLASS_COLOR, CLASS_HINT, CLASS_ORDER, classFilterOptions, isBlockedClass, matchesClass, NO_COLOR, tint, ZoneDot, zoneColor } from '../components/ClassBadge';
 
 function ClassRow({ sheet, value, onChange, demo }: { sheet?: string; value?: string; onChange: (v: string | null) => void; demo?: boolean }) {
@@ -429,10 +431,14 @@ export function ClientCard() {
                 </>
               )}
             </dl>
+            {(() => {
+              const p = clientPoint(c);
+              return p ? <MiniMap lat={p.lat} lng={p.lng} color={zoneColor(c.live.bx.zone)} title={c.name} /> : null;
+            })()}
             <div className="addr-a">
               {c.live.bx.mapLink && (
                 <a className="link-sort" href={c.live.bx.mapLink} target="_blank" rel="noopener noreferrer">
-                  Open map
+                  {c.live.geo ? 'Open in Google Maps' : 'Open map'}
                 </a>
               )}
               <span className="muted">Read-only · edit in Bitrix24</span>

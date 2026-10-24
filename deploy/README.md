@@ -83,6 +83,17 @@ sudo -u portal ln -sfn releases/<предыдущая> /var/www/greeneration-por
 Остановить обновления: `sudo systemctl disable --now greeneration-portal-update.timer`.
 Убрать всё: `docker compose -p greeneration-portal down`, удалить `/opt/greeneration-portal`, `/var/www/greeneration-portal`, `/etc/greeneration-portal`, юниты systemd.
 
+## Координаты клиентов (карта)
+
+Синхронизация (`scripts/geo.py`, вызывается из `sync_sheets.py`) находит точку доставки для каждого клиента: из ссылки Google Maps
+в Bitrix24 (короткие ссылки раскрываются), из координат в поле адреса Bitrix24 или по адресу через OpenStreetMap Nominatim
+(не больше 1 запроса в секунду и 150 за прогон). Bitrix24 только читается.
+
+Результаты кэшируются в `/opt/greeneration-portal/.geo-cache.json` (путь задаёт `update.sh` через `GEO_CACHE`; можно переопределить
+в `/etc/greeneration-portal/env`). Файл пишет пользователь `portal`, он в `.gitignore` и **никогда не коммитится** —
+в нём адреса клиентов. Если файл удалить, координаты просто заново соберутся за несколько часовых прогонов.
+Покрытие видно в журнале: строка `Geo: N of M Bitrix clients located …` в `journalctl -u greeneration-portal-update`.
+
 ## После переезда
 
 Отключить публичную версию на GitHub Pages: `deploy/disable-github-pages.md`.

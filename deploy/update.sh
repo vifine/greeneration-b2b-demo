@@ -19,6 +19,8 @@ set -a
 # shellcheck disable=SC1090
 . "$ENV_FILE"
 set +a
+# Geocoding cache (client locations): outside the repo's tracked files, never committed.
+export GEO_CACHE="${GEO_CACHE:-$APP_DIR/.geo-cache.json}"
 if ! "$APP_DIR/.venv/bin/python" scripts/sync_sheets.py; then
   echo "update: sync FAILED — keeping the current site" >&2
   exit 1

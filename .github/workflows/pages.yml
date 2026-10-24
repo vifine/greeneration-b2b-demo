@@ -35,6 +35,12 @@ jobs:
         with:
           workload_identity_provider: projects/231319851044/locations/global/workloadIdentityPools/github/providers/github
           service_account: claude-sheets@vifine-personal.iam.gserviceaccount.com
+      # Geocoding cache (client locations) between runs. Never committed: the repo is public.
+      - uses: actions/cache@v4
+        with:
+          path: scripts/.geo-cache.json
+          key: geo-cache-${{ github.run_id }}
+          restore-keys: geo-cache-
       - name: Sync live data from Google Sheets
         run: |
           pip install --quiet google-auth requests

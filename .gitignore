@@ -4,3 +4,8 @@ dist
 .DS_Store
 *.tsbuildinfo
 public/live/
+
+# Client coordinates cache (geo.py): never commit, the repo is public
+.geo-cache.json
+.geo-cache.json.tmp
+__pycache__/

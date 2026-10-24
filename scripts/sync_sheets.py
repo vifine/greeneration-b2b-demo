@@ -417,6 +417,7 @@ new_from = sorted({e.get("newFrom") for rows in prices.values() for e in rows.va
 # Only *.list / *.get methods are called. The URL is never printed.
 KEYS_SHEET = "1HonwyWyghTIy-uv2HG6uzvPcfBnH0YSod8o1oLuP9IE"
 bitrix_stats = "skipped"
+bx_ll = {}  # client id → coordinates stored in the Bitrix24 address field (input for geo.py)
 
 
 def bitrix_sync():
@@ -518,7 +519,12 @@ def bitrix_sync():
         matched += 1
         zname = zones.get(str(co.get("UF_CRM_DELIVERY_ZONE") or ""))
         m = re.search(r"-\s*(\d+)\s*$", zname or "")
-        addr = (co.get("UF_CRM_DELIVERY_ADDRESS") or "").split("|")[0].strip() or None
+        addr_raw = (co.get("UF_CRM_DELIVERY_ADDRESS") or "").split("|")
+        addr = addr_raw[0].strip() or None
+        # Address field format: "text|lat;lng|location id"; the coordinates are often empty or "0;0".
+        mm = re.match(r"^\s*(-?\d+\.\d+);(-?\d+\.\d+)\s*$", addr_raw[1]) if len(addr_raw) > 1 else None
+        if mm:
+            bx_ll[c["id"]] = (float(mm.group(1)), float(mm.group(2)))
         bx = {
             "zone": re.sub(r"\s*-\s*\d+\s*$", "", zname).replace("ZZZ NO USE", "").strip() if zname else None,
             "zoneTier": int(m.group(1)) if m else None,
@@ -622,6 +628,15 @@ try:
 except Exception as e:  # never fail the build because of Bitrix24
     print("Bitrix24: sync failed, skipped:", type(e).__name__, str(e)[:120].replace(os.environ.get("BITRIX_WEBHOOK", "") or "\x00", "<webhook>"))
 
+# ---------- Coordinates for the map (geo.py: map links, Bitrix24 address field, Nominatim; cached) ----------
+geo_stats = "skipped"
+try:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import geo
+    geo_stats = geo.enrich(clients.values(), bx_ll)
+except Exception as e:  # never fail the build because of geocoding
+    geo_stats = f"failed, skipped: {type(e).__name__} {str(e)[:120]}"
+
 # ---------- Service rules from the SOP (Coordinator sheet) ----------
 rules = {"minOrder": 150, "cutoff": "22:30", "sameDay": {"before": "12:00", "minAmount": 800, "window": "14:00–16:00"}}
 try:
@@ -667,6 +682,7 @@ with open(dest, "w") as f:
 print("rules", rules)
 print("Bitrix24:", bitrix_stats)
 print("Bitrix24 orders:", deals_stats)
+print("Geo:", geo_stats)
 print(f"contacts matched {co_matched}, special req SKUs {len(special)} (with client {sum(1 for v in special.values() for e in v if e['clients'])}), "
       f"shortage rows {oos_matched} for {len(shortages)} clients, credit notes {len(credit_notes)} "
       f"({sum(1 for x in credit_notes if x['clientId'])} matched), inventory {inventory_at}")

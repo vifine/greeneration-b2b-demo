@@ -38,6 +38,8 @@ export interface LiveClient {
   paymentType?: string;
   /** Read-only snapshot of the Bitrix24 company card. */
   bx?: LiveBitrix;
+  /** Delivery point [lat, lng, source], resolved by scripts/geo.py from the map link, the Bitrix24 address field or the address. */
+  geo?: [number, number, 'link' | 'bitrix' | 'address'];
 }
 
 export interface LiveBitrixContact {
