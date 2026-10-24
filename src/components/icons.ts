@@ -18,6 +18,8 @@ export { default as icArrowWarning } from '../assets/icons/arrow-warning.svg';
 export { default as icArrowInfo } from '../assets/icons/arrow-info.svg';
 export { default as icCardInbox } from '../assets/icons/card-inbox.svg';
 export { default as icCardClipboard } from '../assets/icons/card-clipboard.svg';
+export { default as icTruck } from '../assets/icons/truck.svg';
+export { default as icMoney } from '../assets/icons/money.svg';
 export { default as icCardClaims } from '../assets/icons/card-claims.svg';
 export { default as icCbCheck } from '../assets/icons/cb-check.svg';
 export { default as icCbFail } from '../assets/icons/cb-fail.svg';

@@ -3430,3 +3430,7 @@ a.pt-tile:hover { border-color: var(--forest); }
 /* Clients toolbar: List/Map and colour switches, then search, at the start of the row */
 .clients-toolbar > .journal-filters > .seg { order: -2; }
 .clients-toolbar > .journal-filters > .journal-search { order: -1; }
+
+/* Kanban card: icons for delivery and money */
+.kcard-row { display: flex; align-items: center; gap: 6px; }
+.kcard-ico { width: 14px; height: 14px; flex: none; opacity: 0.85; }

@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Shell } from '../components/Shell';
 import { ClassBadge } from '../components/ClassBadge';
+import * as I from '../components/icons';
 import { ClientName } from '../components/ClientName';
 import { Dot, FilterSelect, SearchBox, Tabs } from '../components/ui';
 import { matchesPaymentFilter, PAYMENT_FILTERS, paymentView, type PaymentFilter, type PaymentView } from '../data/payments';
@@ -241,7 +242,8 @@ function OrdersKanban({ rows, tab, onOpen }: { rows: OrdRow[]; tab: OrdTab; onOp
                   <span className="kcard-meta">
                     #{o.id} · {o.channel}
                   </span>
-                  <span className="kcard-meta">
+                  <span className="kcard-meta kcard-row">
+                    <img src={I.icTruck} alt="" className="kcard-ico" />
                     {o.delivery.day} · {o.delivery.window}
                   </span>
                   {issue && (
@@ -252,7 +254,8 @@ function OrdersKanban({ rows, tab, onOpen }: { rows: OrdRow[]; tab: OrdTab; onOp
                   )}
                   <span className="kcard-foot">
                     <span className={pay.danger ? 'text-danger ellipsis' : 'ellipsis'}>{pay.label}</span>
-                    <span>
+                    <span className="kcard-row">
+                      <img src={I.icMoney} alt="" className="kcard-ico" />
                       <Money v={orderOriginalTotal(o)} bold />
                       <small>
                         {' '}· {n} line{n === 1 ? '' : 's'}

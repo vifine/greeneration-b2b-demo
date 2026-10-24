@@ -1,4 +1,5 @@
-import { useState, type CSSProperties } from 'react';
+import type { CSSProperties } from 'react';
+import * as I from './icons';
 import { Link } from 'react-router-dom';
 import { Money } from './Money';
 import { Dot } from './ui';
@@ -77,29 +78,8 @@ export function clientDealSummary(clientId: string) {
   return { count: active.length, avg: priced.length ? total / priced.length : 0, last };
 }
 
-function DealProducts({ d }: { d: LiveDeal }) {
-  return (
-    <div className="deal-rows">
-      {d[8]?.length ? (
-        d[8].map((r, i) => (
-          <div key={i} className="deal-row">
-            <span className="ellipsis">{r[0]}</span>
-            <span>× {r[1]}</span>
-            <span>
-              <Money v={r[2]} />
-            </span>
-            <span className="strong">
-              <Money v={r[1] * r[2]} />
-            </span>
-          </div>
-        ))
-      ) : (
-        <div className="deal-row muted">Products are loaded for the latest 8 orders of each client · open the deal in Bitrix24</div>
-      )}
-      {d[7] && <div className="deal-row muted">LPO {d[7]}</div>}
-    </div>
-  );
-}
+/** A Bitrix24 deal has no card in the portal: clicking it opens the deal in Bitrix24. */
+const openDeal = (id: number) => window.open(bitrixDealUrl(id), '_blank', 'noopener');
 
 /** All recent Bitrix24 orders across portal clients, newest first. */
 export function allDeals() {
@@ -126,14 +106,12 @@ export const kanbanColStyle = (c: string) => ({ '--stage': c, '--col-bg': tint(c
 /** Bitrix24 orders as columns by Bitrix stage. Canceled and lost deals are left out. */
 export function BitrixOrdersKanban({ q, clientId }: { q: string; clientId?: string | null }) {
   const { clientClass } = useStore();
-  const [open, setOpen] = useState<number | null>(null);
   const rows = bitrixRows(q, clientId).filter((x) => isActiveDeal(x.d));
   const rank = (c: string) => {
     const i = BX_STAGE_ORDER.indexOf(c);
     return i < 0 ? BX_STAGE_ORDER.length : i;
   };
   const stages = [...new Set(rows.map((x) => x.d[3]))].sort((a, b) => rank(a) - rank(b));
-  const toggle = (id: number) => setOpen(open === id ? null : id);
   return (
     <div className="kanban">
       {stages.map((stage) => {
@@ -155,13 +133,12 @@ export function BitrixOrdersKanban({ q, clientId }: { q: string; clientId?: stri
                 key={d[0]}
                 role="button"
                 tabIndex={0}
-                aria-expanded={open === d[0]}
-                className={`kcard bx-kcard ${open === d[0] ? 'is-open' : ''}`}
-                onClick={() => toggle(d[0])}
+                className="kcard bx-kcard"
+                onClick={() => openDeal(d[0])}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    toggle(d[0]);
+                    openDeal(d[0]);
                   }
                 }}
               >
@@ -173,7 +150,8 @@ export function BitrixOrdersKanban({ q, clientId }: { q: string; clientId?: stri
                   <DealLink id={d[0]} /> · created {day(d[1])}
                   {d[7] ? ` · LPO ${d[7]}` : ''}
                 </span>
-                <span className="kcard-meta">
+                <span className="kcard-meta kcard-row">
+                  <img src={I.icTruck} alt="" className="kcard-ico" />
                   Delivery {day(d[2])}
                   {d[6] ? ` · ${d[6]}` : ''}
                 </span>
@@ -181,11 +159,11 @@ export function BitrixOrdersKanban({ q, clientId }: { q: string; clientId?: stri
                   <span>
                     <PayCell d={d} />
                   </span>
-                  <span>
+                  <span className="kcard-row">
+                    <img src={I.icMoney} alt="" className="kcard-ico" />
                     <Money v={d[4]} bold />
                   </span>
                 </span>
-                {open === d[0] && <DealProducts d={d} />}
               </div>
             ))}
             {!col.length && <div className="kcard-empty">No orders</div>}
@@ -199,7 +177,6 @@ export function BitrixOrdersKanban({ q, clientId }: { q: string; clientId?: stri
 
 export function BitrixOrdersTable({ q, clientId }: { q: string; clientId?: string | null }) {
   const { clientClass } = useStore();
-  const [open, setOpen] = useState<number | null>(null);
   const rows = bitrixRows(q, clientId);
   const shown = clientId ? rows : rows.slice(0, 300);
   const canceled = rows.filter((x) => !isActiveDeal(x.d)).length;
@@ -207,7 +184,7 @@ export function BitrixOrdersTable({ q, clientId }: { q: string; clientId?: strin
     <>
       <p className="section-note">
         {rows.length} orders from Bitrix24 (Orders pipeline, last 90 days){canceled ? ` · ${canceled} canceled` : ''}
-        {rows.length > shown.length ? ` · showing the latest ${shown.length}, use search to narrow` : ''} · click a row to see the products · read-only
+        {rows.length > shown.length ? ` · showing the latest ${shown.length}, use search to narrow` : ''} · click a row to open the deal in Bitrix24 · read-only
       </p>
       <div className="table journal ord-table bx-ord-table">
         <div className="tr th">
@@ -223,13 +200,12 @@ export function BitrixOrdersTable({ q, clientId }: { q: string; clientId?: strin
             <div
               role="button"
               tabIndex={0}
-              aria-expanded={open === d[0]}
               className={`tr row bx-row ${d[5] === 'Not paid' && d[3] === 'WON' ? 'stripe-warning' : ''}`}
-              onClick={() => setOpen(open === d[0] ? null : d[0])}
+              onClick={() => openDeal(d[0])}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  setOpen(open === d[0] ? null : d[0]);
+                  openDeal(d[0]);
                 }
               }}
             >
@@ -257,7 +233,6 @@ export function BitrixOrdersTable({ q, clientId }: { q: string; clientId?: strin
                 <Money v={d[4]} bold />
               </span>
             </div>
-            {open === d[0] && <DealProducts d={d} />}
           </div>
         ))}
         {!shown.length && <div className="empty">No Bitrix24 orders match.</div>}
