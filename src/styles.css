@@ -3598,3 +3598,7 @@ textarea.input { height: auto; padding: 10px 12px; }
 .client-facts dd:has(.person-chip) { align-items: center; }
 /* Credit class list: all classes at once, no scrolling */
 .class-picker .dd-pop { max-height: none; overflow: visible; }
+
+.fact-tag.is-info { background: #e6f0f8; color: #2b5d8a; }
+.fact-tag.is-muted { background: #ececE7; color: var(--text-2); }
+.dd-req { margin-right: auto; align-self: center; font-size: 12px; color: var(--danger, #b42318); }

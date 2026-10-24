@@ -18,7 +18,7 @@ import { SERVER_AUTH } from '../auth';
 import { SharedNotesCard } from '../components/SharedNotes';
 import { LIVE } from '../data/live';
 import { MiniMap } from '../components/MapLazy';
-import { BitrixDetails, ClientDocuments } from '../components/BitrixDetails';
+import { BitrixDetails, bxLabel, ClientDocuments } from '../components/BitrixDetails';
 import { clientPoint } from '../data/geo';
 import { ClientsMapView } from './MapPage';
 import { ClassBadge, CLASS_COLOR, CLASS_HINT, CLASS_ORDER, classFilterOptions, isBlockedClass, matchesClass, NO_COLOR, tint, ZoneDot, zoneColor } from '../components/ClassBadge';
@@ -78,10 +78,19 @@ function PersonChip({ name, photo }: { name: string; photo?: string }) {
 }
 
 /** Client card header: only what is not in Details (the balance; area and addresses for test clients). */
-function ClientFacts({ c, ownCount }: { c: CardClient; ownCount: number }) {
+/** Colour of the customer status / priority tags. */
+const statusTone = (s: string) =>
+  /retain|resurrect|^new/i.test(s) ? 'is-good' : /churn|lost|not qualified/i.test(s) ? 'is-bad' : /lead|progress/i.test(s) ? 'is-info' : '';
+const priorityTone = (s: string) => (/high/i.test(s) ? 'is-bad' : /regular/i.test(s) ? 'is-info' : 'is-muted');
+
+function ClientFacts({ c, ownCount, raw }: { c: CardClient; ownCount: number; raw: Record<string, string | string[]> }) {
   const bal = balanceOf(c.id);
   // Status, segment, priority, responsible and payment terms are in Details; order figures go to a dashboard later.
   const facts: { k: string; v: React.ReactNode; sub?: React.ReactNode }[] = [];
+  const status = bxLabel('status', raw, c.live?.bx?.status);
+  const priority = bxLabel('priority', raw, c.live?.bx?.priority);
+  if (status) facts.push({ k: 'Status', v: <span className={`fact-tag ${statusTone(status)}`}>{status}</span> });
+  if (priority) facts.push({ k: 'Priority', v: <span className={`fact-tag ${priorityTone(priority)}`}>{priority.replace(/\s*priority$/i, '')}</span> });
   const mgr = c.live?.bx?.manager;
   if (mgr) {
     const st = c.live?.bx?.managerId ? LIVE?.staff?.[c.live.bx.managerId] : undefined;
@@ -468,9 +477,13 @@ export function ClientCard() {
   const [person, setPerson] = useState<(Omit<Contact, 'id'> & { id?: string }) | null>(null);
   const toast = useToast();
   const [edit, setEdit] = useState<(Omit<Address, 'id'> & { id?: string }) | null>(null);
+  const [bxEdits, setBxEdits] = useState<Record<string, Record<string, string | string[]>>>({});
   const c = id ? CLIENTS.find((x) => x.id === id) : undefined;
   if (!c) return <Navigate to="/customers/clients" replace />;
   const own = addresses.filter((a) => a.clientId === c.id).sort((a, b) => Number(!!b.main) - Number(!!a.main));
+  // Editable Bitrix24 lists as changed on this card (shown in Details and in the header), per client.
+  const bxRaw = { ...(c.live?.bx?.xr ?? {}), ...(bxEdits[c.id] ?? {}) };
+  const setBxValue = (k: string, v: string | string[]) => setBxEdits((e) => ({ ...e, [c.id]: { ...(e[c.id] ?? {}), [k]: v } }));
   return (
     <Shell crumbs={[{ label: 'Clients', to: '/customers/clients' }, { label: clientById(c.id).name }]} crmLink={`Open ${c.name} in Bitrix24${c.live?.bitrixId ? ` (#${String(c.live.bitrixId).replace(/\.0$/, '')})` : ''}`} crmHref={bitrixCompanyUrl(c.live?.bitrixId ?? (testBitrix as Record<string, number>)[c.id])} odooHref={odooPartnerUrl(c.id)} contentClass="card-page">
       <div className="card-header">
@@ -484,7 +497,7 @@ export function ClientCard() {
               </span>
             )}
           </div>
-          <ClientFacts c={c} ownCount={own.length} />
+          <ClientFacts c={c} ownCount={own.length} raw={bxRaw} />
         </div>
         <div className="card-actions">
           <Btn kind="primary" onClick={() => navigate(`/portal/${c.id}`)}>
@@ -545,7 +558,7 @@ export function ClientCard() {
       {(() => {
         const left = (
           <>
-            {c.live?.bx && <BitrixDetails key={`bx-${c.id}`} clientId={c.id} bx={c.live.bx} bitrixId={c.live.bitrixId} />}
+            {c.live?.bx && <BitrixDetails key={`bx-${c.id}`} clientId={c.id} bx={c.live.bx} bitrixId={c.live.bitrixId} raw={bxRaw} onRaw={setBxValue} />}
             {c.live?.bx && <ClientDocuments key={`docs-${c.id}`} clientId={c.id} bx={c.live.bx} bitrixId={c.live.bitrixId} />}
       {specialFor(c.id).length > 0 && (
               <>

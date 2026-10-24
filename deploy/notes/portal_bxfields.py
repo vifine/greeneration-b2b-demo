@@ -162,6 +162,8 @@ def save_field(bitrix_call, cid, key, value, edit_defs, me):
         vals = str(value or "")
         if vals and vals not in allowed:
             return 400, {"error": "unknown value"}
+    if d.get("r") and not vals:
+        return 400, {"error": "this field is required in Bitrix24"}
     company = bitrix_call("crm.company.get", {"id": cid}) or {}
     title = str(company.get("TITLE") or "")
     if WRITE_MODE != "all" and not title.startswith(TEST_PREFIX):
@@ -174,6 +176,11 @@ def save_field(bitrix_call, cid, key, value, edit_defs, me):
             params.append((f"fields[{d['f']}]", ""))
     else:
         params.append((f"fields[{d['f']}]", vals))
+    if d["f"] == "UF_CRM_AGREED_PAYMENT_DELAY" and vals:
+        # Bitrix24 keeps the delay twice: this list and the text field "Agreed payment delay, days". Keep them equal.
+        label = dict((str(i), lbl) for i, lbl in d.get("o", [])).get(vals, "")
+        m = re.search(r"\d+", label)
+        params.append(("fields[UF_CRM_AGREED_PAYMENT_DALAY_DAYS]", m.group(0) if m else "0"))
     bitrix_call("crm.company.update", params)
     with _lock:
         _cache.pop(cid, None)

@@ -238,6 +238,7 @@ export function MultiDropdown({
   size = 'md',
   disabled,
   ariaLabel,
+  required,
 }: {
   value: string[];
   onChange: (v: string[]) => void;
@@ -245,6 +246,8 @@ export function MultiDropdown({
   size?: 'md' | 'sm';
   disabled?: boolean;
   ariaLabel?: string;
+  /** At least one value must stay chosen. */
+  required?: boolean;
 }) {
   const { open, setOpen, up, ref, toggle } = usePopover();
   const [draft, setDraft] = useState<string[]>(value);
@@ -282,9 +285,11 @@ export function MultiDropdown({
             <button type="button" className="btn btn-sm btn-ghost" onClick={() => setOpen(false)}>
               Cancel
             </button>
+            {required && !draft.length && <span className="dd-req">Choose at least one</span>}
             <button
               type="button"
               className="btn btn-sm btn-primary"
+              disabled={required && !draft.length}
               onClick={() => {
                 setOpen(false);
                 onChange(draft);

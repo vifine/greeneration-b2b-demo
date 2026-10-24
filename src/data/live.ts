@@ -125,7 +125,7 @@ export interface LiveData {
   /** Responsible persons of the companies: Bitrix24 user id -> full name and photo (relative to BASE_URL). */
   staff?: Record<string, { name: string; photo?: string }>;
   /** Editable list fields on the client card: key -> Bitrix24 field, multiple or not, options [id, label]. */
-  bxEdit?: Record<string, { f: string; m: boolean; one?: boolean; o: [string, string][] }>;
+  bxEdit?: Record<string, { f: string; m: boolean; one?: boolean; r?: boolean; o: [string, string][] }>;
   availability: Record<string, LiveAvailability>;
   clients: LiveClient[];
   prices: Record<string, Record<string, LivePriceRow>>;

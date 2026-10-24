@@ -36,13 +36,14 @@ function EditCell({ clientId, d, value, onSaved }: { clientId: string; d: Def; v
         disabled={busy}
         ariaLabel={d.l}
         onChange={(v) => void save(def.one ? (v ? [v] : []) : v)}
-        options={[{ value: '', label: '—' }, ...options]}
+        options={def.r ? options : [{ value: '', label: '—' }, ...options]}
+        placeholder="—"
       />
     );
   }
   return (
     <div className="bx-edit">
-      <MultiDropdown size="sm" value={Array.isArray(value) ? value : value ? [value] : []} disabled={busy} ariaLabel={d.l} onChange={(v) => void save(v)} options={options} />
+      <MultiDropdown size="sm" required={def.r} value={Array.isArray(value) ? value : value ? [value] : []} disabled={busy} ariaLabel={d.l} onChange={(v) => void save(v)} options={options} />
     </div>
   );
 }
@@ -53,8 +54,19 @@ const ORDER = ['status', 'segment', 'priority', 'payType', 'delay', 'channel', '
 const LABEL: Record<string, string> = { status: 'Status', segment: 'Segment', priority: 'Priority', payType: 'Payment type', delay: 'Payment delay', groupList: 'Group', supplyList: 'Supply system' };
 
 /** Company fields from Bitrix24: list fields are editable (saved to Bitrix24), the rest read-only. Files are in ClientDocuments. */
-export function BitrixDetails({ clientId, bx }: { clientId: string; bx?: LiveBitrix; bitrixId?: string | number }) {
-  const [raw, setRaw] = useState<Record<string, string | string[]>>(bx?.xr ?? {});
+export function BitrixDetails({
+  clientId,
+  bx,
+  raw,
+  onRaw,
+}: {
+  clientId: string;
+  bx?: LiveBitrix;
+  bitrixId?: string | number;
+  /** Current values of the editable lists (shared with the card header). */
+  raw: Record<string, string | string[]>;
+  onRaw: (k: string, v: string | string[]) => void;
+}) {
   const defs = (LIVE?.bxFields ?? []).filter((d) => d.t !== 'f');
   const editable = (k: string) => SERVER_AUTH && !!LIVE?.bxEdit?.[k];
   const x = bx?.x ?? {};
@@ -65,7 +77,7 @@ export function BitrixDetails({ clientId, bx }: { clientId: string; bx?: LiveBit
   const cell = (d: Def) => {
     const v = valueOf(d.k);
     const val = editable(d.k) ? (
-      <EditCell clientId={clientId} d={d} value={raw[d.k]} onSaved={(nv) => setRaw((r) => ({ ...r, [d.k]: nv }))} />
+      <EditCell clientId={clientId} d={d} value={raw[d.k]} onSaved={(nv) => onRaw(d.k, nv)} />
     ) : d.t === 'b' ? (
       'Yes'
     ) : d.t === 'c' ? (
@@ -171,4 +183,11 @@ export function ClientDocuments({ clientId, bx, bitrixId }: { clientId: string; 
       )}
     </section>
   );
+}
+
+/** Label of an editable list value (current one from the card, else the synced label). */
+export function bxLabel(k: string, raw: Record<string, string | string[]>, fallback?: string) {
+  const v = raw[k];
+  const id = Array.isArray(v) ? v[0] : v;
+  return (id && LIVE?.bxEdit?.[k]?.o.find((o) => o[0] === id)?.[1]) || fallback || undefined;
 }

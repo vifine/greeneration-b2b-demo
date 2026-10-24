@@ -613,6 +613,8 @@ def bitrix_sync():
             bx_edit[k] = {"f": f, "m": bool(enum_multi.get(f)) if kd == "e" else bool(d.get("isMultiple")), "o": [[i, lbl] for i, lbl in opts]}
             if k in BX_ONE:
                 bx_edit[k]["one"] = True
+            if d.get("isRequired"):  # Bitrix24 does not accept an empty value
+                bx_edit[k]["r"] = True
             if k not in shown:  # editable even when no company has a value yet
                 label = re.sub(r"\s*\(archived\)\s*", "", (d.get("listLabel") or d.get("formLabel") or d.get("title") or f), flags=re.I).strip()
                 bx_fields.append({"k": k, "l": label, "t": "t"})
