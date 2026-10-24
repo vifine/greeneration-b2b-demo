@@ -2,7 +2,7 @@ import { intakeChip, useDubaiNow } from '../time';
 import { liveUpdatedText } from '../data/live';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { logout } from '../auth';
+import { currentUser, logout, SERVER_AUTH } from '../auth';
 import { useStore } from '../store';
 import * as I from './icons';
 import { useToast } from './ui';
@@ -141,8 +141,8 @@ export function Sidebar({ pinned: pinnedByPage }: { pinned: boolean }) {
   const showSubs = (key: string) => key === openKey;
 
   const doLogout = () => {
-    logout();
-    navigate('/login');
+    void logout(); // server build reloads to the login page itself
+    if (!SERVER_AUTH) navigate('/login');
   };
 
   const subActive = (to: string) => pathname === to || pathname.startsWith(to + '/');
@@ -232,6 +232,66 @@ export function Sidebar({ pinned: pinnedByPage }: { pinned: boolean }) {
   );
 }
 
+/** Top-right avatar: who is signed in (Bitrix24 photo or initials) with a small profile menu. */
+function UserMenu() {
+  const me = currentUser();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [photoOk, setPhotoOk] = useState(true);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, [open]);
+  const face = (cls: string) =>
+    me.photo && photoOk ? (
+      <img className={`${cls} avatar-img`} src={me.photo} alt="" onError={() => setPhotoOk(false)} />
+    ) : (
+      <span className={cls}>{me.initials}</span>
+    );
+  const doLogout = () => {
+    void logout(); // server build reloads to the login page itself
+    if (!SERVER_AUTH) navigate('/login');
+  };
+  return (
+    <div className="user-menu" ref={ref}>
+      <button type="button" className="avatar-btn" title={me.title} aria-label={`Signed in as ${me.name}`} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        {face('avatar')}
+      </button>
+      {open && (
+        <div className="user-pop" role="menu">
+          <div className="up-head">
+            {face('avatar avatar-lg')}
+            <div className="up-id">
+              <strong>{me.name}</strong>
+              {me.position && <span>{me.position}</span>}
+              {me.email && <span className="up-email">{me.email}</span>}
+            </div>
+          </div>
+          {me.profileUrl && (
+            <a className="up-item" role="menuitem" href={me.profileUrl} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
+              <img src={I.icBitrix24} width={18} height={18} alt="" />
+              Profile in Bitrix24
+            </a>
+          )}
+          <button type="button" className="up-item" role="menuitem" onClick={doLogout}>
+            <img src={I.icLogout} width={18} height={18} alt="" />
+            Log out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export interface Crumb {
   label: string;
   to?: string;
@@ -279,9 +339,7 @@ export function TopBar({ crumbs, chip = true, crmLink, crmHref, odooHref }: { cr
           </span>
         )}
         {chip && <IntakeChip />}
-        <span className="avatar" title="Karina P. · coordinator">
-          KP
-        </span>
+        <UserMenu />
       </div>
     </header>
   );

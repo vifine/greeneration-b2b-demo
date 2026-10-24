@@ -121,13 +121,27 @@ export interface LiveData {
   deals?: Record<string, LiveDeal[]>;
   /** Stage code (without the "C1:" prefix) → stage name. */
   dealStages?: Record<string, string>;
+  /** Portal accounts (lower-case email) → Bitrix24 profile; photo is relative to BASE_URL (live/avatars/…). */
+  users?: Record<string, LivePortalUser>;
+}
+
+export interface LivePortalUser {
+  bitrixId: string;
+  name: string;
+  position?: string;
+  photo?: string;
 }
 
 export let LIVE: LiveData | null = null;
 
 export async function loadLive() {
   try {
-    const r = await fetch(`${import.meta.env.BASE_URL}live/live.json`, { cache: 'no-cache' });
+    const r = await fetch(`${import.meta.env.BASE_URL}live/live.json`, { cache: 'no-cache', credentials: 'same-origin' });
+    // 401 = not signed in (server build): run on demo data, the login page takes over.
+    if (r.status === 401) {
+      LIVE = null;
+      return;
+    }
     if (r.ok && (r.headers.get('content-type') ?? '').includes('json')) LIVE = (await r.json()) as LiveData;
   } catch {
     LIVE = null;

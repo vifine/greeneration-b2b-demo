@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { currentUser } from '../auth';
 import { Money } from '../components/Money';
 import * as I from '../components/icons';
 import { Shell } from '../components/Shell';
@@ -126,7 +127,7 @@ export function Home() {
   return (
     <Shell crumbs={[{ label: 'Home' }]} pinned chip={false} contentClass="home">
       <div className="hero">
-        <p className="hero-meta">{greeting(now)}, Karina · Monday 19 Oct · orders for Tue 20 Oct</p>
+        <p className="hero-meta">{greeting(now)}, {currentUser().name.split(' ')[0]} · Monday 19 Oct · orders for Tue 20 Oct</p>
         <h1 className="hero-title">
           {stuck.length} request{stuck.length === 1 ? ' is' : 's are'} stuck before 22:30
         </h1>

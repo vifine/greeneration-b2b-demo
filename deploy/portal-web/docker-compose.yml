@@ -1,4 +1,4 @@
-# Small nginx container that serves the built portal with a password.
+# Small nginx container that serves the built portal (no password: Caddy + the auth service protect /live/*).
 # Listens only on 127.0.0.1; the existing HTTPS proxy (nginx / Caddy / Traefik) forwards b2b.greeneration.ae here.
 services:
   portal-web:
@@ -10,7 +10,5 @@ services:
     volumes:
       - /var/www/greeneration-portal:/srv/portal:ro
       - /etc/greeneration-portal/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      # Folder, not a single file: htpasswd rewrites the file, a single-file mount would keep the old copy.
-      - /etc/greeneration-portal/web-auth:/etc/nginx/auth:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"

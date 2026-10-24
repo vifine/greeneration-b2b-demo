@@ -557,6 +557,48 @@ def bitrix_sync():
     except Exception as e:  # deals are optional; keep the companies data
         print("Bitrix24: deals skipped:", type(e).__name__, str(e)[:120].replace(hook, "<webhook>"))
 
+    # ---------- Portal accounts: who is signed in (name, position, photo from Bitrix24) ----------
+    try:
+        portal_users_sync(call, hook)
+    except Exception as e:  # optional; the header falls back to initials
+        print("Bitrix24: portal users skipped:", type(e).__name__, str(e)[:120].replace(hook, "<webhook>"))
+
+
+# The portal logins (same list as deploy/make-users.sh). Their Bitrix24 profiles go to live.json "users".
+PORTAL_ACCOUNTS = ["vifine767@gmail.com", "levkova@greeneration.ae", "nikolaychik@greeneration.ae"]
+portal_users = {}
+
+
+def portal_users_sync(call, hook):
+    """Read-only user.get by email; photos saved under public/live/avatars (served only with a session)."""
+    from urllib.parse import urljoin
+    base = re.match(r"^https://[^/]+", hook).group(0)
+    av_dir = os.path.join(os.path.dirname(__file__), "..", "public", "live", "avatars")
+    for email in PORTAL_ACCOUNTS:
+        res = call("user.get", {"FILTER": {"EMAIL": email}}).get("result", [])
+        u = next((x for x in res if str(x.get("EMAIL", "")).strip().lower() == email), None)
+        if not u:
+            continue
+        uid = str(u["ID"])
+        entry = {"bitrixId": uid,
+                 "name": " ".join(x for x in (u.get("NAME"), u.get("LAST_NAME")) if x).strip() or email,
+                 "position": (u.get("WORK_POSITION") or "").strip() or None}
+        photo = (u.get("PERSONAL_PHOTO") or "").strip()
+        if photo:
+            try:
+                r = requests.get(urljoin(base + "/", photo), timeout=30)
+                ctype = r.headers.get("content-type", "")
+                if r.ok and ctype.startswith("image/") and len(r.content) < 5_000_000:
+                    ext = {"image/png": "png", "image/webp": "webp", "image/gif": "gif"}.get(ctype.split(";")[0], "jpg")
+                    os.makedirs(av_dir, exist_ok=True)
+                    with open(os.path.join(av_dir, f"{uid}.{ext}"), "wb") as f:
+                        f.write(r.content)
+                    entry["photo"] = f"live/avatars/{uid}.{ext}"
+            except requests.RequestException:
+                pass
+        portal_users[email] = {k: v for k, v in entry.items() if v}
+    print(f"Bitrix24: portal users {len(portal_users)} of {len(PORTAL_ACCOUNTS)}, photos {sum('photo' in v for v in portal_users.values())}")
+
 
 deals_out, deal_stages, deals_stats = {}, {}, "skipped"
 
@@ -674,6 +716,7 @@ out = {
     "deals": deals_out,
     "dealStages": deal_stages,
     "dealFields": ["id", "created", "delivery", "stage", "amount", "payment", "deliveryStatus", "lpo", "rows"],
+    "users": portal_users,
 }
 dest = os.path.join(os.path.dirname(__file__), "..", "public", "live", "live.json")
 os.makedirs(os.path.dirname(dest), exist_ok=True)
