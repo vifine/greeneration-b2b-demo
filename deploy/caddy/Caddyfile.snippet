@@ -1,26 +1,30 @@
-# Add to the Caddyfile and reload Caddy (`caddy reload` or restart the container).
-# HTTPS certificate is issued automatically. Password is asked by portal-web (basic auth).
+# b2b.greeneration.ae in the host Caddy (/etc/caddy/Caddyfile). Reload: sudo systemctl reload caddy.
+# HTTPS certificate is issued automatically.
+#   /auth/*  → login service (deploy/auth/portal_auth.py, 127.0.0.1:8089): sign in / out, session cookie
+#   /live/*  → real data; only with a valid session (forward_auth asks /auth/check, otherwise 401)
+#   rest     → portal-web (nginx container, 127.0.0.1:8088): login page + app bundle (demo data only)
 # Caddy running in Docker: replace 127.0.0.1 with host.docker.internal (and add
-#   extra_hosts: ["host.docker.internal:host-gateway"]  to the Caddy service).
+#   extra_hosts: ["host.docker.internal:host-gateway"] to the Caddy service; bind both services to 0.0.0.0 then).
 b2b.greeneration.ae {
 	encode zstd gzip
 	header {
 		Strict-Transport-Security "max-age=31536000"
+		X-Robots-Tag "noindex, nofollow"
 		-Server
 	}
-	reverse_proxy 127.0.0.1:8088
-}
 
-# Alternative without the portal-web container (Caddy serves the files and asks the password).
-# Hashes come from:  caddy hash-password   (type the password, never commit the result)
-# b2b.greeneration.ae {
-# 	root * /var/www/greeneration-portal/current
-# 	basic_auth {
-# 		vifine767@gmail.com <hash>
-# 		levkova@greeneration.ae <hash>
-# 		nikolaychik@greeneration.ae <hash>
-# 	}
-# 	header X-Robots-Tag "noindex, nofollow"
-# 	try_files {path} /index.html
-# 	file_server
-# }
+	handle /auth/* {
+		reverse_proxy 127.0.0.1:8089
+	}
+
+	handle /live/* {
+		forward_auth 127.0.0.1:8089 {
+			uri /auth/check
+		}
+		reverse_proxy 127.0.0.1:8088
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:8088
+	}
+}

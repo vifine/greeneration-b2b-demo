@@ -1,6 +1,10 @@
 # Traefik dynamic config (file provider). Copy into the folder Traefik watches (providers.file.directory).
 # Uses the certificate resolver already configured for Supabase/n8n — rename `letsencrypt` if yours differs.
-# Password is asked by portal-web (basic auth). If Traefik runs in Docker, the service URL must reach the host:
+# WARNING: portal-web has no password any more. /live/* (real data) must go through the login service:
+# add a forwardAuth middleware (address http://<host>:8089/auth/check) on a router for PathPrefix(`/live`)
+# and route PathPrefix(`/auth`) to the login service (it listens on 127.0.0.1:8089 — rebind for Docker).
+# The production server uses Caddy (deploy/caddy/Caddyfile.snippet); this file is kept only as a starting point.
+# If Traefik runs in Docker, the service URL must reach the host:
 # use http://host.docker.internal:8088 (add extra_hosts host-gateway to Traefik) or the host's docker0 IP (172.17.0.1).
 http:
   routers:

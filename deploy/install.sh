@@ -5,10 +5,12 @@
 #
 # What it does:
 #   - system user `portal`, code in /opt/greeneration-portal (public repo, HTTPS clone)
-#   - Node.js 20 + Python venv with google-auth/requests for the read-only data sync
-#   - secrets file /etc/greeneration-portal/env (placeholders only, chmod 600)
-#   - web container `portal-web` (nginx, basic auth) on 127.0.0.1:8088 serving /var/www/greeneration-portal/current
-#   - systemd timer: rebuild every hour 07:00–23:00 Asia/Dubai
+#   - Node.js 20 + Python venv with google-auth/requests (read-only data sync) and bcrypt (login service)
+#   - secrets file /etc/greeneration-portal/env (placeholders + generated PORTAL_SESSION_SECRET, chmod 600)
+#   - login service greeneration-portal-auth (127.0.0.1:8089): the portal's own sign-in page, session cookie
+#   - web container `portal-web` (nginx, no password) on 127.0.0.1:8088 serving /var/www/greeneration-portal/current;
+#     /live/* (real data) is protected by the proxy asking the login service (forward_auth)
+#   - systemd timers: rebuild every hour 07:00–23:00 Asia/Dubai + within ~2 min of a push to main (codewatch)
 #   - detects the reverse proxy already in front of Supabase/n8n and prints the snippet to add
 set -euo pipefail
 
@@ -27,7 +29,7 @@ warn() { printf '\033[1;33m!! %s\033[0m\n' "$*"; }
 log "Packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq git curl ca-certificates python3 python3-venv apache2-utils >/dev/null
+apt-get install -y -qq git curl ca-certificates openssl python3 python3-venv apache2-utils >/dev/null
 if ! command -v node >/dev/null || [ "$(node -p 'process.versions.node.split(".")[0]')" -lt 20 ]; then
   curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null
   apt-get install -y -qq nodejs >/dev/null
@@ -48,7 +50,7 @@ fi
 
 log "Python venv for the sync"
 [ -x "$APP_DIR/.venv/bin/python" ] || sudo -u portal python3 -m venv "$APP_DIR/.venv"
-sudo -u portal "$APP_DIR/.venv/bin/pip" install -q --upgrade pip google-auth requests
+sudo -u portal "$APP_DIR/.venv/bin/pip" install -q --upgrade pip google-auth requests bcrypt
 
 log "Secrets file (placeholders only — fill in by hand)"
 if [ ! -f "$ETC_DIR/env" ]; then
@@ -60,25 +62,41 @@ GOOGLE_APPLICATION_CREDENTIALS=/etc/greeneration-portal/google-sa.json
 BITRIX_WEBHOOK=
 ENV
 fi
+# Session signing key for the login service: generated once, never printed.
+if ! grep -q '^PORTAL_SESSION_SECRET=.\{32,\}' "$ETC_DIR/env"; then
+  sed -i '/^PORTAL_SESSION_SECRET=/d' "$ETC_DIR/env"
+  printf '# Login sessions (deploy/auth/portal_auth.py). Changing it signs everybody out.\nPORTAL_SESSION_SECRET=%s\n' "$(openssl rand -hex 32)" >> "$ETC_DIR/env"
+fi
 chown portal:portal "$ETC_DIR/env"; chmod 600 "$ETC_DIR/env"
 [ -f "$ETC_DIR/google-sa.json" ] && { chown portal:portal "$ETC_DIR/google-sa.json"; chmod 600 "$ETC_DIR/google-sa.json"; } \
   || warn "Copy the Google key to $ETC_DIR/google-sa.json (chmod 600, owner portal)"
 [ -s "$ETC_DIR/web-auth/htpasswd" ] || warn "No users yet: run  sudo bash $APP_DIR/deploy/make-users.sh"
 
+log "Logins: htpasswd (bcrypt) read by the login service (user portal)"
+install -d -o root -g portal -m 750 "$ETC_DIR/web-auth"
+[ -f "$ETC_DIR/htpasswd" ] && [ ! -s "$ETC_DIR/web-auth/htpasswd" ] && mv "$ETC_DIR/htpasswd" "$ETC_DIR/web-auth/htpasswd"
+touch "$ETC_DIR/web-auth/htpasswd"; chown root:portal "$ETC_DIR/web-auth/htpasswd"; chmod 640 "$ETC_DIR/web-auth/htpasswd"
+rm -f "$ETC_DIR/htpasswd"
+
+log "Login service greeneration-portal-auth on 127.0.0.1:8089"
+install -m 644 "$APP_DIR/deploy/systemd/greeneration-portal-auth.service" /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable greeneration-portal-auth.service
+systemctl restart greeneration-portal-auth.service
+
 log "Web container portal-web on 127.0.0.1:$PORT"
 install -d -m 755 "$ETC_DIR/nginx"
-install -m 644 "$APP_DIR/deploy/portal-web/default.conf" "$ETC_DIR/nginx/default.conf"
-install -d -o root -g 101 -m 750 "$ETC_DIR/web-auth"   # 101 = nginx user in nginx:alpine
-[ -f "$ETC_DIR/htpasswd" ] && [ ! -s "$ETC_DIR/web-auth/htpasswd" ] && mv "$ETC_DIR/htpasswd" "$ETC_DIR/web-auth/htpasswd"
-touch "$ETC_DIR/web-auth/htpasswd"; chown root:101 "$ETC_DIR/web-auth/htpasswd"; chmod 640 "$ETC_DIR/web-auth/htpasswd"
-rm -f "$ETC_DIR/htpasswd"
-PORTAL_PORT="$PORT" docker compose -f "$APP_DIR/deploy/portal-web/docker-compose.yml" -p greeneration-portal up -d --force-recreate
+# Keep the same inode: the container mounts this single file.
+cat "$APP_DIR/deploy/portal-web/default.conf" > "$ETC_DIR/nginx/default.conf"; chmod 644 "$ETC_DIR/nginx/default.conf"
+PORTAL_PORT="$PORT" docker compose -f "$APP_DIR/deploy/portal-web/docker-compose.yml" -p greeneration-portal up -d
+docker exec greeneration-portal-web nginx -s reload >/dev/null 2>&1 || true   # picks up default.conf if not recreated
 
-log "systemd timer (hourly 07:00–23:00 Dubai)"
-install -m 644 "$APP_DIR/deploy/systemd/greeneration-portal-update.service" /etc/systemd/system/
-install -m 644 "$APP_DIR/deploy/systemd/greeneration-portal-update.timer" /etc/systemd/system/
+log "systemd timers (hourly 07:00–23:00 Dubai + codewatch every 2 min)"
+for u in update.service update.timer codewatch.service codewatch.timer; do
+  install -m 644 "$APP_DIR/deploy/systemd/greeneration-portal-$u" /etc/systemd/system/
+done
 systemctl daemon-reload
-systemctl enable --now greeneration-portal-update.timer
+systemctl enable --now greeneration-portal-update.timer greeneration-portal-codewatch.timer
 
 log "First build"
 systemctl start greeneration-portal-update.service || warn "First build failed — see: journalctl -u greeneration-portal-update -n 100"
@@ -95,9 +113,9 @@ fi
 echo "Detected: $PROXY"
 case "$PROXY" in
   nginx) echo "Next: sudo cp $APP_DIR/deploy/nginx/b2b.greeneration.ae.conf /etc/nginx/sites-available/ && sudo ln -sf /etc/nginx/sites-available/b2b.greeneration.ae.conf /etc/nginx/sites-enabled/ && sudo certbot --nginx -d $DOMAIN && sudo nginx -t && sudo systemctl reload nginx" ;;
-  caddy|caddy-docker) echo "Next: add $APP_DIR/deploy/caddy/Caddyfile.snippet to the Caddyfile and reload Caddy (docker: point it at host.docker.internal:$PORT)" ;;
+  caddy|caddy-docker) echo "Next: add $APP_DIR/deploy/caddy/Caddyfile.snippet to the Caddyfile (/auth/* → 8089, /live/* forward_auth, rest → $PORT), caddy validate, reload" ;;
   traefik) echo "Next: copy $APP_DIR/deploy/traefik/b2b.yml into Traefik's dynamic config folder (file provider)" ;;
   nginx-proxy-manager) echo "Next: in Nginx Proxy Manager add Proxy Host $DOMAIN → http://<host-ip>:$PORT, request a Let's Encrypt certificate, force SSL" ;;
   *) echo "Next: see deploy/README.md, section 'Прокси'" ;;
 esac
-echo "Check locally: curl -I -u <user> http://127.0.0.1:$PORT/"
+echo "Check: curl -s http://127.0.0.1:8089/auth/healthz; curl -sI https://$DOMAIN/live/live.json | head -1   # ok / 401"

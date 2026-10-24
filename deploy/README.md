@@ -10,14 +10,23 @@ Google Sheets ─┐                        ┌─ /var/www/greeneration-portal/
 Bitrix24 ──────┼─ update.sh (раз в час) ─┤
 GitHub (код) ──┘    только чтение        └─ current → последняя удачная сборка
                                                │
-                     portal-web (nginx в Docker, пароль) — 127.0.0.1:8088
+                     portal-web (nginx в Docker) — 127.0.0.1:8088
                                                │
-                     ваш HTTPS-прокси (nginx / Caddy / Traefik) — b2b.greeneration.ae
+     Caddy — b2b.greeneration.ae ── /auth/*  → сервис входа greeneration-portal-auth (127.0.0.1:8089)
+                                 ── /live/*  → только с сессией (forward_auth → /auth/check), иначе 401
+                                 ── остальное → portal-web (страница входа + приложение, без данных)
 ```
 
 * Сборка идёт на самом сервере: код из публичного репозитория, данные из таблиц и Битрикса **только на чтение**.
 * Если синхронизация или сборка упала — сайт остаётся прежним, ничего не ломается.
-* Пароль спрашивает маленький контейнер `portal-web`, поэтому годится любой прокси перед ним.
+* Вход — собственная страница портала (email + пароль). Сервис `deploy/auth/portal_auth.py` (Python + bcrypt, пользователь `portal`)
+  проверяет пароль по `/etc/greeneration-portal/web-auth/htpasswd` и ставит cookie `gp_session` на 30 дней
+  (HttpOnly, Secure, SameSite=Lax, подпись HMAC ключом `PORTAL_SESSION_SECRET` из `/etc/greeneration-portal/env`).
+  Подбор пароля ограничен: 8 неудачных попыток за 15 минут с одного IP или на один email → 429.
+* Реальные данные (`/live/live.json`, фото пользователей `/live/avatars/`) отдаются только с действующей сессией.
+  Страница и JS-бандл открыты, в них только демо-данные.
+* В шапке — фото и должность вошедшего из Bitrix24 (синхронизация делает `user.get` по email, только чтение);
+  меню аватара: «Профиль в Bitrix24» и «Выйти».
 * Почему не всё в Docker: сборке нужен Node и Python раз в час, проще и прозрачнее держать их на сервере (systemd-таймер, логи в journald). В Docker только веб-часть.
 
 ## Что нужно заранее
@@ -49,15 +58,21 @@ journalctl -u greeneration-portal-update -n 50 --no-pager
 # 5. Подключить домен в прокси — install.sh в конце пишет, какой прокси найден и что сделать
 ```
 
-Логины: `vifine767@gmail.com`, `levkova@greeneration.ae`, `nikolaychik@greeneration.ae`.
-Сменить пароль одному человеку: `sudo bash /opt/greeneration-portal/deploy/make-users.sh levkova@greeneration.ae`.
+Логины: `vifine767@gmail.com`, `levkova@greeneration.ae`, `nikolaychik@greeneration.ae` (email без учёта регистра).
+Сменить пароль одному человеку: `sudo bash /opt/greeneration-portal/deploy/make-users.sh levkova@greeneration.ae` —
+сервис входа перечитывает файл сам, перезапуск не нужен. Права: папка `web-auth` `root:portal 750`, файл `root:portal 640`.
+Новый пользователь: добавить email в `make-users.sh` и в `PORTAL_ACCOUNTS` в `scripts/sync_sheets.py` (профиль Bitrix24).
+Выйти у всех сразу: заменить `PORTAL_SESSION_SECRET` в env и `sudo systemctl restart greeneration-portal-auth`.
+
+`install.sh` можно запускать повторно: ставит bcrypt, юнит `greeneration-portal-auth`, генерирует секрет (если его нет,
+значение не печатается), ставит таймеры обновления и codewatch (пересборка в течение ~2 минут после пуша в main).
 
 ## Прокси
 
 | Что стоит на сервере | Что сделать |
 |---|---|
 | nginx на сервере | `deploy/nginx/b2b.greeneration.ae.conf` → `/etc/nginx/sites-available/`, ссылка в `sites-enabled`, `certbot --nginx -d b2b.greeneration.ae`, `nginx -t`, reload |
-| Caddy | вставить `deploy/caddy/Caddyfile.snippet` в Caddyfile, reload. Сертификат выпустится сам |
+| Caddy (так на нашем сервере, `/etc/caddy/Caddyfile`) | блок из `deploy/caddy/Caddyfile.snippet`: бэкап, `caddy validate --config /etc/caddy/Caddyfile`, `systemctl reload caddy` |
 | Traefik (часто вместе с Supabase) | `deploy/traefik/b2b.yml` в папку file provider. Проверить имя certResolver |
 | Nginx Proxy Manager | Proxy Host `b2b.greeneration.ae` → `http://<IP сервера>:8088`, Let's Encrypt, Force SSL |
 
@@ -67,12 +82,13 @@ journalctl -u greeneration-portal-update -n 50 --no-pager
 
 ```bash
 curl -s http://127.0.0.1:8088/healthz                  # ok
-curl -sI http://127.0.0.1:8088/ | head -1               # 401 — без пароля не пускает
-curl -sI -u vifine767@gmail.com https://b2b.greeneration.ae/ | head -1   # 200 после ввода пароля
-systemctl list-timers greeneration-portal-update.timer  # следующий запуск
+curl -s http://127.0.0.1:8089/auth/healthz              # {"ok": true} — сервис входа жив
+systemctl status greeneration-portal-auth --no-pager
+curl -sI https://b2b.greeneration.ae/live/live.json | head -1    # 401 — без входа данных нет
+systemctl list-timers 'greeneration-portal-*'           # следующий запуск
 ```
 
-В браузере: https://b2b.greeneration.ae — окно логина браузера, затем портал. Зелёная плашка «Live data · sheets synced …» в шапке показывает время последней синхронизации. Встроенный демо-логин (test/test) на серверной сборке отключён.
+В браузере: https://b2b.greeneration.ae — страница входа портала, затем портал. Зелёная плашка «Live data · sheets synced …» в шапке показывает время последней синхронизации. Встроенный демо-логин (test/test) на серверной сборке отключён.
 
 ## Откат
 
@@ -80,7 +96,8 @@ systemctl list-timers greeneration-portal-update.timer  # следующий з�
 ls -1t /var/www/greeneration-portal/releases            # список сборок
 sudo -u portal ln -sfn releases/<предыдущая> /var/www/greeneration-portal/current
 ```
-Остановить обновления: `sudo systemctl disable --now greeneration-portal-update.timer`.
+Остановить обновления: `sudo systemctl disable --now greeneration-portal-update.timer greeneration-portal-codewatch.timer`.
+Журнал входов: `journalctl -u greeneration-portal-auth -n 50` (пароли и тела запросов не пишутся).
 Убрать всё: `docker compose -p greeneration-portal down`, удалить `/opt/greeneration-portal`, `/var/www/greeneration-portal`, `/etc/greeneration-portal`, юниты systemd.
 
 ## Координаты клиентов (карта)
@@ -110,6 +127,6 @@ sudo nano /etc/greeneration-portal/google-sa.json      # Google SA key JSON
 sudo chown portal:portal /etc/greeneration-portal/{env,google-sa.json} && sudo chmod 600 /etc/greeneration-portal/{env,google-sa.json}
 sudo bash /opt/greeneration-portal/deploy/make-users.sh
 sudo systemctl start greeneration-portal-update && journalctl -u greeneration-portal-update -n 50 --no-pager
-# then wire b2b.greeneration.ae → 127.0.0.1:8088 in the detected proxy (see table above)
-curl -s http://127.0.0.1:8088/healthz && curl -sI http://127.0.0.1:8088/ | head -1   # ok / 401
+# then wire b2b.greeneration.ae in Caddy: /auth/* → 8089, /live/* forward_auth /auth/check + 8088, rest → 8088
+curl -s http://127.0.0.1:8089/auth/healthz && curl -sI https://b2b.greeneration.ae/live/live.json | head -1   # ok / 401
 ```

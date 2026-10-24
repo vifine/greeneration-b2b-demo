@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# Create or reset portal logins (basic auth). Passwords are typed in, never stored in the repo.
+# Create or reset portal logins (bcrypt htpasswd read by the login service). Passwords are typed in, never stored in the repo.
 # Usage: sudo bash deploy/make-users.sh                 — all three users
 #        sudo bash deploy/make-users.sh levkova@greeneration.ae   — one user (reset password)
 set -euo pipefail
 AUTH_DIR=/etc/greeneration-portal/web-auth
 HTPASSWD=$AUTH_DIR/htpasswd
-NGINX_GID=101   # nginx user inside nginx:alpine
+# Keep in sync with PORTAL_ACCOUNTS in scripts/sync_sheets.py (Bitrix24 profiles for the header).
 USERS=("vifine767@gmail.com" "levkova@greeneration.ae" "nikolaychik@greeneration.ae")   # Victoria Fine, Aleksandra Levkova, Ivan Nikolaychik
 
 [ "$(id -u)" -eq 0 ] || { echo "Run with sudo"; exit 1; }
 command -v htpasswd >/dev/null || apt-get install -y -qq apache2-utils >/dev/null
-install -d -o root -g "$NGINX_GID" -m 750 "$AUTH_DIR"
+install -d -o root -g portal -m 750 "$AUTH_DIR"
 touch "$HTPASSWD"
 
 [ $# -gt 0 ] && USERS=("$@")
@@ -22,6 +22,5 @@ for u in "${USERS[@]}"; do
   echo "ok: $u"
 done
 unset PW PW2
-chown root:"$NGINX_GID" "$HTPASSWD"; chmod 640 "$HTPASSWD"
-docker exec greeneration-portal-web nginx -s reload >/dev/null 2>&1 || true
+chown root:portal "$HTPASSWD"; chmod 640 "$HTPASSWD"   # the login service re-reads it on change, no restart
 echo "Users in $HTPASSWD: $(cut -d: -f1 "$HTPASSWD" | paste -sd, -)"
