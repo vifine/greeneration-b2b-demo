@@ -1,4 +1,4 @@
-import { allDeals, BitrixOrdersKanban, BitrixOrdersTable, bitrixRows, BX_STAGE_ORDER, BxCard, isActiveDeal, kanbanColStyle, stageColor, stageName } from '../components/BitrixDeals';
+import { allDeals, BitrixOrdersKanban, BitrixOrdersTable, bitrixRows, BX_STAGE_ORDER, BxCard, isActiveDeal, kanbanColStyle, stageColor, StageDot, stageName } from '../components/BitrixDeals';
 import type { LiveDeal } from '../data/live';
 import { ClientFilterChip } from '../components/ClientActivity';
 import { LIVE } from '../data/live';
@@ -13,7 +13,7 @@ import { ClientName } from '../components/ClientName';
 import { Dot, FilterSelect, SearchBox, Tabs } from '../components/ui';
 import { matchesPaymentFilter, PAYMENT_FILTERS, paymentView, type PaymentFilter, type PaymentView } from '../data/payments';
 import { clientById } from '../data/clients';
-import type { Client, Order, OrderStage, Tone } from '../data/types';
+import type { Client, Order, OrderStage } from '../data/types';
 import { orderIssue, orderCurrentTotal, orderOriginalTotal, requestIssue, requestTotal, useStore } from '../store';
 
 function Toolbar<T extends string>({
@@ -205,7 +205,6 @@ export function RequestsJournal() {
 const ORD_TABS = ['all', 'new', 'preorder', 'confirmed', 'bitrix'] as const;
 type OrdTab = (typeof ORD_TABS)[number];
 const STAGE_OF: Record<Exclude<OrdTab, 'all' | 'bitrix'>, OrderStage> = { new: 'New request', preorder: 'Preorder', confirmed: 'Confirmed' };
-const STAGE_TONE: Record<OrderStage, Tone> = { 'New request': 'info', Preorder: 'warning', Confirmed: 'success' };
 
 type OrdView = 'list' | 'kanban';
 /** Bitrix24 stage code behind each internal order stage (New request, Preorder, Confirmed). */
@@ -415,7 +414,7 @@ export function OrdersJournal() {
                 <small>{o.delivery.window}</small>
               </span>
               <span className="c-for">
-                <Dot tone={STAGE_TONE[o.stage]} />
+                <StageDot code={BX_CODE_OF[o.stage]} />
                 {o.stage}
               </span>
               <span className="c-issue">

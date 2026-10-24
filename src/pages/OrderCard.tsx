@@ -1,3 +1,4 @@
+import { StageDot } from '../components/BitrixDeals';
 import { useState } from 'react';
 import { Money } from '../components/Money';
 import { Link, Navigate, useParams } from 'react-router-dom';
@@ -118,7 +119,7 @@ export function OrderCard() {
               <h1>{client.name}</h1>
             </span>
             <span className="stage">
-              <Dot tone={STAGE_TONE[o.stage]} />
+              <StageDot code={({ 'New request': 'FINAL_INVOICE', Preorder: 'UC_SO2AUI', Confirmed: 'NEW' } as const)[o.stage]} />
               {o.stage}
             </span>
           </div>

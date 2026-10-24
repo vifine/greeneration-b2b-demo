@@ -2,8 +2,7 @@ import { Navigate, useParams } from 'react-router-dom';
 import { ClientName } from '../components/ClientName';
 import { Money } from '../components/Money';
 import { Shell } from '../components/Shell';
-import { Dot } from '../components/ui';
-import { allDeals, stageName, stageTone } from '../components/BitrixDeals';
+import { allDeals, stageName, StageDot } from '../components/BitrixDeals';
 import { clientById } from '../data/clients';
 import { bitrixDealUrl, LIVE, shortDate } from '../data/live';
 
@@ -30,7 +29,7 @@ export function BitrixOrderCard() {
           <div className="card-name gap16">
             <ClientName id={clientId} name={client?.name ?? clientId} as="h1" />
             <span className="stage">
-              <Dot tone={stageTone(d[3])} />
+              <StageDot code={d[3]} />
               {stageName(d[3])}
             </span>
           </div>

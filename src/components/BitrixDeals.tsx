@@ -44,6 +44,11 @@ export const BX_STAGE_COLOR: Record<string, string> = {
 };
 export const stageColor = (code: string) => BX_STAGE_COLOR[code] ?? '#9aa1a9';
 
+/** Stage dot in the Bitrix24 stage colour (same as the kanban columns). */
+export function StageDot({ code }: { code: string }) {
+  return <span className="dot" style={{ background: stageColor(code) }} aria-hidden="true" />;
+}
+
 export const stageName = (code: string) => LIVE?.dealStages?.[code] ?? code;
 export const stageTone = (code: string): Tone => STAGE_TONE[code] ?? 'info';
 const day = (iso: string | null) => (iso ? shortDate(iso) : '—');
@@ -241,7 +246,7 @@ export function BitrixOrdersTable({ q, clientId }: { q: string; clientId?: strin
               </span>
               <span className="c-received">{day(d[2])}</span>
               <span className="c-for">
-                <Dot tone={stageTone(d[3])} /> {stageName(d[3])}
+                <StageDot code={d[3]} /> {stageName(d[3])}
               </span>
               <span className="c-pay">
                 <PayCell d={d} />
