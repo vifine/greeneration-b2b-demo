@@ -3241,3 +3241,11 @@ a.pt-tile:hover { border-color: var(--forest); }
   cursor: pointer;
 }
 .up-item:hover { background: var(--row-hover); }
+
+/* Bitrix24 details on the client card */
+.bx-details .bx-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 16px; margin-top: 8px; }
+.bx-details .kv-v { overflow-wrap: anywhere; }
+.bx-comment { margin-top: 14px; }
+.bx-comment p { margin: 2px 0 0; white-space: pre-wrap; font-size: 14px; }
+.bx-arch { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border, #e5e5e0); }
+@media (max-width: 720px) { .bx-details .bx-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

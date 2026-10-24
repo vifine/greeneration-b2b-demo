@@ -17,6 +17,7 @@ import { fmt } from '../data/lines';
 import { useStore } from '../store';
 import { LIVE } from '../data/live';
 import { MiniMap } from '../components/MapLazy';
+import { BitrixDetails } from '../components/BitrixDetails';
 import { clientPoint } from '../data/geo';
 import { ClassBadge, CLASS_COLOR, CLASS_HINT, CLASS_ORDER, classFilterOptions, isBlockedClass, matchesClass, NO_COLOR, tint, ZoneDot, zoneColor } from '../components/ClassBadge';
 
@@ -397,6 +398,8 @@ export function ClientCard() {
           </div>
         </>
       )}
+
+      {c.live?.bx && <BitrixDetails bx={c.live.bx} bitrixId={c.live.bitrixId} />}
 
       <div className="section-head">
         <h2 className="section-h">Delivery addresses</h2>

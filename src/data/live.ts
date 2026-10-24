@@ -68,6 +68,10 @@ export interface LiveBitrix {
   phone?: string;
   email?: string;
   contacts?: LiveBitrixContact[];
+  /** Extra company fields by key (see LiveData.bxFields): text, or a file / linked-item count, or true. */
+  x?: Record<string, string | number | true>;
+  /** Company comment from Bitrix24, markup stripped. */
+  comment?: string;
 }
 
 export interface LiveSpecial {
@@ -112,6 +116,8 @@ export interface LiveData {
   sources: { stockDates: string[]; arTab: string; paymentsTab?: string; inventoryAt?: string };
   rules: { minOrder: number; cutoff: string; sameDay: { before: string; minAmount: number; window: string }; classes: Record<string, string> };
   products: Record<string, LiveProduct>;
+  /** Definitions of the extra Bitrix24 company fields that have a value for at least one company. t: t text, f files, c linked items, b yes/no; a archived; id identity document. */
+  bxFields?: { k: string; l: string; t: 't' | 'f' | 'c' | 'b'; a?: 1; id?: 1 }[];
   availability: Record<string, LiveAvailability>;
   clients: LiveClient[];
   prices: Record<string, Record<string, LivePriceRow>>;

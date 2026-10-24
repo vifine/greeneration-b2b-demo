@@ -8,11 +8,13 @@ import { ALL_PACKS, DAY, demandBySku, harvestFor } from '../data/stock';
 import type { Category, Tone } from '../data/types';
 import { useStore } from '../store';
 import { LIVE } from '../data/live';
+import * as I from '../components/icons';
 
 type CatKey = 'all' | Category;
 
-function status(free: number | null, harvest: number | null, stop: boolean): { tone: Tone | 'sand'; text: string; key: 'in' | 'low' | 'out' | 'over' | 'tbc' | 'stop' } {
+function status(free: number | null, harvest: number | null, stop: boolean, noData = false): { tone: Tone | 'sand'; text: string; key: 'in' | 'low' | 'out' | 'over' | 'tbc' | 'stop' } {
   if (stop) return { tone: 'neutral', text: 'Stop list', key: 'stop' };
+  if (harvest == null && noData) return { tone: 'neutral', text: 'No stock data', key: 'tbc' };
   if (harvest == null) return { tone: 'info', text: 'By weight · at harvest', key: 'tbc' };
   if (free! < 0) return { tone: 'danger', text: `Over-ordered by ${-free!}`, key: 'over' };
   if (harvest === 0) return { tone: 'danger', text: 'Sold out', key: 'out' };
@@ -33,7 +35,7 @@ export function Availability() {
     const harvest = harvestFor(pack);
     const ordered = demand.get(pack.sku) ?? 0;
     const free = harvest == null ? null : harvest - ordered;
-    return { group, pack, harvest, ordered, free, st: status(free, harvest, !!stop[pack.sku]) };
+    return { group, pack, harvest, ordered, free, st: status(free, harvest, !!stop[pack.sku], !!LIVE && pack.kind !== 'custom' && !LIVE.availability[pack.sku]) };
   });
   const count = (k: string) => rows.filter((r) => r.st.key === k).length;
   const n = q.trim().toLowerCase();
@@ -81,7 +83,13 @@ export function Availability() {
         {visible.map((r) => (
           <div key={r.pack.sku} className={`tr row ${r.st.key === 'over' || r.st.key === 'out' ? 'stripe-danger' : r.st.key === 'low' ? 'stripe-warning' : ''}`}>
             <span className="a-photo">
-              <img className="line-photo" src={lineImage(r.pack.sku)} width={40} height={40} alt="" loading="lazy" />
+              {lineImage(r.pack.sku) ? (
+                <img className="line-photo" src={lineImage(r.pack.sku)} width={40} height={40} alt="" loading="lazy" />
+              ) : (
+                <span className="photo-ph">
+                  <img src={I.icImagePh} width={18} height={18} alt="" />
+                </span>
+              )}
             </span>
             <span className="a-product two">
               <span>

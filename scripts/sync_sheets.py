@@ -417,6 +417,8 @@ new_from = sorted({e.get("newFrom") for rows in prices.values() for e in rows.va
 # Only *.list / *.get methods are called. The URL is never printed.
 KEYS_SHEET = "1HonwyWyghTIy-uv2HG6uzvPcfBnH0YSod8o1oLuP9IE"
 bitrix_stats = "skipped"
+bx_fields = []  # definitions of the extra company fields that have a value for at least one company
+bx_fill = {}
 bx_ll = {}  # client id → coordinates stored in the Bitrix24 address field (input for geo.py)
 
 
@@ -481,7 +483,72 @@ def bitrix_sync():
             break
         start = r["next"]
 
-    sel = ["ID", "TITLE", "ASSIGNED_BY_ID", "PHONE", "EMAIL", "UF_CRM_DELIVERY_ZONE", "UF_CRM_DELIVERY_ADDRESS", "UF_CRM_DELIVERY_NOTE",
+    # Extra Bitrix24 company fields for the client card ("Bitrix24 details"): (key, field, kind). Kinds: t text, n number,
+    # m money, d date, b yes/no, e enum (labels from userfield.list), s standard list (crm.status.list), f files (count only), c linked CRM items (count only).
+    # Labels come from crm.company.fields; a field is shown when at least one company has a value; "(Archived)" in the label puts it in the archived group.
+    BX_EXTRA = [
+        ("delay", "UF_CRM_AGREED_PAYMENT_DELAY", "e"), ("outlets", "UF_CRM_1755257392917", "n"), ("vendor", "UF_CRM_1702553531904", "e"),
+        ("channel", "UF_CRM_1737549202781", "e"), ("volume", "UF_CRM_MONTHLY_EXPECTED_VOLUME", "m"), ("license", "UF_CRM_TRADE_LICENSE", "f"),
+        ("chef", "UF_CRM_CHEF", "t"), ("vat", "UF_CRM_OTHER_FILES", "f"), ("samples", "UF_CRM_SAMPLES_DELIVERED", "b"),
+        ("need", "UF_CRM_NEED_PRODUCTS", "e"), ("file", "UF_CRM_1702638147488", "f"), ("revenue", "UF_CRM_AVG_MONTHLY_REVENUE", "n"),
+        ("obstacles", "UF_CRM_1702558251522", "e"), ("grp", "UF_CRM_1705566885553", "t"), ("supplyList", "UF_CRM_SUPPLY_SYSTEM_LIST", "e"),
+        ("supply", "UF_CRM_1705566912084", "t"), ("weekly", "UF_CRM_1708955214763", "e"), ("firstOrder", "UF_CRM_1716199109655", "d"),
+        ("form", "UF_CRM_67924460AD450", "t"), ("credit", "UF_CRM_1784619222556", "f"), ("eid", "UF_CRM_1784704839121", "f"),
+        ("addContact", "UF_CRM_ADDITIONAL_CONTACT", "c"), ("passport", "UF_CRM_1784704809229", "f"), ("discount", "UF_CRM_NEGOTIATED_DISCOUNT", "n"),
+        ("junk", "UF_CRM_6792446093F07", "e"), ("otherEntity", "UF_CRM_1755600623", "c"), ("cheque", "UF_CRM_1784619203008", "f"),
+        ("industry", "INDUSTRY", "s"), ("type", "COMPANY_TYPE", "s"), ("employees", "EMPLOYEES", "s"),
+    ]
+    BX_IDENTITY = {"passport", "eid"}  # identity documents: shown as present / absent only, never linked
+    try:
+        bx_defs = call("crm.company.fields", {}).get("result", {})
+    except Exception:
+        bx_defs = {}
+    status_lists = {}
+    for ent in sorted({f for _, f, k in BX_EXTRA if k == "s"}):
+        try:
+            status_lists[ent] = {str(i["STATUS_ID"]): i["NAME"] for i in call("crm.status.list", {"filter": {"ENTITY_ID": ent}}).get("result", [])}
+        except Exception:
+            status_lists[ent] = {}
+
+    def bx_clean_text(t):
+        t = re.sub(r"\[/?[a-zA-Z*][^\]]*\]", " ", str(t or ""))
+        t = re.sub(r"<[^>]+>", " ", t)
+        import html as _html
+        return re.sub(r"[ \t\r\f\v]*\n[ \t\r\f\v\n]*", "\n", re.sub(r"[ \t]+", " ", _html.unescape(t))).strip()
+
+    def bx_value(key, field, kind, raw):
+        """Display value for one extra field, or None when empty."""
+        if raw in (None, "", [], {}, "0", 0, False, "N"):
+            return None
+        if kind in ("f", "c"):
+            n = len(raw) if isinstance(raw, list) else 1
+            return n or None
+        if kind == "b":
+            return True if str(raw).upper() in ("1", "Y", "TRUE") else None
+        if kind == "e":
+            return enum(field, raw)
+        if kind == "s":
+            return status_lists.get(field, {}).get(str(raw)) or None
+        if kind == "n":
+            try:
+                f = float(str(raw).replace(",", "."))
+            except ValueError:
+                return str(raw).strip() or None
+            return None if f == 0 else (str(int(f)) if f == int(f) else str(round(f, 2)))
+        if kind == "m":
+            amt, _, cur = str(raw).partition("|")
+            try:
+                f = float(amt)
+            except ValueError:
+                return None
+            return None if f == 0 else f"{int(f) if f == int(f) else round(f, 2):,} {cur}".strip()
+        if kind == "d":
+            return str(raw)[:10]
+        if isinstance(raw, list):
+            raw = ", ".join(str(x) for x in raw if x)
+        return str(raw).strip() or None
+
+    sel = ["ID", "TITLE", "COMMENTS", *[f for _, f, _k in BX_EXTRA], "ASSIGNED_BY_ID", "PHONE", "EMAIL", "UF_CRM_DELIVERY_ZONE", "UF_CRM_DELIVERY_ADDRESS", "UF_CRM_DELIVERY_NOTE",
            "UF_CRM_TIME_OF_DELIVERY", "UF_CRM_CLIENT_SEGMENT", "UF_CRM_CLIENT_STATUS", "UF_CRM_PREFERRED_PAYMENT_TYPE",
            "UF_CRM_AGREED_PAYMENT_DALAY_DAYS", "UF_CRM_1756222582502", "UF_CRM_GROUP", "UF_CRM_ASSIGNED_DRIVER", "UF_CRM_GOOGLE_MAP_LINK"]
     companies = all_pages("crm.company.list", {"select": sel, "order": {"ID": "ASC"}})
@@ -508,6 +575,26 @@ def bitrix_sync():
         if len(lst) < 5:
             name = " ".join(x for x in (p.get("NAME"), p.get("LAST_NAME")) if x).strip()
             lst.append({"name": name or "—", "post": (p.get("POST") or "").strip(), "phone": first(p.get("PHONE")), "email": first(p.get("EMAIL"))})
+
+    # Fill counts over all companies decide which extra fields are shown.
+    global bx_fields, bx_fill
+    bx_fill = {k: sum(1 for co in companies if bx_value(k, f, kd, co.get(f)) is not None) for k, f, kd in BX_EXTRA}
+    bx_fill["comment"] = sum(1 for co in companies if bx_clean_text(co.get("COMMENTS")))
+    for k, f, kd in BX_EXTRA:
+        if not bx_fill[k]:
+            continue
+        d = bx_defs.get(f) or {}
+        label = (d.get("listLabel") or d.get("formLabel") or d.get("title") or f).strip()
+        arch = bool(re.search(r"\(archived\)", label, re.I))
+        label = re.sub(r"\s*\(archived\)\s*", "", label, flags=re.I).strip()
+        e = {"k": k, "l": label, "t": kd if kd in ("f", "b", "c") else "t"}
+        if arch:
+            e["a"] = 1
+        if k in BX_IDENTITY:
+            e["id"] = 1
+        bx_fields.append(e)
+    shown = {e["k"] for e in bx_fields}
+    print("Bitrix24 extra fields: " + ", ".join(f"{k}={bx_fill[k]}" for k in bx_fill))
 
     by_bitrix = {str(c.get("bitrixId")).replace(".0", ""): c for c in clients.values() if c.get("bitrixId")}
     matched = 0
@@ -547,6 +634,17 @@ def bitrix_sync():
         }
         if bx["group"] == "No":
             bx["group"] = None
+        x = {}
+        for k, f, kd in BX_EXTRA:
+            if k in shown:
+                v = bx_value(k, f, kd, co.get(f))
+                if v is not None:
+                    x[k] = v
+        if x:
+            bx["x"] = x
+        cm = bx_clean_text(co.get("COMMENTS"))
+        if cm:
+            bx["comment"] = cm[:800]
         c["bitrixId"] = bid
         c["bx"] = {k: v for k, v in bx.items() if v not in (None, "", [], False)}
     bitrix_stats = f"companies {len(companies)}, contacts {len(contacts)}, matched to portal clients {matched}, zones {len(zones)}"
@@ -719,6 +817,7 @@ out = {
     "sources": {"stockDates": dates, "arTab": ar_tab, "paymentsTab": paid_tab, "inventoryAt": inventory_at},
     "rules": rules,
     "products": products,
+    "bxFields": bx_fields,
     "availability": availability,
     "clients": sorted(clients.values(), key=lambda c: c["name"].lower()),
     "priceFields": PRICE_FIELDS,

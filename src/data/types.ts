@@ -1,4 +1,4 @@
-export type Category = 'Microgreens' | 'Specialty greens' | 'Edible flowers';
+export type Category = 'Microgreens' | 'Specialty greens' | 'Edible flowers' | 'Other';
 export type PackKind = 'punnet' | 'cut' | 'flowers' | 'leaves' | 'custom';
 
 export interface Pack {

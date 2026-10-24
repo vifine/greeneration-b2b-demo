@@ -10,6 +10,97 @@ export { CATALOG };
 
 export const CATEGORIES: Category[] = ['Microgreens', 'Specialty greens', 'Edible flowers'];
 
+/** Name for a group created from a live SKU: "Viola mix EF U (20 flowers)" → "Viola mix". */
+function cleanName(raw: string, type: string) {
+  let n = raw
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/\s+(?:SET\s+)?(?:(?:EF|SG|NP|MC|MP)\s+)?U\b.*$/, '')
+    .replace(/\s+cut$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (type.startsWith('SET') && !/\bset\b/i.test(n)) n += ' set';
+  return n.charAt(0).toUpperCase() + n.slice(1);
+}
+
+const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+/**
+ * Live mode: every active Product Matrix SKU appears in the catalog.
+ * A SKU joins the existing group with the same crop code (MP/MC: code without its first letter; S/F: the code itself)
+ * or the same name; otherwise it starts a new group. Sets, packaging and tools get their own groups.
+ * Groups without a photo show the neutral placeholder. Returns SKUs that could not be placed (none expected).
+ */
+function addLiveProducts(): string[] {
+  if (!LIVE) return [];
+  const known = new Set<string>();
+  const byCrop = new Map<string, ProductGroup>();
+  const byName = new Map<string, ProductGroup>();
+  const family = (type: string) => (type === 'MP' || type === 'MC' ? 'M' : type);
+  for (const g of CATALOG) {
+    byName.set(g.name.toLowerCase(), g);
+    for (const pk of g.packs) {
+      known.add(pk.sku.replace(/-C$/, ''));
+      const lp = LIVE.products[pk.sku.replace(/-C$/, '')];
+      if (!lp?.code) continue;
+      const key = family(lp.type) + ':' + (lp.type === 'MP' || lp.type === 'MC' ? lp.code.slice(1) : lp.code);
+      if (!byCrop.has(key)) byCrop.set(key, g);
+    }
+  }
+  const unmapped: string[] = [];
+  const order = { punnet: 0, cut: 1, flowers: 2, leaves: 2, custom: 9 } as const;
+  for (const [sku, lp] of Object.entries(LIVE.products)) {
+    if (known.has(sku)) continue;
+    const t = lp.type;
+    const isSet = t.startsWith('SET');
+    const base = isSet ? t.slice(4) : t;
+    const category: Category | null =
+      base === 'MP' || base === 'MC' ? 'Microgreens' : base === 'SG' ? 'Specialty greens' : base === 'EF' ? 'Edible flowers' : base === 'NP' ? 'Other' : null;
+    if (!category) {
+      unmapped.push(sku);
+      continue;
+    }
+    const v = lp.volume ?? 1;
+    const unit = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+    let kind: Pack['kind'];
+    let label: string;
+    let grams: number | undefined;
+    if (base === 'MP') {
+      kind = 'punnet';
+      label = isSet ? unit(v, 'punnet', 'punnets') : 'Punnet';
+    } else if (base === 'MC') {
+      kind = 'cut';
+      grams = lp.um === 'gr' ? v : undefined;
+      label = `Cut ${v} g`;
+    } else if (base === 'SG') {
+      kind = 'leaves';
+      label = lp.um === 'gr' ? `${v} g` : `${v} leaves`;
+    } else if (base === 'EF') {
+      kind = 'flowers';
+      label = unit(v, 'flower', 'flowers');
+    } else {
+      kind = 'punnet';
+      label = unit(v, 'pc', 'pcs');
+    }
+    const name = cleanName(lp.name, t);
+    const key = isSet || base === 'NP' ? '' : family(base) + ':' + (base === 'MP' || base === 'MC' ? lp.code.slice(1) : lp.code);
+    let group = (key && lp.code ? byCrop.get(key) : undefined) ?? byName.get(name.toLowerCase());
+    if (group && group.category !== category) group = undefined;
+    if (!group) {
+      group = { id: `lv-${slug(name)}`, name, category, packs: [] };
+      CATALOG.push(group);
+      byName.set(name.toLowerCase(), group);
+      if (key && lp.code) byCrop.set(key, group);
+    }
+    const pack: Pack = { sku, label, kind, price: lp.price ?? 0, ...(grams ? { grams } : {}) };
+    group.packs.push(pack);
+    group.packs.sort((a, b) => order[a.kind] - order[b.kind] || (a.grams ?? 0) - (b.grams ?? 0));
+  }
+  if (CATALOG.some((g) => g.category === 'Other') && !CATEGORIES.includes('Other')) CATEGORIES.push('Other');
+  return unmapped;
+}
+
+export const UNMAPPED_LIVE_SKUS = addLiveProducts();
+
 /** Product photos from the design file, used for the line tables. */
 const LOCAL_PHOTOS: Record<string, string> = {
   MP101: peaPunnet,
