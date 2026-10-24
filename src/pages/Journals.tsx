@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Shell } from '../components/Shell';
 import { ClassBadge } from '../components/ClassBadge';
+import { ClientName } from '../components/ClientName';
 import { Dot, FilterSelect, SearchBox, Tabs } from '../components/ui';
 import { matchesPaymentFilter, PAYMENT_FILTERS, paymentView, type PaymentFilter, type PaymentView } from '../data/payments';
 import { clientById } from '../data/clients';
@@ -164,7 +165,7 @@ export function RequestsJournal() {
           return (
             <button type="button" key={r.id} className={`tr row stripe-${issue.tone}`} onClick={() => navigate(`/crm/requests/${r.id}`)}>
               <span className="c-client two">
-                <span>{client.name}</span>
+                <ClientName id={r.clientId} name={client.name} />
                 <small>
                   #{r.id} · {r.channel}
                 </small>

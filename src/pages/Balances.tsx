@@ -7,6 +7,7 @@ import { FileChip } from '../components/FileChip';
 import * as I from '../components/icons';
 import { ProgressTrack } from '../components/Progress';
 import { Shell } from '../components/Shell';
+import { ClientName } from '../components/ClientName';
 import { Btn, Dot, FilterSelect, SearchBox, Tabs, useToast } from '../components/ui';
 import { BALANCES, balanceOf, collectionSteps, STATUS_TONE, type ClientBalance } from '../data/balances';
 import { clientById } from '../data/clients';
@@ -169,7 +170,7 @@ export function Balances() {
               onClick={() => navigate(`/customers/balances/${b.clientId}`)}
             >
               <span className="b-client two">
-                <span>{c.name}</span>
+                <ClientName id={b.clientId} name={c.name} />
                 <small>{b.terms}</small>
               </span>
               <span className="b-balance strong"><Money v={b.balance} bold /></span>
@@ -251,7 +252,7 @@ export function BalanceDetail() {
       <div className="card-header">
         <div className="card-title">
           <div className="card-name gap16">
-            <h1>{c.name}</h1>
+            <ClientName id={c.id} name={c.name} as="h1" />
             <span className={`stage ${tone === 'danger' ? 'text-danger' : ''}`}>
               <Dot tone={tone} />
               {statusText}

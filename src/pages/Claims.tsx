@@ -10,6 +10,7 @@ import { Btn, Dot, SearchBox, Stepper, Tabs, useToast } from '../components/ui';
 import { lineImage } from '../data/catalog';
 import { CLAIM_KIND, CLAIM_SLA_MIN, claimValue, type Claim, type ClaimDecision } from '../data/claims';
 import { clientById } from '../data/clients';
+import { ClientName } from '../components/ClientName';
 import { deliveryDays } from '../data/addresses';
 import { line, money } from '../data/lines';
 import { useStore } from '../store';
@@ -205,7 +206,7 @@ export function ClaimsJournal() {
           return (
             <button type="button" key={c.id} className={`tr row ${c.status === 'closed' ? '' : `stripe-${k.tone}`}`} onClick={() => navigate(`/crm/claims/${c.id}`)}>
               <span className="c-client two">
-                <span>{clientById(c.clientId).name}</span>
+                <ClientName id={c.clientId} name={clientById(c.clientId).name} />
                 <small>
                   {c.id} · {c.channel} · {c.received.time}
                 </small>
@@ -296,7 +297,7 @@ export function ClaimCard() {
       <div className="card-header">
         <div className="card-title">
           <div className="card-name gap16">
-            <h1>{client.name}</h1>
+            <ClientName id={client.id} name={client.name} as="h1" />
             <span className="stage">
               <Dot tone={k.tone} />
               {k.label}

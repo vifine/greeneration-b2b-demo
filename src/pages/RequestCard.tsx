@@ -15,6 +15,7 @@ import { clientById } from '../data/clients';
 import { packText } from '../data/lines';
 import type { Attachment, Line, MessagePart } from '../data/types';
 import { requestChecks, requestTotal, useStore } from '../store';
+import { ClientName } from '../components/ClientName';
 
 export function MessagePreview({ lines, collapsedLines = 4 }: { lines: MessagePart[][]; collapsedLines?: number }) {
   const [open, setOpen] = useState(false);
@@ -140,7 +141,7 @@ export function RequestCard() {
       <div className="card-header">
         <div className="card-title">
           <div className="card-name">
-            <h1>{client.name}</h1>
+            <ClientName id={client.id} name={client.name} as="h1" />
             <img src={I.icChevronDownDark} width={18} height={18} alt="" style={{ transform: 'rotate(90deg)' }} />
           </div>
           <p className="card-sub">

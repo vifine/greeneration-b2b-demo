@@ -6,6 +6,7 @@ import { Shell } from '../components/Shell';
 import { Btn, Dot, useToast } from '../components/ui';
 import { lineImage } from '../data/catalog';
 import { clientById } from '../data/clients';
+import { ClientName } from '../components/ClientName';
 import { AVAILABLE, DAY, demandBySku, isLive, SHORT_AT_CHECK } from '../data/stock';
 import { Kpi } from './Balances';
 import type { Order, OrderLine } from '../data/types';
@@ -158,7 +159,7 @@ export function StockCheck() {
                   {r.affected.map(({ order, line }) => (
                     <div key={line.id} className="stock-sub-row">
                       <Link to={`/crm/orders/${order.id}`} className="ss-client two">
-                        <span>{clientById(order.clientId).name}</span>
+                        <ClientName id={order.clientId} name={clientById(order.clientId).name} />
                         <small>
                           #{order.id} · {order.stage} · {order.delivery.window}
                         </small>

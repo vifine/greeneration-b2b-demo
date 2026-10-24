@@ -23,6 +23,7 @@ import { BitrixDetails } from '../components/BitrixDetails';
 import { clientPoint } from '../data/geo';
 import { ClientsMapView } from './MapPage';
 import { ClassBadge, CLASS_COLOR, CLASS_HINT, CLASS_ORDER, classFilterOptions, isBlockedClass, matchesClass, NO_COLOR, tint, ZoneDot, zoneColor } from '../components/ClassBadge';
+import { ClientName } from '../components/ClientName';
 
 function ClassRow({ sheet, value, onChange, demo }: { sheet?: string; value?: string; onChange: (v: string | null) => void; demo?: boolean }) {
   const changed = value !== sheet;
@@ -381,7 +382,7 @@ export function ClientCard() {
       <div className="card-header">
         <div className="card-title">
           <div className="card-name gap16">
-            <h1>{c.name}</h1>
+            <ClientName id={c.id} name={c.name} as="h1" />
             {(c.live ? isBlockedClass(clientClass(c.id)) : c.creditHold) && (
               <span className="stage text-danger">
                 <Dot tone="danger" />

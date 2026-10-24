@@ -4,6 +4,7 @@ import { Money } from '../components/Money';
 import { Shell } from '../components/Shell';
 import { Dot, SearchBox, Tabs } from '../components/ui';
 import { clientById } from '../data/clients';
+import { ClientName } from '../components/ClientName';
 import type { Order, Request, Tone } from '../data/types';
 import { orderCurrentTotal, orderHasChanges, requestIssues, requestTotal, useStore } from '../store';
 
@@ -147,7 +148,7 @@ export function AuditLog() {
               {e.detail ? <small className="ellipsis">{e.detail}</small> : null}
             </span>
             <span className="a-deal two">
-              <span className="ellipsis">{clientById(e.clientId).name}</span>
+              <ClientName id={e.clientId} name={clientById(e.clientId).name} />
               <small>
                 {e.kind === 'order' ? 'Order' : 'Request'} #{e.deal}
               </small>
