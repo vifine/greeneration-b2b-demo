@@ -3121,9 +3121,12 @@ a.pt-tile:hover { border-color: var(--forest); }
 
 .group-toggle { width: 100%; background: var(--soft-light); border: 0; border-bottom: 1px solid var(--border); cursor: pointer; text-align: left; font: inherit; padding: 10px 20px; }
 .group-toggle:hover { background: var(--tint-info, #eef3f6); }
-.group-chevron { transition: transform .15s; flex: none; }
-.contacts-group.collapsed .group-chevron { transform: rotate(-90deg); }
+.group-chevron { transition: transform .15s; flex: none; transform: rotate(90deg); }
+.contacts-group.collapsed .group-chevron { transform: none; }
 
 /* Light shadow under every table header */
 .table .tr.th { box-shadow: 0 2px 6px rgba(26, 46, 33, 0.08); position: relative; z-index: 2; }
 .sticky-journal .table .tr.th { position: sticky; z-index: 5; }
+
+.zone-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.zone-cell { display: inline-flex; align-items: center; gap: 8px; }

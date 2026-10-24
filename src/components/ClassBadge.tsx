@@ -37,11 +37,49 @@ export function classFilterOptions(count: (k: string) => number) {
 
 export const matchesClass = (filter: string, k?: string) => (filter === 'all' ? true : filter === 'none' ? !k : k === filter);
 
+/** One colour per class: badge text, group stripe and group tint. */
+export const CLASS_COLOR: Record<string, string> = {
+  A: '#2f7d4a',
+  B: '#1f8a80',
+  C: '#6b7280',
+  E: '#a0782c',
+  X: '#7c5cbf',
+  H: '#d9822b',
+  D: '#c0392b',
+  T: '#2f6fb3',
+};
+
+/** One colour per delivery zone. */
+export const ZONE_COLOR: Record<string, string> = {
+  D1: '#2f6fb3',
+  D2: '#1f8a80',
+  D3: '#7c5cbf',
+  D4: '#d9822b',
+  D5: '#c2477f',
+  Sharjah: '#8a6d3b',
+  'Abu Dhabi': '#3f51b5',
+};
+export const NO_COLOR = '#9aa1a9';
+
+/** Colour for a zone label such as "Dubai · D3" or "Sharjah · S1". */
+export function zoneColor(label?: string | null) {
+  if (!label || label === '—') return NO_COLOR;
+  const [emirate, zone] = label.split(' · ');
+  return ZONE_COLOR[zone] ?? ZONE_COLOR[emirate] ?? NO_COLOR;
+}
+
+export const tint = (hex: string, alpha = 0.1) => `${hex}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`;
+
 export function ClassBadge({ k }: { k?: string }) {
   if (!k) return <span className="muted">—</span>;
+  const c = CLASS_COLOR[k] ?? NO_COLOR;
   return (
-    <span className={`cls-badge pill-${CLASS_TONE[k] ?? 'neutral'}`} title={CLASS_HINT[k] ?? ''}>
+    <span className="cls-badge" style={{ color: c, background: tint(c, 0.14) }} title={CLASS_HINT[k] ?? ''}>
       {k}
     </span>
   );
+}
+
+export function ZoneDot({ label }: { label?: string | null }) {
+  return <span className="zone-dot" style={{ background: zoneColor(label) }} aria-hidden="true" />;
 }

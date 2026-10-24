@@ -13,7 +13,7 @@ import { CLIENTS, clientById } from '../data/clients';
 import { fmt } from '../data/lines';
 import { useStore } from '../store';
 import { LIVE, shortDate } from '../data/live';
-import { ClassBadge, CLASS_HINT, CLASS_ORDER, classFilterOptions, isBlockedClass, matchesClass } from '../components/ClassBadge';
+import { ClassBadge, CLASS_COLOR, CLASS_HINT, CLASS_ORDER, classFilterOptions, isBlockedClass, matchesClass, NO_COLOR, tint, ZoneDot, zoneColor } from '../components/ClassBadge';
 
 function ClassRow({ sheet, value, onChange, demo }: { sheet?: string; value?: string; onChange: (v: string | null) => void; demo?: boolean }) {
   const changed = value !== sheet;
@@ -127,7 +127,10 @@ export function ClientsJournal() {
               <small>{main ? `${main.name} · receiving ${main.hours || '—'}` : ''}</small>
             </span>
             <span className="c-emirate two">
-              <span>{main ? `${main.emirate} · ${main.zone}` : '—'}</span>
+              <span className="zone-cell">
+                {main && <ZoneDot label={`${main.emirate} · ${main.zone}`} />}
+                {main ? `${main.emirate} · ${main.zone}` : '—'}
+              </span>
               <small>{main ? `${DELIVERY_DAYS_BY_EMIRATE[main.emirate]} · ${ZONES[main.zone].slot}` : ''}</small>
             </span>
             <span className="c-points">{own.length}</span>
@@ -223,11 +226,15 @@ export function ClientsJournal() {
               <button
                 type="button"
                 className="contacts-group-head group-toggle"
+                style={(() => {
+                  const col = groupBy === 'class' ? (g.label ? CLASS_COLOR[g.label] ?? NO_COLOR : NO_COLOR) : zoneColor(g.label);
+                  return { borderLeft: `4px solid ${col}`, background: tint(col, 0.08) };
+                })()}
                 aria-expanded={expanded[`${groupBy}:${g.label}`]}
                 onClick={() => toggleGroup(`${groupBy}:${g.label}`)}
               >
                 <img className="group-chevron" src={I.icChevronDownDark} width={16} height={16} alt="" />
-                {groupBy === 'class' ? <ClassBadge k={g.label || undefined} /> : null}
+                {groupBy === 'class' ? <ClassBadge k={g.label || undefined} /> : <ZoneDot label={g.label} />}
                 <b>{groupBy === 'class' ? (g.label ? CLASS_HINT[g.label] ?? `Class ${g.label}` : 'No class') : g.label}</b>
                 <span>
                   {g.rows.length} {g.rows.length === 1 ? 'client' : 'clients'}
