@@ -1,4 +1,4 @@
-import { allDeals, BitrixOrdersKanban, BitrixOrdersTable } from '../components/BitrixDeals';
+import { allDeals, BitrixOrdersKanban, BitrixOrdersTable, kanbanColStyle, stageColor } from '../components/BitrixDeals';
 import { ClientFilterChip } from '../components/ClientActivity';
 import { LIVE } from '../data/live';
 import type React from 'react';
@@ -206,6 +206,8 @@ const STAGE_OF: Record<Exclude<OrdTab, 'all' | 'bitrix'>, OrderStage> = { new: '
 const STAGE_TONE: Record<OrderStage, Tone> = { 'New request': 'info', Preorder: 'warning', Confirmed: 'success' };
 
 type OrdView = 'list' | 'kanban';
+/** Bitrix24 stage code behind each internal order stage (New request, Preorder, Confirmed). */
+const BX_CODE_OF: Record<OrderStage, string> = { 'New request': 'FINAL_INVOICE', Preorder: 'UC_SO2AUI', Confirmed: 'NEW' };
 type OrdRow = { o: Order; client: Client; pay: PaymentView };
 
 /** Orders as columns by stage. Shows the stage of the active tab (all three on "All"). */
@@ -218,9 +220,9 @@ function OrdersKanban({ rows, tab, onOpen }: { rows: OrdRow[]; tab: OrdTab; onOp
         const col = rows.filter((x) => x.o.stage === stage);
         const sum = col.reduce((s, x) => s + orderOriginalTotal(x.o), 0);
         return (
-          <section key={stage} className="kanban-col" aria-label={stage}>
+          <section key={stage} className="kanban-col" aria-label={stage} style={kanbanColStyle(stageColor(BX_CODE_OF[stage]))}>
             <header className="kanban-head">
-              <Dot tone={STAGE_TONE[stage]} />
+              <span className="dot" style={{ background: stageColor(BX_CODE_OF[stage]) }} aria-hidden="true" />
               <b>{stage}</b>
               <span className="kanban-count">{col.length}</span>
               <span className="kanban-sum">

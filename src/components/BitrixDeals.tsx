@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { Money } from './Money';
 import { Dot } from './ui';
-import { ClassBadge } from './ClassBadge';
+import { ClassBadge, tint } from './ClassBadge';
 import { useStore } from '../store';
 import { clientById } from '../data/clients';
 import { bitrixDealUrl, LIVE, shortDate, type LiveDeal } from '../data/live';
@@ -22,6 +22,26 @@ const STAGE_TONE: Record<string, Tone> = {
   UC_UZKA34: 'warning', // Credit notes
   UC_1MU1K8: 'warning', // Wait for payment
 };
+
+/** Bitrix24 stage colours of the Orders pipeline, by stage code (without the "C1:" prefix). */
+export const BX_STAGE_COLOR: Record<string, string> = {
+  FINAL_INVOICE: '#ffa900',
+  UC_SO2AUI: '#47d1e2',
+  NEW: '#39a8ef',
+  UC_ZOGZVI: '#00c4fb',
+  PREPARATION: '#2fc6f6',
+  EXECUTING: '#47e4c2',
+  UC_ZSGM69: '#ffbdbb',
+  UC_E182GD: '#468ee5',
+  UC_UZKA34: '#fff300',
+  UC_G1FBUO: '#47d1e2',
+  UC_D3LG0R: '#75d900',
+  UC_1MU1K8: '#ffa801',
+  WON: '#7bd500',
+  LOSE: '#949da9',
+  APOLOGY: '#ff5752',
+};
+export const stageColor = (code: string) => BX_STAGE_COLOR[code] ?? '#9aa1a9';
 
 export const stageName = (code: string) => LIVE?.dealStages?.[code] ?? code;
 export const stageTone = (code: string): Tone => STAGE_TONE[code] ?? 'info';
@@ -100,6 +120,9 @@ function bitrixRows(q: string, clientId?: string | null) {
 /** Bitrix24 stage order for the kanban columns; stages not listed here go last. */
 const BX_STAGE_ORDER = ['FINAL_INVOICE', 'UC_SO2AUI', 'NEW', 'UC_E182GD', 'UC_1MU1K8', 'WON', 'UC_UZKA34'];
 
+/** Column colours: a light tint of the stage colour for the background, the stage colour for the scrollbar. */
+export const kanbanColStyle = (c: string) => ({ '--stage': c, '--col-bg': tint(c, 0.12) }) as CSSProperties;
+
 /** Bitrix24 orders as columns by Bitrix stage. Canceled and lost deals are left out. */
 export function BitrixOrdersKanban({ q, clientId }: { q: string; clientId?: string | null }) {
   const { clientClass } = useStore();
@@ -116,10 +139,11 @@ export function BitrixOrdersKanban({ q, clientId }: { q: string; clientId?: stri
       {stages.map((stage) => {
         const col = rows.filter((x) => x.d[3] === stage);
         const sum = col.reduce((s, x) => s + x.d[4], 0);
+        const c = stageColor(stage);
         return (
-          <section key={stage} className="kanban-col" aria-label={stageName(stage)}>
+          <section key={stage} className="kanban-col" aria-label={stageName(stage)} style={kanbanColStyle(c)}>
             <header className="kanban-head">
-              <Dot tone={stageTone(stage)} />
+              <span className="dot" style={{ background: c }} aria-hidden="true" />
               <b>{stageName(stage)}</b>
               <span className="kanban-count">{col.length}</span>
               <span className="kanban-sum">

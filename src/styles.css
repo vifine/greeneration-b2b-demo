@@ -3274,6 +3274,22 @@ a.pt-tile:hover { border-color: var(--forest); }
   align-items: flex-start;
   overflow-x: auto;
   padding: 4px 16px 24px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.kanban:hover {
+  scrollbar-color: var(--forest) transparent;
+}
+.kanban::-webkit-scrollbar-thumb,
+.kanban-col::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+}
+.kanban:hover::-webkit-scrollbar-thumb {
+  background: var(--forest);
+}
+.kanban-col:hover::-webkit-scrollbar-thumb {
+  background: var(--stage, var(--forest));
 }
 .kanban-col {
   flex: 1 0 280px;
@@ -3283,10 +3299,18 @@ a.pt-tile:hover { border-color: var(--forest); }
   flex-direction: column;
   gap: 8px;
   padding: 10px;
-  background: var(--soft-light);
+  background: var(--col-bg, var(--soft-light));
   border-radius: 12px;
   max-height: calc(100vh - 230px);
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.kanban-col:hover {
+  scrollbar-color: var(--stage, var(--forest)) transparent;
+}
+.kanban-col::-webkit-scrollbar {
+  width: 8px;
 }
 .kanban-head {
   position: sticky;
@@ -3297,7 +3321,7 @@ a.pt-tile:hover { border-color: var(--forest); }
   gap: 8px;
   margin: -10px -10px 0;
   padding: 12px 14px 8px;
-  background: var(--soft-light);
+  background: var(--col-bg, var(--soft-light));
   font-size: 14px;
   color: var(--heading);
 }
