@@ -94,6 +94,9 @@ export function ClientsJournal() {
   const [zone, setZone] = useState('all');
   const [minF, setMinF] = useState('all');
   const [groupBy, setGroupBy] = useState<'none' | 'class' | 'zone'>('none');
+  // Groups start collapsed; `expanded` holds the ones the user opened.
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const toggleGroup = (k: string) => setExpanded((x) => ({ ...x, [k]: !x[k] }));
   const minOf = (id: string, emirate?: Address['emirate']) => minOverrides[id] ?? MIN_ORDER[emirate ?? 'Dubai'];
   const rows = CLIENTS.map((c) => {
     const own = addresses.filter((a) => a.clientId === c.id);
@@ -177,13 +180,28 @@ export function ClientsJournal() {
           />
           <SelectBox
             value={groupBy}
-            onChange={(v) => setGroupBy(v as 'none' | 'class' | 'zone')}
+            onChange={(v) => {
+              setGroupBy(v as 'none' | 'class' | 'zone');
+              setExpanded({});
+            }}
             options={[
               { value: 'none', label: 'Group: none' },
               { value: 'class', label: 'Group by class' },
               { value: 'zone', label: 'Group by zone' },
             ]}
           />
+          {groupBy !== 'none' && (
+            <button
+              type="button"
+              className="link-sort"
+              onClick={() => {
+                const all = groups.every((g) => !expanded[`${groupBy}:${g.label}`]);
+                setExpanded(all ? Object.fromEntries(groups.map((g) => [`${groupBy}:${g.label}`, true])) : {});
+              }}
+            >
+              {groups.every((g) => !expanded[`${groupBy}:${g.label}`]) ? 'Expand all' : 'Collapse all'}
+            </button>
+          )}
           <SearchBox value={q} onChange={setQ} placeholder="Search client, area, address" className="journal-search" />
         </div>
       </div>
@@ -201,15 +219,21 @@ export function ClientsJournal() {
           g.label == null ? (
             g.rows.map(renderRow)
           ) : (
-            <div key={g.label} className="contacts-group">
-              <div className="contacts-group-head">
+            <div key={g.label} className={`contacts-group ${!expanded[`${groupBy}:${g.label}`] ? 'collapsed' : ''}`}>
+              <button
+                type="button"
+                className="contacts-group-head group-toggle"
+                aria-expanded={expanded[`${groupBy}:${g.label}`]}
+                onClick={() => toggleGroup(`${groupBy}:${g.label}`)}
+              >
+                <img className="group-chevron" src={I.icChevronDownDark} width={16} height={16} alt="" />
                 {groupBy === 'class' ? <ClassBadge k={g.label || undefined} /> : null}
                 <b>{groupBy === 'class' ? (g.label ? CLASS_HINT[g.label] ?? `Class ${g.label}` : 'No class') : g.label}</b>
                 <span>
                   {g.rows.length} {g.rows.length === 1 ? 'client' : 'clients'}
                 </span>
-              </div>
-              {g.rows.map(renderRow)}
+              </button>
+              {expanded[`${groupBy}:${g.label}`] && g.rows.map(renderRow)}
             </div>
           ),
         )}
