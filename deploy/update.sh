@@ -21,6 +21,9 @@ set -a
 set +a
 # Geocoding cache (client locations): outside the repo's tracked files, never committed.
 export GEO_CACHE="${GEO_CACHE:-$APP_DIR/.geo-cache.json}"
+# Client documents: copied from Bitrix24 to the server (optional step, never stops the update).
+export DOCS_DIR="${DOCS_DIR:-$APP_DIR/.docs}"
+"$APP_DIR/.venv/bin/python" scripts/sync_docs.py || echo "update: documents not synced" >&2
 if ! "$APP_DIR/.venv/bin/python" scripts/sync_sheets.py; then
   echo "update: sync FAILED — keeping the current site" >&2
   exit 1

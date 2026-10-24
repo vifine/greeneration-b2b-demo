@@ -629,6 +629,11 @@ def bitrix_sync():
                 bx_edit[k]["r"] = True
     print("Bitrix24 extra fields: " + ", ".join(f"{k}={bx_fill[k]}" for k in bx_fill))
 
+    try:
+        with open(os.path.join(os.environ.get("DOCS_DIR", os.path.join(os.path.dirname(__file__), "..", ".docs")), "index.json"), encoding="utf-8") as f:
+            docs_index = json.load(f)
+    except Exception:
+        docs_index = {}
     by_bitrix = {str(c.get("bitrixId")).replace(".0", ""): c for c in clients.values() if c.get("bitrixId")}
     matched = 0
     for co in companies:
@@ -696,6 +701,14 @@ def bitrix_sync():
                     xr[k] = str(raw)
         if xr:
             bx["xr"] = xr
+        # Documents copied to the server by scripts/sync_docs.py (names and ids only; files are served by the notes service).
+        dd = docs_index.get(bid)
+        if dd:
+            if dd.get("docs"):
+                bx["docs"] = [{"f": uf, "l": g.get("label") or uf, "files": [[f["id"], f["name"]] for f in g.get("files", [])]}
+                              for uf, g in dd["docs"].items()]
+            if dd.get("identity"):
+                bx["idDocs"] = dd["identity"]
         cm = bx_clean_text(co.get("COMMENTS"))
         if cm:
             bx["comment"] = cm[:800]
