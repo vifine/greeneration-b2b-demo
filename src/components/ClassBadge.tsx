@@ -79,7 +79,12 @@ export function zoneColor(label?: string | null) {
 export const tint = (hex: string, alpha = 0.1) => `${hex}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`;
 
 export function ClassBadge({ k }: { k?: string }) {
-  if (!k) return <span className="muted">—</span>;
+  if (!k)
+    return (
+      <span className="cls-badge cls-none" title="No class">
+        —
+      </span>
+    );
   const c = CLASS_COLOR[k] ?? NO_COLOR;
   return (
     <span className="cls-badge" style={{ color: '#fff', background: c }} title={CLASS_HINT[k] ?? ''}>

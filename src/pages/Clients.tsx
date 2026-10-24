@@ -143,7 +143,7 @@ function ClassPicker({ value, onChange }: { value: string; onChange: (v: string)
       options={['', ...CLASS_ORDER, 'T'].map((k) => ({
         value: k,
         label: k ? CLASS_HINT[k] : 'No class',
-        icon: k ? <ClassBadge k={k} /> : <span className="cls-badge cls-none">—</span>,
+        icon: <ClassBadge k={k || undefined} />,
       }))}
     />
   );

@@ -3530,7 +3530,7 @@ body.rz-dragging, body.rz-dragging * { cursor: col-resize !important; user-selec
 .cp-pop button:hover { background: var(--soft-light); }
 .cp-pop button.on { background: var(--soft-primary); font-weight: 700; }
 .cp-pop .cls-badge, .cp-btn .cls-badge { cursor: inherit; flex: none; }
-.cls-none { background: var(--soft-light); color: var(--text-2); }
+
 
 /* client card header: key facts as labelled cells */
 .client-facts { display: flex; flex-wrap: wrap; gap: 6px 28px; margin: 8px 0 0; }
@@ -3581,3 +3581,14 @@ textarea.input { height: auto; padding: 10px 12px; }
 .fsel.open .filter-btn img { transform: rotate(180deg); }
 .fsel-menu.dd-pop { left: 0; right: auto; }
 .journal-filters { gap: 8px; }
+
+/* Dropdown list: as wide as its longest item (never wraps), thin quiet scrollbar */
+.dd-pop { width: max-content; min-width: 100%; max-width: min(520px, calc(100vw - 32px)); max-height: 360px; scrollbar-width: thin; scrollbar-color: #d6d6cf transparent; }
+.dd-pop::-webkit-scrollbar { width: 8px; }
+.dd-pop::-webkit-scrollbar-thumb { background: #d6d6cf; border-radius: 4px; border: 2px solid var(--white); }
+.dd-pop::-webkit-scrollbar-track { background: transparent; }
+.dd-opt, .dd-opt-text { white-space: nowrap; }
+.dd-opt-text { overflow: hidden; text-overflow: ellipsis; }
+.class-picker { width: 340px; max-width: 100%; }
+/* "No class": a light grey square with a dash, same size as the class badges */
+.cls-badge.cls-none { background: #e6e6e1 !important; color: #8a8f88 !important; cursor: default; }
