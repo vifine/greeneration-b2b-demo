@@ -1,4 +1,5 @@
 import { allDeals, BitrixOrdersTable } from '../components/BitrixDeals';
+import { ClientFilterChip } from '../components/ClientActivity';
 import { LIVE } from '../data/live';
 import type React from 'react';
 import { Money } from '../components/Money';
@@ -46,6 +47,12 @@ function useTabParam<T extends string>(keys: readonly T[], fallback: T) {
   const idsRaw = params.get('ids');
   const ids = idsRaw ? idsRaw.split(',') : null;
   const from = params.get('from') ?? '';
+  const client = params.get('client');
+  const clearClient = () => {
+    const p = new URLSearchParams(params);
+    p.delete('client');
+    setParams(p, { replace: true });
+  };
   const clearIds = () => {
     const p = new URLSearchParams(params);
     p.delete('ids');
@@ -66,7 +73,7 @@ function useTabParam<T extends string>(keys: readonly T[], fallback: T) {
     }
     setParams(p, { replace: true });
   };
-  return { tab, q, ids, from, clearIds, setTab: (t: T) => update({ tab: t }), setQ: (v: string) => update({ q: v }) };
+  return { tab, q, ids, from, client, clearClient, clearIds, setTab: (t: T) => update({ tab: t }), setQ: (v: string) => update({ q: v }) };
 }
 
 type DeliveryFilter = 'all' | 'upcoming' | 'tomorrow' | 'later';
@@ -196,7 +203,7 @@ const STAGE_TONE: Record<OrderStage, Tone> = { 'New request': 'info', Preorder: 
 export function OrdersJournal() {
   const { orders } = useStore();
   const navigate = useNavigate();
-  const { tab, q, ids, from, clearIds, setTab, setQ } = useTabParam<OrdTab>(ORD_TABS, 'all');
+  const { tab, q, ids, from, client, clearClient, clearIds, setTab, setQ } = useTabParam<OrdTab>(ORD_TABS, 'all');
   const [dday, setDday] = useState<DeliveryFilter>('upcoming');
   const [payF, setPayF] = useState<PaymentFilter>('all');
   const rows = orders.map((o) => ({ o, client: clientById(o.clientId), pay: paymentView(o, orderCurrentTotal(o), orderOriginalTotal(o)) }));
@@ -225,7 +232,14 @@ export function OrdersJournal() {
         {tab !== 'bitrix' && <FilterSelect value={payF} onChange={setPayF} options={PAYMENT_FILTERS} />}
       </Toolbar>
       {tab === 'bitrix' && !ids ? (
-        <BitrixOrdersTable q={q} />
+        <>
+          {client && (
+            <div className="journal-chips">
+              <ClientFilterChip name={clientById(client)?.name ?? client} onClear={clearClient} />
+            </div>
+          )}
+          <BitrixOrdersTable q={q} clientId={client} />
+        </>
       ) : (
       <>
       {ids && <FromHome n={visible.length} from={from} onClear={clearIds} />}

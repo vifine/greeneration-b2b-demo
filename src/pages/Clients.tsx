@@ -1,4 +1,5 @@
-import { ClientDeals } from '../components/BitrixDeals';
+import { ClientActivity } from '../components/ClientActivity';
+import testBitrix from '../data/testBitrix.json';
 import { bitrixCompanyUrl, odooPartnerUrl } from '../data/live';
 import { useState } from 'react';
 import { Money } from '../components/Money';
@@ -14,7 +15,7 @@ import { balanceOf } from '../data/balances';
 import { CLIENTS, clientById } from '../data/clients';
 import { fmt } from '../data/lines';
 import { useStore } from '../store';
-import { LIVE, shortDate } from '../data/live';
+import { LIVE } from '../data/live';
 import { ClassBadge, CLASS_COLOR, CLASS_HINT, CLASS_ORDER, classFilterOptions, isBlockedClass, matchesClass, NO_COLOR, tint, ZoneDot, zoneColor } from '../components/ClassBadge';
 
 function ClassRow({ sheet, value, onChange, demo }: { sheet?: string; value?: string; onChange: (v: string | null) => void; demo?: boolean }) {
@@ -277,7 +278,7 @@ export function ClientCard() {
   const own = addresses.filter((a) => a.clientId === c.id).sort((a, b) => Number(!!b.main) - Number(!!a.main));
   const bal = balanceOf(c.id);
   return (
-    <Shell crumbs={[{ label: 'Clients', to: '/customers/clients' }, { label: clientById(c.id).name }]} crmLink={`Open ${c.name} in Bitrix24`} crmHref={bitrixCompanyUrl(c.live?.bitrixId)} odooHref={odooPartnerUrl(c.id)} contentClass="card-page">
+    <Shell crumbs={[{ label: 'Clients', to: '/customers/clients' }, { label: clientById(c.id).name }]} crmLink={`Open ${c.name} in Bitrix24`} crmHref={bitrixCompanyUrl(c.live?.bitrixId ?? (testBitrix as Record<string, number>)[c.id])} odooHref={odooPartnerUrl(c.id)} contentClass="card-page">
       <div className="card-header">
         <div className="card-title">
           <div className="card-name gap16">
@@ -311,6 +312,7 @@ export function ClientCard() {
             {c.live?.bx?.status && <> · Status {c.live.bx.status}</>}
             {c.live?.bitrixId != null && c.live.bitrixId !== '' && <> · Bitrix24 #{String(c.live.bitrixId).replace(/\.0$/, '')}</>}
           </p>
+          <ClientActivity clientId={c.id} />
         </div>
         <div className="card-actions">
           <Btn kind="primary" onClick={() => navigate(`/portal/${c.id}`)}>
@@ -388,39 +390,6 @@ export function ClientCard() {
                   <small>{LIVE?.products[x.sku]?.name ?? ''}</small>
                 </span>
                 <span className="m-wide">{x.req}</span>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {c.live && <ClientDeals clientId={c.id} />}
-
-      {(LIVE?.shortages?.[c.id]?.length ?? 0) > 0 && (
-        <>
-          <div className="section-head">
-            <h2 className="section-h">Shortages (last 180 days)</h2>
-            <p className="section-note">
-              {LIVE!.shortages![c.id].reduce((n, r) => n + (r[5] || 0), 0)} units removed from {new Set(LIVE!.shortages![c.id].map((r) => r[1])).size} orders · from Out of stock items
-            </p>
-          </div>
-          <div className="table journal mini-table">
-            <div className="tr th">
-              <span className="m-date">Date</span>
-              <span className="m-order">Order</span>
-              <span className="m-wide">Item</span>
-              <span className="m-num">Ordered</span>
-              <span className="m-num">Removed</span>
-              <span className="m-reason">Reason</span>
-            </div>
-            {LIVE!.shortages![c.id].slice(0, 30).map((r, i) => (
-              <div key={i} className="tr row">
-                <span className="m-date">{shortDate(r[0])}</span>
-                <span className="m-order">#{r[1]}</span>
-                <span className="m-wide ellipsis">{r[2]}</span>
-                <span className="m-num">{r[4]}</span>
-                <span className="m-num strong text-danger">{r[5]}</span>
-                <span className="m-reason muted">{r[6] || '—'}</span>
               </div>
             ))}
           </div>

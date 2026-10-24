@@ -3146,3 +3146,18 @@ a.pt-tile:hover { border-color: var(--forest); }
 .deals-table .tr.row { min-height: 0; padding-top: 10px; padding-bottom: 10px; align-items: center; }
 .deals-table .m-num { flex: 0 0 120px; padding-right: 16px; }
 .deals-table .tr.row[aria-expanded='true'] { background: var(--soft-light); }
+
+/* Client card: compact activity line + journal client filter chip */
+.client-activity { margin-top: 6px; font-size: 13px; color: var(--text-2); }
+.client-activity a b { color: var(--text); }
+.filter-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 4px 4px 12px; border-radius: 999px; border: 1px solid var(--forest); background: var(--soft-light); font-size: 13px; white-space: nowrap; }
+.filter-chip button { border: 0; background: none; cursor: pointer; font-size: 16px; line-height: 1; padding: 0 6px; color: var(--text-2); }
+.filter-chip button:hover { color: var(--text); }
+.journal-chips { display: flex; gap: 8px; margin: 0 0 12px; }
+.sh-table .s-date { flex: 0 0 80px; }
+.sh-table .s-client { flex: 0 0 240px; }
+.sh-table .s-client a { color: var(--forest); text-decoration: none; font-weight: 600; }
+.sh-table .s-order { flex: 0 0 90px; }
+.sh-table .s-item { flex: 1 1 auto; min-width: 0; }
+.sh-table .s-num { flex: 0 0 80px; text-align: right; }
+.sh-table .s-reason { flex: 0 0 180px; padding-left: 16px; }

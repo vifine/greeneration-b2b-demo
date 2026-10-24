@@ -1,6 +1,7 @@
 import { bitrixDealUrl } from '../data/live';
 import { useState } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ClientFilterChip, clientShortages } from '../components/ClientActivity';
 import { FileChip } from '../components/FileChip';
 import { Money } from '../components/Money';
 import { ReplyDialog, type ReplyTemplate } from '../components/ReplyDialog';
@@ -15,7 +16,7 @@ import { useStore } from '../store';
 import { LIVE, shortDate } from '../data/live';
 import { dur, hm, toMin, useDubaiNow } from '../time';
 
-const TABS = ['open', 'not_delivered', 'quality', 'closed', 'sheet'] as const;
+const TABS = ['open', 'not_delivered', 'quality', 'closed', 'sheet', 'shortages'] as const;
 type Tab = (typeof TABS)[number];
 
 const DECISION: Record<ClaimDecision, string> = {
@@ -44,8 +45,19 @@ export function ClaimsJournal() {
   const { claims } = useStore();
   const navigate = useNavigate();
   const now = useDubaiNow();
-  const [tab, setTab] = useState<Tab>('open');
-  const [q, setQ] = useState('');
+  const [params, setParams] = useSearchParams();
+  const rawTab = params.get('tab') as Tab | null;
+  const tab: Tab = rawTab && TABS.includes(rawTab) ? rawTab : 'open';
+  const q = params.get('q') ?? '';
+  const client = params.get('client');
+  const setParam = (k: string, v: string | null) => {
+    const p = new URLSearchParams(params);
+    if (v) p.set(k, v);
+    else p.delete(k);
+    setParams(p, { replace: true });
+  };
+  const setTab = (t: Tab) => setParam('tab', t);
+  const setQ = (v: string) => setParam('q', v);
   const open = claims.filter((c) => c.status !== 'closed');
   const groups: Record<Tab, Claim[]> = {
     open,
@@ -53,11 +65,19 @@ export function ClaimsJournal() {
     quality: open.filter((c) => c.kind === 'quality'),
     closed: claims.filter((c) => c.status === 'closed'),
     sheet: [],
+    shortages: [],
   };
 
   const n = q.trim().toLowerCase().replace(/^#/, '');
-  const notes = (LIVE?.creditNotes ?? []).filter((x) => !n || `${x.client} ${x.deal} ${x.text} ${x.by}`.toLowerCase().includes(n));
-  const rows = groups[tab].filter((c) => !n || `${clientById(c.clientId).name} ${c.id} ${c.orderId}`.toLowerCase().includes(n));
+  const byClient = (id: string | null | undefined) => !client || id === client;
+  const notes = (LIVE?.creditNotes ?? []).filter((x) => byClient(x.clientId)).filter((x) => !n || `${x.client} ${x.deal} ${x.text} ${x.by}`.toLowerCase().includes(n));
+  const allShortages = Object.keys(LIVE?.shortages ?? {})
+    .flatMap((cid) => clientShortages(cid).map((r) => ({ cid, r })))
+    .sort((a, b) => (b.r[0] ?? '').localeCompare(a.r[0] ?? ''));
+  const shortages = allShortages
+    .filter((x) => byClient(x.cid))
+    .filter(({ cid, r }) => !n || `${clientById(cid)?.name ?? ''} ${r[1]} ${r[2]} ${r[3]} ${r[6]}`.toLowerCase().includes(n));
+  const rows = groups[tab].filter((c) => byClient(c.clientId)).filter((c) => !n || `${clientById(c.clientId).name} ${c.id} ${c.orderId}`.toLowerCase().includes(n));
   return (
     <Shell crumbs={[{ label: 'Claims' }]}>
       <div className="journal-toolbar">
@@ -68,6 +88,7 @@ export function ClaimsJournal() {
             { key: 'quality', label: 'Quality issue', count: groups.quality.length },
             { key: 'closed', label: 'Closed', count: groups.closed.length },
             ...(LIVE?.creditNotes ? [{ key: 'sheet' as Tab, label: 'Credit notes (sheet)', count: LIVE.creditNotes.length }] : []),
+            ...(LIVE?.shortages ? [{ key: 'shortages' as Tab, label: 'Shortages (sheet)', count: allShortages.length }] : []),
           ]}
           value={tab}
           onChange={setTab}
@@ -77,7 +98,55 @@ export function ClaimsJournal() {
           <SearchBox value={q} onChange={setQ} placeholder="Search client, claim or order #" className="journal-search" />
         </div>
       </div>
-      {tab === 'sheet' ? (
+      {client && (
+        <div className="journal-chips">
+          <ClientFilterChip name={clientById(client)?.name ?? client} onClear={() => setParam('client', null)} />
+        </div>
+      )}
+      {tab === 'shortages' ? (
+        <>
+          <p className="section-note">
+            {shortages.length} shortage line{shortages.length === 1 ? '' : 's'} · {shortages.reduce((t, x) => t + (x.r[5] || 0), 0)} units removed · last 180 days · from Out of stock items · read-only
+          </p>
+          <div className="table journal sh-table">
+            <div className="tr th">
+              <span className="s-date">Date</span>
+              <span className="s-client">Client</span>
+              <span className="s-order">Order</span>
+              <span className="s-item">Item</span>
+              <span className="s-num">Ordered</span>
+              <span className="s-num">Removed</span>
+              <span className="s-reason">Reason</span>
+            </div>
+            {shortages.slice(0, client ? undefined : 500).map(({ cid, r }, i) => (
+              <div key={i} className="tr row">
+                <span className="s-date">{r[0] ? shortDate(r[0]) : '—'}</span>
+                <span className="s-client ellipsis">
+                  <Link to={`/customers/clients/${cid}`}>{clientById(cid)?.name ?? cid}</Link>
+                </span>
+                <span className="s-order">
+                  {bitrixDealUrl(r[1]) ? (
+                    <a href={bitrixDealUrl(r[1])} target="_blank" rel="noopener noreferrer" className="link-sort">
+                      #{r[1]}
+                    </a>
+                  ) : r[1] ? (
+                    `#${r[1]}`
+                  ) : (
+                    '—'
+                  )}
+                </span>
+                <span className="s-item ellipsis" title={r[3] ? `${r[2]} · ${r[3]}` : r[2]}>
+                  {r[2] || '—'}
+                </span>
+                <span className="s-num">{r[4]}</span>
+                <span className="s-num strong text-danger">{r[5]}</span>
+                <span className="s-reason muted ellipsis">{r[6] || '—'}</span>
+              </div>
+            ))}
+            {!shortages.length && <div className="empty">No shortages match.</div>}
+          </div>
+        </>
+      ) : tab === 'sheet' ? (
         <div className="table journal cn-table">
           <div className="tr th">
             <span className="n-date">Date</span>
