@@ -3249,3 +3249,138 @@ a.pt-tile:hover { border-color: var(--forest); }
 .bx-comment p { margin: 2px 0 0; white-space: pre-wrap; font-size: 14px; }
 .bx-arch { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border, #e5e5e0); }
 @media (max-width: 720px) { .bx-details .bx-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Client credit class next to the client name (Orders list, Bitrix24 orders, order card) */
+.name-cls { display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+.name-cls > .ellipsis { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.name-cls > .cls-badge { flex: none; }
+.card-name .name-cls { flex-wrap: wrap; }
+
+/* Orders kanban: one column per stage */
+.kanban {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding: 4px 16px 24px 16px;
+}
+.kanban-col {
+  flex: 1 0 280px;
+  min-width: 260px;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--soft-light);
+  border-radius: 12px;
+  max-height: calc(100vh - 230px);
+  overflow-y: auto;
+}
+.kanban-head {
+  position: sticky;
+  top: -10px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -10px -10px 0;
+  padding: 12px 14px 8px;
+  background: var(--soft-light);
+  font-size: 14px;
+  color: var(--heading);
+}
+.kanban-head b {
+  font-weight: 800;
+}
+.kanban-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+  background: var(--white);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+.kanban-sum {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.kcard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 12px;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.kcard:hover {
+  border-color: var(--forest);
+}
+.kcard.has-issue {
+  box-shadow: inset 3px 0 0 var(--warning);
+}
+.kcard-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.kcard-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  color: var(--heading);
+}
+.kcard-meta {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-2);
+}
+.kcard-issue {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+}
+.kcard-issue .ellipsis {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kcard-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-2);
+}
+.kcard-foot > span:first-child {
+  min-width: 0;
+}
+.kcard-foot .ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kcard-foot .text-danger {
+  color: var(--danger);
+}
+.kcard-empty {
+  padding: 16px 0;
+  font-size: 13px;
+  text-align: center;
+  color: var(--text-2);
+}
